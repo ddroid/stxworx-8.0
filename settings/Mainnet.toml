@@ -1,6 +1,6 @@
 [network]
-name = "testnet"
-stacks_node_rpc_address = "https://api.testnet.hiro.so"
+name = "mainnet"
+stacks_node_rpc_address = "https://api.hiro.so"
 deployment_fee_rate = 10
 
 [accounts.deployer]
@@ -12,4 +12,4 @@ deployment_fee_rate = 10
 # Enter your seed phrase and a password, then paste the encrypted mnemonic here.
 #
 # Otherwise, use the mnemonic field below:
-encrypted_mnemonic = "4YapvsZ2KKTFUn71m6NMqCj46B8WUm7CeB5YTozZFSZQfGurJMDfQkAMAd9vyuHK72cfWt2R6DQRq665payaDjYBP6VYTXzy1DXgGMq7XfWFQUWEcKocG4E8zg1QyuAYxTinLV1rJzF8qkBwUcsfsKHBJrooFQzTNVxgxw3VMvDkCNn5ZqP62TaUp4qPuoXSUqQXr9Qc8BJa58ocjSSMZegHf2mN67ZRCQwpnwemPmVkUYbHf4zDh"
+mnemonic = "3c8mawiZ7eVZYfUK4yg99LDL7nR6bAoYH8uLbUzyyodt1LLjPjEhwsQswCCnFUMUYc2HsKEEzDnb7FhrBQw1UrLFAC5eRBTTK2NhFhAS79ccJA4yhQqrNhpXwQ8aL3dA7RFeP6ybFkN4HyL6ZA3kiwEcSYH4zxxrTAf9uPBGU8vt2FJcKzTSRNnCG7G8TCZk6xhwA7XR4ppBmEUXDwXDmXrsJNGQrSTnktNgryF6ufLiWRwmE5tL4"

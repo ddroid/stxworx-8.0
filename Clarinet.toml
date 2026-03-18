@@ -1,24 +1,40 @@
 [project]
-name = "stx-freelance-platform"
-description = "Decentralized freelance platform on Stacks blockchain"
+name = "temp"
+description = ""
 authors = []
 telemetry = false
 cache_dir = "./.cache"
-requirements = []
-boot_contracts = []
+
+# [contracts.counter]
+# path = "contracts/counter.clar"
+# epoch = "latest"
+
+# Check-checker settings:
+# trusted_sender: if true, inputs are trusted after tx_sender has been checked.
+# trusted_caller: if true, inputs are trusted after contract-caller has been checked.
+# callee_filter: if true, untrusted data may be passed into a private function without a
+# warning, if it gets checked inside. This check will also propagate up to the
+# caller.
+# More informations: https://www.hiro.so/blog/new-safety-checks-in-clarinet
+
+[repl.analysis]
+passes = ["check_checker"]
+check_checker = { trusted_sender = false, trusted_caller = false, callee_filter = false }
+
+[contracts]
 
 [contracts.escrow-multi-token-v7]
 path = "contracts/escrow-multi-token-v7.clar"
 clarity_version = 4
 epoch = "latest"
 
-[contracts.stxworks-escrow-v8]
-path = "contracts/stxworks-escrow-v8.clar"
+[contracts.escrow-multi-token]
+path = "contracts/escrow-multi-token.clar"
 clarity_version = 4
 epoch = "latest"
 
-[contracts.verify-soulbound]
-path = "contracts/verify-soulbound.clar"
+[contracts.escrow-multi-token.tests.clar]
+path = "contracts/escrow-multi-token.tests.clar"
 clarity_version = 4
 epoch = "latest"
 
@@ -27,11 +43,17 @@ path = "contracts/rep-sft.clar"
 clarity_version = 4
 epoch = "latest"
 
-[repl.analysis]
-passes = ["check_checker"]
+[contracts.stxworks-escrow-v8]
+path = "contracts/stxworks-escrow-v8.clar"
+clarity_version = 4
+epoch = "latest"
 
-[repl.analysis.check_checker]
-strict = false
-trusted_sender = false
-trusted_caller = false
-callee_filter = false
+[contracts.stxworx-badge]
+path = "contracts/stxworx-badge.clar"
+clarity_version = 4
+epoch = "latest"
+
+[contracts.verify-soulbound]
+path = "contracts/verify-soulbound.clar"
+clarity_version = 4
+epoch = "latest"

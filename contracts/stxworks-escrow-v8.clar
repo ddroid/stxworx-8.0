@@ -25,7 +25,7 @@
 (define-constant ERR-DISPUTE-ACTIVE (err u131))
 
 (define-data-var project-counter uint u0)
-(define-data-var dao-wallet principal 'SP0000000000000000000000000000000000000000)
+(define-data-var dao-wallet principal 'SP4RX4SP7XYEC9BSA6XJFA74Y45M3TQFH2RK8D3X)
 (define-data-var dao-governor principal tx-sender)
 (define-data-var paused bool false)
 (define-data-var fee-client uint DEFAULT-FEE-CLIENT)
@@ -101,10 +101,12 @@
       (asserts! (and (>= ms-count u1) (<= ms-count MAX-MILESTONES)) ERR-INVALID-MS)
       (try! (stx-transfer? gross tx-sender current-contract))
       (if (> dao-cut u0)
-        (try! (as-contract (stx-transfer? dao-cut tx-sender (var-get dao-wallet))))
+        (try! (as-contract? ((with-stx dao-cut))
+               (try! (stx-transfer? dao-cut tx-sender (var-get dao-wallet)))))
         true)
       (if (> client-fee u0)
-        (try! (as-contract (stx-transfer? client-fee tx-sender (var-get dao-wallet))))
+        (try! (as-contract? ((with-stx client-fee))
+               (try! (stx-transfer? client-fee tx-sender (var-get dao-wallet)))))
         true)
       (var-set project-counter id)
       (map-set projects id {
@@ -124,7 +126,7 @@
       (if (> m2 u0) (map-set milestones {project: id, ms: u2} {amount: m2, complete: false, released: false, completed-at: u0}) true)
       (if (> m3 u0) (map-set milestones {project: id, ms: u3} {amount: m3, complete: false, released: false, completed-at: u0}) true)
       (if (> m4 u0) (map-set milestones {project: id, ms: u4} {amount: m4, complete: false, released: false, completed-at: u0}) true)
-      (print {event: "STXWORX-Job-Created", id: id, memo: (concat "STXWORX Job #" (to-string id)), gross: gross, dao-cut: dao-cut, ts: burn-block-height})
+      (print {event: "STXWORX-Job-Created", id: id, gross: gross, dao-cut: dao-cut, ts: burn-block-height})
       (ok id))))
 
 (define-read-only (get-project-count)

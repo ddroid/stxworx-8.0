@@ -8,31 +8,45 @@ plan:
   - id: 0
     transactions:
     - transaction-type: contract-publish
+      contract-name: escrow-multi-token
+      expected-sender: ST1PQHQKV0RJXZFY1DGX8MNSNYVE3VGZJSRTPGZGM
+      cost: 407450
+      path: contracts/escrow-multi-token.clar
+      anchor-block-only: true
+      clarity-version: 4
+    - transaction-type: contract-publish
       contract-name: escrow-multi-token-v7
       expected-sender: ST1PQHQKV0RJXZFY1DGX8MNSNYVE3VGZJSRTPGZGM
       cost: 407450
-      path: escrow-multi-token-v7.clar
+      path: contracts/escrow-multi-token-v7.clar
       anchor-block-only: true
-      clarity-version: 1
+      clarity-version: 4
     - transaction-type: contract-publish
       contract-name: rep-sft
       expected-sender: ST1PQHQKV0RJXZFY1DGX8MNSNYVE3VGZJSRTPGZGM
       cost: 130230
-      path: rep-sft.clar
+      path: contracts/rep-sft.clar
       anchor-block-only: true
-      clarity-version: 1
+      clarity-version: 4
     - transaction-type: contract-publish
       contract-name: stxworks-escrow-v8
       expected-sender: ST1PQHQKV0RJXZFY1DGX8MNSNYVE3VGZJSRTPGZGM
-      cost: 55210
-      path: stxworks-escrow-v8.clar
+      cost: 55630
+      path: contracts/stxworks-escrow-v8.clar
       anchor-block-only: true
-      clarity-version: 1
+      clarity-version: 4
+    - transaction-type: contract-publish
+      contract-name: stxworx-badge
+      expected-sender: ST1PQHQKV0RJXZFY1DGX8MNSNYVE3VGZJSRTPGZGM
+      cost: 130230
+      path: contracts/stxworx-badge.clar
+      anchor-block-only: true
+      clarity-version: 4
     - transaction-type: contract-publish
       contract-name: verify-soulbound
       expected-sender: ST1PQHQKV0RJXZFY1DGX8MNSNYVE3VGZJSRTPGZGM
       cost: 130230
-      path: verify-soulbound.clar
+      path: contracts/verify-soulbound.clar
       anchor-block-only: true
-      clarity-version: 1
-    epoch: '2.05'
+      clarity-version: 4
+    epoch: '3.3'

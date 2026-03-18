@@ -1,25 +1,52 @@
----
 id: 0
 name: Testnet deployment
 network: testnet
-stacks-node: "https://api.testnet.hiro.so"
-bitcoin-node: "http://blockstack:blockstacksystem@bitcoind.testnet.stacks.co:18332"
+stacks-node: https://api.testnet.hiro.so
+bitcoin-node: http://blockstack:blockstacksystem@bitcoind.testnet.stacks.co:18332
 plan:
   batches:
-    - id: 0
-      transactions:
-        - contract-publish:
-            contract-name: escrow-multi-token-v7
-            expected-sender: STVNRH0FC9XJP8J18C92J09MNBS2BS2TW6RCAQ87
-            cost: 407450
-            path: contracts/escrow-multi-token-v7.clar
-            anchor-block-only: true
-            clarity-version: 4
-        - contract-publish:
-            contract-name: rep-sft
-            expected-sender: STVNRH0FC9XJP8J18C92J09MNBS2BS2TW6RCAQ87
-            cost: 130230
-            path: contracts/rep-sft.clar
-            anchor-block-only: true
-            clarity-version: 4
-      epoch: "3.3"
+  - id: 0
+    transactions:
+    - transaction-type: contract-publish
+      contract-name: escrow-multi-token
+      expected-sender: STTCT2FCG2AE0T2Q70KBA1GDM4VN14FRW5A1NBR0
+      cost: 407450
+      path: contracts/escrow-multi-token.clar
+      anchor-block-only: true
+      clarity-version: 4
+    - transaction-type: contract-publish
+      contract-name: escrow-multi-token-v7
+      expected-sender: STTCT2FCG2AE0T2Q70KBA1GDM4VN14FRW5A1NBR0
+      cost: 407450
+      path: contracts/escrow-multi-token-v7.clar
+      anchor-block-only: true
+      clarity-version: 4
+    - transaction-type: contract-publish
+      contract-name: rep-sft
+      expected-sender: STTCT2FCG2AE0T2Q70KBA1GDM4VN14FRW5A1NBR0
+      cost: 130230
+      path: contracts/rep-sft.clar
+      anchor-block-only: true
+      clarity-version: 4
+    - transaction-type: contract-publish
+      contract-name: stxworks-escrow-v8
+      expected-sender: STTCT2FCG2AE0T2Q70KBA1GDM4VN14FRW5A1NBR0
+      cost: 55630
+      path: contracts/stxworks-escrow-v8.clar
+      anchor-block-only: true
+      clarity-version: 4
+    - transaction-type: contract-publish
+      contract-name: stxworx-badge
+      expected-sender: STTCT2FCG2AE0T2Q70KBA1GDM4VN14FRW5A1NBR0
+      cost: 130230
+      path: contracts/stxworx-badge.clar
+      anchor-block-only: true
+      clarity-version: 4
+    - transaction-type: contract-publish
+      contract-name: verify-soulbound
+      expected-sender: STTCT2FCG2AE0T2Q70KBA1GDM4VN14FRW5A1NBR0
+      cost: 130230
+      path: contracts/verify-soulbound.clar
+      anchor-block-only: true
+      clarity-version: 4
+    epoch: '3.3'
