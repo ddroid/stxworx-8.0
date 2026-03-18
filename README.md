@@ -7,8 +7,12 @@ A decentralized freelance escrow platform built on the Stacks blockchain, suppor
 ```bash
 
 # 0. Clone and install
-git clone <your-repo-url>
-cd stx-freelance-platform
+git clone https://github.com/ddroid/stxworx-8.git
+cd stxworx-8
+npm install
+cd backend
+npm install
+cd ../client
 npm install
 
 # 1. Docker compose
