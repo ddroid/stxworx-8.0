@@ -10,6 +10,7 @@ type FreelancerCard = ApiLeaderboardEntry & {
 };
 
 export const FreelancersPage = () => {
+  const { walletAddress } = Shared.useWallet();
   const [isMessageModalOpen, setIsMessageModalOpen] = useState(false);
   const [selectedRecipient, setSelectedRecipient] = useState('');
   const [selectedRecipientAddress, setSelectedRecipientAddress] = useState('');
@@ -61,18 +62,23 @@ export const FreelancersPage = () => {
 
   const filters = useMemo(
     () => [
-      { label: 'All', count: freelancers.length },
-      { label: 'Top Rated', count: freelancers.filter((freelancer) => freelancer.avgRating >= 4.5).length },
-      { label: 'Most Reviewed', count: freelancers.filter((freelancer) => freelancer.reviewCount > 0).length },
-      { label: 'Recently Joined', count: recentIds.size },
+      { label: 'All', count: freelancers.filter((f) => f.stxAddress !== walletAddress && (!f.profile?.username || f.profile.username !== walletAddress)).length },
+      { label: 'Top Rated', count: freelancers.filter((freelancer) => freelancer.avgRating >= 4.5 && freelancer.stxAddress !== walletAddress && (!freelancer.profile?.username || freelancer.profile.username !== walletAddress)).length },
+      { label: 'Most Reviewed', count: freelancers.filter((freelancer) => freelancer.reviewCount > 0 && freelancer.stxAddress !== walletAddress && (!freelancer.profile?.username || freelancer.profile.username !== walletAddress)).length },
+      { label: 'Recently Joined', count: Array.from(recentIds).filter(id => {
+        const freelancer = freelancers.find(f => f.id === id);
+        return freelancer && freelancer.stxAddress !== walletAddress && (!freelancer.profile?.username || freelancer.profile.username !== walletAddress);
+      }).length },
     ],
-    [freelancers, recentIds],
+    [freelancers, recentIds, walletAddress],
   );
 
   const visibleFreelancers = useMemo(() => {
     const loweredSearch = searchQuery.trim().toLowerCase();
 
     return freelancers.filter((freelancer) => {
+      // Exclude current user
+      if (freelancer.stxAddress === walletAddress) return false;      
       const matchesFilter =
         selectedFilter === 'All' ||
         (selectedFilter === 'Top Rated' && freelancer.avgRating >= 4.5) ||
@@ -94,7 +100,7 @@ export const FreelancersPage = () => {
 
       return matchesFilter && matchesSearch;
     });
-  }, [freelancers, recentIds, searchQuery, selectedFilter]);
+  }, [freelancers, recentIds, searchQuery, selectedFilter, walletAddress]);
 
   return (
     <div className="pt-28 pb-20 px-6 md:pl-[92px]">
