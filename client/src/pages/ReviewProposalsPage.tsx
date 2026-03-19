@@ -3,6 +3,7 @@ import { ChevronRight, Star } from 'lucide-react';
 import { Link, useLocation } from 'react-router-dom';
 import * as Shared from '../shared';
 import {
+  activateProject,
   acceptProposal,
   formatAddress,
   formatRelativeTime,
@@ -14,6 +15,7 @@ import {
   rejectProposal,
   type ApiProposal,
 } from '../lib/api';
+import { createEscrowForProject } from '../lib/escrow';
 import type { ApiProject } from '../types/job';
 import type { ApiUserProfile, ApiUserReview } from '../types/user';
 
@@ -27,6 +29,7 @@ export const ReviewProposalsPage = () => {
   const [reviewsByAddress, setReviewsByAddress] = useState<Record<string, ApiUserReview[]>>({});
   const [messageRecipientAddress, setMessageRecipientAddress] = useState('');
   const [isMessageModalOpen, setIsMessageModalOpen] = useState(false);
+  const [processingProposalId, setProcessingProposalId] = useState<number | null>(null);
   const [loading, setLoading] = useState(true);
 
   const loadProposals = useCallback(async (projectIdOverride?: number) => {
@@ -100,12 +103,28 @@ export const ReviewProposalsPage = () => {
     [proposals],
   );
 
-  const handleAcceptProposal = async (proposalId: number) => {
+  const handleAcceptProposal = async (proposal: ApiProposal) => {
+    if (!project || !proposal.freelancerAddress) {
+      return;
+    }
+
+    setProcessingProposalId(proposal.id);
     try {
-      await acceptProposal(proposalId);
+      const escrow = await createEscrowForProject(project, proposal.freelancerAddress);
+
+      if (proposal.status === 'pending') {
+        await acceptProposal(proposal.id);
+      }
+
+      await activateProject(project.id, {
+        escrowTxId: escrow.txId,
+        onChainId: escrow.onChainId,
+      });
       await loadProposals(project?.id);
     } catch (error) {
       console.error('Failed to accept proposal:', error);
+    } finally {
+      setProcessingProposalId(null);
     }
   };
 
@@ -165,6 +184,8 @@ export const ReviewProposalsPage = () => {
                 ? (reviews.reduce((sum, review) => sum + review.rating, 0) / reviews.length).toFixed(1)
                 : '0.0';
               const displayName = profile?.username || proposal.freelancerUsername || formatAddress(address || `freelancer-${proposal.freelancerId}`);
+              const canFundEscrow = proposal.status === 'accepted' && project?.status !== 'active';
+              const canAcceptProposal = proposal.status === 'pending' || canFundEscrow;
 
               return (
                 <div key={proposal.id} className="card p-6">
@@ -190,15 +211,21 @@ export const ReviewProposalsPage = () => {
                   </div>
                   <div className="flex gap-4">
                     <button
-                      onClick={() => handleAcceptProposal(proposal.id)}
-                      disabled={proposal.status !== 'pending'}
+                      onClick={() => handleAcceptProposal(proposal)}
+                      disabled={!canAcceptProposal || processingProposalId === proposal.id || Boolean(acceptedProposal && acceptedProposal.id !== proposal.id && project?.status !== 'active')}
                       className="flex-1 btn-primary py-3 justify-center disabled:opacity-50"
                     >
-                      {proposal.status === 'accepted' ? 'Accepted' : 'Accept Proposal'}
+                      {processingProposalId === proposal.id
+                        ? 'Opening Wallet...'
+                        : canFundEscrow
+                          ? 'Fund Escrow'
+                          : proposal.status === 'accepted'
+                            ? 'Accepted'
+                            : 'Accept Proposal'}
                     </button>
                     <button
                       onClick={() => handleRejectProposal(proposal.id)}
-                      disabled={proposal.status !== 'pending'}
+                      disabled={proposal.status !== 'pending' || processingProposalId === proposal.id}
                       className="flex-1 btn-outline py-3 justify-center disabled:opacity-50"
                     >
                       Reject Proposal

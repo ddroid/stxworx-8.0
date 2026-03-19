@@ -13,6 +13,7 @@ import {
   toAppJob,
   type ApiMilestoneSubmission,
 } from '../lib/api';
+import { releaseEscrowMilestone } from '../lib/escrow';
 import type { ApiProject } from '../types/job';
 
 export const ReviewWorkPage = () => {
@@ -20,7 +21,7 @@ export const ReviewWorkPage = () => {
   const state = (location.state as { projectId?: number; submissionId?: number } | null) || null;
   const [project, setProject] = useState<ApiProject | null>(null);
   const [submissions, setSubmissions] = useState<ApiMilestoneSubmission[]>([]);
-  const [releaseTxId, setReleaseTxId] = useState('');
+  const [isApproving, setIsApproving] = useState(false);
   const [loading, setLoading] = useState(true);
 
   const loadSubmission = useCallback(async () => {
@@ -83,16 +84,19 @@ export const ReviewWorkPage = () => {
   }, [project, selectedSubmission]);
 
   const handleApprove = async () => {
-    if (!selectedSubmission || !releaseTxId.trim()) {
+    if (!selectedSubmission || !project?.onChainId) {
       return;
     }
 
+    setIsApproving(true);
     try {
-      await approveMilestone(selectedSubmission.id, { releaseTxId: releaseTxId.trim() });
-      setReleaseTxId('');
+      const releaseTxId = await releaseEscrowMilestone(project.onChainId, selectedSubmission.milestoneNum, project.tokenType);
+      await approveMilestone(selectedSubmission.id, { releaseTxId });
       await loadSubmission();
     } catch (error) {
       console.error('Failed to approve milestone:', error);
+    } finally {
+      setIsApproving(false);
     }
   };
 
@@ -163,27 +167,17 @@ export const ReviewWorkPage = () => {
               </a>
             </div>
 
-            <div className="mb-8">
-              <label className="block text-[10px] font-bold uppercase tracking-widest text-muted mb-2">Release Transaction ID</label>
-              <input
-                value={releaseTxId}
-                onChange={(event) => setReleaseTxId(event.target.value)}
-                placeholder="Paste release transaction ID"
-                className="w-full bg-ink/5 border border-border rounded-[15px] px-4 py-3 text-sm outline-none"
-              />
-            </div>
-
             <div className="flex gap-4">
               <button
                 onClick={handleApprove}
-                disabled={selectedSubmission.status !== 'submitted' || !releaseTxId.trim()}
+                disabled={selectedSubmission.status !== 'submitted' || !project.onChainId || project.tokenType === 'USDCx' || isApproving}
                 className="flex-1 btn-primary py-4 justify-center disabled:opacity-50"
               >
-                {selectedSubmission.status === 'approved' ? 'Funds Released' : 'Approve & Release Funds'}
+                {isApproving ? 'Opening Wallet...' : selectedSubmission.status === 'approved' ? 'Funds Released' : 'Approve & Release Funds'}
               </button>
               <button
                 onClick={handleReject}
-                disabled={selectedSubmission.status !== 'submitted'}
+                disabled={selectedSubmission.status !== 'submitted' || isApproving}
                 className="flex-1 btn-outline py-4 justify-center disabled:opacity-50"
               >
                 {selectedSubmission.status === 'rejected' ? 'Changes Requested' : 'Request Changes'}

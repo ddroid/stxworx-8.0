@@ -13,6 +13,7 @@ import {
 import { GoogleGenAI } from '@google/genai';
 import type { UserSession } from '@stacks/connect';
 import { createProject, createProposal, getCategories, submitMilestone, startConversation, getConversationMessages, sendConversationMessage, getUserProfile, getCurrentUser, toDisplayName, formatRelativeTime, type ApiConversationMessage } from './lib/api';
+import { completeEscrowMilestone } from './lib/escrow';
 import type { ApiCategory } from './types/job';
 import type { ApiUserProfile } from './types/user';
 
@@ -186,17 +187,19 @@ export const MilestoneSubmitModal = ({ isOpen, onClose, milestone, onSubmitted }
       const isResubmission = milestone?.status === 'rejected';
 
       const handleSubmit = async () => {
-        if (!milestone?.projectId || !milestone?.milestoneNum || !deliverableUrl.trim()) {
+        if (!milestone?.projectId || !milestone?.milestoneNum || !deliverableUrl.trim() || !milestone?.projectOnChainId || milestone?.tokenType === 'USDCx') {
           return;
         }
 
         setIsSubmitting(true);
         try {
+          const completionTxId = await completeEscrowMilestone(milestone.projectOnChainId, milestone.milestoneNum);
           await submitMilestone({
             projectId: milestone.projectId,
             milestoneNum: milestone.milestoneNum,
             deliverableUrl: deliverableUrl.trim(),
             description: description.trim() || undefined,
+            completionTxId,
           });
           setIsWorkSubmitted(true);
           onSubmitted?.();
@@ -272,10 +275,10 @@ export const MilestoneSubmitModal = ({ isOpen, onClose, milestone, onSubmitted }
 
                   <button 
                     onClick={handleSubmit}
-                    disabled={isSubmitting || !deliverableUrl.trim()}
+                    disabled={isSubmitting || !deliverableUrl.trim() || !milestone?.projectOnChainId || milestone?.tokenType === 'USDCx'}
                     className="w-full btn-primary py-4 font-bold text-lg justify-center"
                   >
-                    {isSubmitting ? (isResubmission ? 'Resubmitting...' : 'Submitting...') : (isResubmission ? 'Resubmit Work' : 'Submit Work')}
+                    {isSubmitting ? 'Opening Wallet...' : (isResubmission ? 'Resubmit Work' : 'Submit Work')}
                   </button>
                 </div>
               </motion.div>

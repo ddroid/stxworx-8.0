@@ -61,8 +61,8 @@
 ;; ======================== DATA VARIABLES ========================
 
 (define-data-var project-counter uint u0)
-(define-data-var treasury principal tx-sender)
-(define-data-var contract-owner principal tx-sender)
+(define-data-var treasury principal 'ST4RX4SP7XYEC9BSA6XJFA74Y45M3TQFH13NT2M9)
+(define-data-var contract-owner principal 'ST4RX4SP7XYEC9BSA6XJFA74Y45M3TQFH13NT2M9)
 (define-data-var proposed-owner (optional principal) none)
 (define-data-var fee-rate uint u1000)              ;; 10% default (1000 basis points)
 (define-data-var contract-paused bool false)

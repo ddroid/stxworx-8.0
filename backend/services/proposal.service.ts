@@ -87,7 +87,6 @@ export const proposalService = {
       .update(projects)
       .set({ 
         freelancerId: proposal.freelancerId, 
-        status: "active",
         updatedAt: new Date() 
       })
       .where(eq(projects.id, proposal.projectId));

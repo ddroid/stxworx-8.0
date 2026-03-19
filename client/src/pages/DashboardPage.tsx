@@ -23,10 +23,12 @@ import type { ApiUserProfile, ApiUserReview } from '../types/user';
 
 type MilestoneView = {
   projectId: number;
+  projectOnChainId?: number | null;
   milestoneNum: number;
   title: string;
   description: string;
   amount: string;
+  tokenType: ApiProject['tokenType'];
   status: 'pending' | 'submitted' | 'approved' | 'rejected';
   deliverableUrl?: string;
 };
@@ -40,10 +42,12 @@ function buildMilestones(project: ApiProject, submissions: ApiMilestoneSubmissio
 
     return {
       projectId: project.id,
+      projectOnChainId: project.onChainId,
       milestoneNum,
       title: `${milestoneNum}. ${milestone.title}`,
       description: milestone.description,
       amount: `${formatTokenAmount(milestone.amount)} ${project.tokenType}`,
+      tokenType: project.tokenType,
       status: submission?.status === 'submitted' || submission?.status === 'approved' || submission?.status === 'rejected'
         ? submission.status
         : 'pending',
