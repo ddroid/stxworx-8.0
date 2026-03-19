@@ -1,11 +1,31 @@
 import { db } from "../db";
 import { conversationParticipants, conversations, messages, userSettings, users } from "@shared/schema";
-import { and, desc, eq, gt, ne } from "drizzle-orm";
+import { and, asc, desc, eq, gt, ne, inArray } from "drizzle-orm";
 import { connectionsService } from "./connections.service";
 
 async function getUser(userId: number) {
   const [user] = await db.select().from(users).where(eq(users.id, userId));
   return user || null;
+}
+
+async function getUnreadMessagesForParticipant(conversationId: number, userId: number, lastReadAt?: Date | null) {
+  const unreadMessages = lastReadAt
+    ? await db
+        .select({ id: messages.id })
+        .from(messages)
+        .where(
+          and(
+            eq(messages.conversationId, conversationId),
+            ne(messages.senderId, userId),
+            gt(messages.createdAt, lastReadAt),
+          ),
+        )
+    : await db
+        .select({ id: messages.id })
+        .from(messages)
+        .where(and(eq(messages.conversationId, conversationId), ne(messages.senderId, userId)));
+
+  return unreadMessages.length;
 }
 
 export const messagesService = {
@@ -48,18 +68,36 @@ export const messagesService = {
       .from(conversationParticipants)
       .where(eq(conversationParticipants.userId, userId));
 
-    for (const row of mine) {
-      const participants = await db
-        .select()
-        .from(conversationParticipants)
-        .where(eq(conversationParticipants.conversationId, row.conversationId));
+    if (mine.length === 0) {
+      return this.createNewConversation(userId, otherUserId);
+    }
 
-      if (participants.length === 2 && participants.some((participant) => participant.userId === otherUserId)) {
-        const [existing] = await db.select().from(conversations).where(eq(conversations.id, row.conversationId));
+    const conversationIds = mine.map(row => row.conversationId);
+    
+    const participants = await db
+      .select()
+      .from(conversationParticipants)
+      .where(inArray(conversationParticipants.conversationId, conversationIds));
+
+    const conversationParticipantsMap = new Map<number, number[]>();
+    participants.forEach(p => {
+      if (!conversationParticipantsMap.has(p.conversationId)) {
+        conversationParticipantsMap.set(p.conversationId, []);
+      }
+      conversationParticipantsMap.get(p.conversationId)!.push(p.userId);
+    });
+
+    for (const [conversationId, participantIds] of conversationParticipantsMap) {
+      if (participantIds.length === 2 && participantIds.includes(otherUserId)) {
+        const [existing] = await db.select().from(conversations).where(eq(conversations.id, conversationId));
         return existing || null;
       }
     }
 
+    return this.createNewConversation(userId, otherUserId);
+  },
+
+  private async createNewConversation(userId: number, otherUserId: number) {
     const [result] = await db.insert(conversations).values({});
     await db.insert(conversationParticipants).values([
       { conversationId: result.insertId, userId, lastReadAt: new Date() },
@@ -67,6 +105,21 @@ export const messagesService = {
     ]);
     const [created] = await db.select().from(conversations).where(eq(conversations.id, result.insertId));
     return created || null;
+  },
+
+  async getUnreadCount(userId: number) {
+    const memberships = await db
+      .select()
+      .from(conversationParticipants)
+      .where(eq(conversationParticipants.userId, userId));
+
+    const unreadCounts = await Promise.all(
+      memberships.map((membership) =>
+        getUnreadMessagesForParticipant(membership.conversationId, userId, membership.lastReadAt),
+      ),
+    );
+
+    return unreadCounts.reduce((total, count) => total + count, 0);
   },
 
   async listForUser(userId: number) {
@@ -108,28 +161,18 @@ export const messagesService = {
           .where(eq(messages.conversationId, membership.conversationId))
           .orderBy(desc(messages.createdAt));
 
-        const unreadMessages = membership.lastReadAt
-          ? await db
-              .select()
-              .from(messages)
-              .where(
-                and(
-                  eq(messages.conversationId, membership.conversationId),
-                  ne(messages.senderId, userId),
-                  gt(messages.createdAt, membership.lastReadAt),
-                ),
-              )
-          : await db
-              .select()
-              .from(messages)
-              .where(and(eq(messages.conversationId, membership.conversationId), ne(messages.senderId, userId)));
+        const unreadCount = await getUnreadMessagesForParticipant(
+          membership.conversationId,
+          userId,
+          membership.lastReadAt,
+        );
 
         return {
           id: membership.conversationId,
           participant: participantUser,
           lastMessage: lastMessage?.body ?? "",
           lastMessageAt: lastMessage?.createdAt ?? membership.createdAt,
-          unreadCount: unreadMessages.length,
+          unreadCount,
         };
       }),
     );
@@ -155,7 +198,8 @@ export const messagesService = {
       })
       .from(messages)
       .leftJoin(users, eq(messages.senderId, users.id))
-      .where(eq(messages.conversationId, conversationId));
+      .where(eq(messages.conversationId, conversationId))
+      .orderBy(asc(messages.createdAt));
 
     await db
       .update(conversationParticipants)

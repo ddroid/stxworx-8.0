@@ -1,30 +1,45 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'motion/react';
 import {
   AlertTriangle,
   Bell,
   Briefcase,
   CheckCircle2,
+  Home,
+  LayoutGrid,
   MessageCircle,
   Moon,
   PenTool,
   Search,
+  Settings,
+  ShieldCheck,
   ShoppingBag,
+  Sparkles,
+  Star,
   Sun,
+  Trophy,
+  User,
+  Users,
   Wallet,
   X,
+  type LucideIcon,
 } from 'lucide-react';
 import * as Shared from '../../shared';
 import {
+  getConversations,
   formatRelativeTime,
   getNotifications,
+  getUnreadMessageCount,
   getUnreadNotificationCount,
   getUserProfile,
   markNotificationRead,
+  toDisplayName,
+  type ApiConversation,
   type ApiNotification,
 } from '../../lib/api';
 import type { ApiUserProfile } from '../../types/user';
+import { platformMenuItems, type PlatformMenuItem } from './navigation';
 
 function getNotificationMeta(type: ApiNotification['type']) {
   switch (type) {
@@ -47,14 +62,60 @@ function getNotificationMeta(type: ApiNotification['type']) {
   }
 }
 
+const menuIconMap: Record<PlatformMenuItem['iconKey'], LucideIcon> = {
+  home: Home,
+  dashboard: LayoutGrid,
+  jobs: Briefcase,
+  freelancers: Users,
+  bounties: Trophy,
+  leaderboard: Star,
+  'ai-proposal': Sparkles,
+  pro: ShieldCheck,
+  messages: MessageCircle,
+  notifications: Bell,
+  profile: User,
+  settings: Settings,
+};
+
+function scoreMenuItem(item: PlatformMenuItem, terms: string[]) {
+  const label = item.label.toLowerCase();
+  const shortLabel = (item.shortLabel || '').toLowerCase();
+  const path = item.path.toLowerCase();
+  const keywords = item.keywords.map((keyword) => keyword.toLowerCase());
+  const compactLabel = label.replace(/\s+/g, '');
+  const joinedTerms = terms.join('');
+  let score = 0;
+
+  for (const term of terms) {
+    if (label === term) score += 120;
+    if (label.startsWith(term)) score += 70;
+    if (label.includes(term)) score += 45;
+    if (shortLabel.startsWith(term)) score += 35;
+    if (path.includes(term)) score += 20;
+    if (keywords.some((keyword) => keyword === term)) score += 30;
+    if (keywords.some((keyword) => keyword.includes(term))) score += 15;
+  }
+
+  if (joinedTerms && compactLabel.startsWith(joinedTerms)) {
+    score += 30;
+  }
+
+  return score;
+}
+
 export const TopHeader = ({ theme, toggleTheme }: { theme: 'dark' | 'light', toggleTheme: () => void }) => {
+  const navigate = useNavigate();
   const { walletAddress, userRole, setUserRole, blockedWallets, connect, disconnect, isSignedIn } = Shared.useWallet();
   const [showWalletModal, setShowWalletModal] = useState(false);
+  const [showLogoutConfirm, setShowLogoutConfirm] = useState(false);
   const [selectedProvider, setSelectedProvider] = useState<string | null>(null);
   const [showMessages, setShowMessages] = useState(false);
   const [showNotifications, setShowNotifications] = useState(false);
+  const [menuQuery, setMenuQuery] = useState('');
+  const [recentMessages, setRecentMessages] = useState<ApiConversation[]>([]);
   const [notifications, setNotifications] = useState<ApiNotification[]>([]);
-  const [unreadCount, setUnreadCount] = useState(0);
+  const [unreadMessageCount, setUnreadMessageCount] = useState(0);
+  const [unreadNotificationCount, setUnreadNotificationCount] = useState(0);
   const [profile, setProfile] = useState<ApiUserProfile | null>(null);
 
   const isBlocked = walletAddress && blockedWallets.includes(walletAddress);
@@ -81,6 +142,7 @@ export const TopHeader = ({ theme, toggleTheme }: { theme: 'dark' | 'light', tog
     setUserRole(role);
     connect(role);
     setShowWalletModal(false);
+    setShowLogoutConfirm(false);
     setSelectedProvider(null);
   };
 
@@ -88,28 +150,61 @@ export const TopHeader = ({ theme, toggleTheme }: { theme: 'dark' | 'light', tog
     disconnect();
     setSelectedProvider(null);
     setShowWalletModal(false);
+    setShowLogoutConfirm(false);
   };
 
-  const loadNotificationSummary = useCallback(async () => {
+  const searchResults = useMemo(() => {
+    const terms = menuQuery.trim().toLowerCase().split(/\s+/).filter(Boolean);
+    if (!terms.length) {
+      return [];
+    }
+
+    return platformMenuItems
+      .map((item) => ({ item, score: scoreMenuItem(item, terms) }))
+      .filter((entry) => entry.score > 0)
+      .sort((left, right) => right.score - left.score || left.item.label.localeCompare(right.item.label))
+      .slice(0, 6)
+      .map((entry) => entry.item);
+  }, [menuQuery]);
+
+  const loadHeaderSummary = useCallback(async () => {
     if (!isSignedIn || !walletAddress) {
+      setRecentMessages([]);
       setNotifications([]);
-      setUnreadCount(0);
+      setUnreadMessageCount(0);
+      setUnreadNotificationCount(0);
       setProfile(null);
       return;
     }
 
     try {
-      const [countResponse, userProfile] = await Promise.all([
+      const [messageCountResponse, notificationCountResponse, userProfile] = await Promise.all([
+        getUnreadMessageCount(),
         getUnreadNotificationCount(),
         getUserProfile(walletAddress).catch(() => null),
       ]);
 
-      setUnreadCount(countResponse.count);
+      setUnreadMessageCount(messageCountResponse.count);
+      setUnreadNotificationCount(notificationCountResponse.count);
       setProfile(userProfile);
     } catch (error) {
-      console.error('Failed to load notification summary:', error);
+      console.error('Failed to load header summary:', error);
     }
   }, [isSignedIn, walletAddress]);
+
+  const loadRecentMessages = useCallback(async () => {
+    if (!isSignedIn) {
+      setRecentMessages([]);
+      return;
+    }
+
+    try {
+      const rows = await getConversations();
+      setRecentMessages(rows.slice(0, 5));
+    } catch (error) {
+      console.error('Failed to load recent messages:', error);
+    }
+  }, [isSignedIn]);
 
   const loadNotifications = useCallback(async () => {
     if (!isSignedIn) {
@@ -120,14 +215,43 @@ export const TopHeader = ({ theme, toggleTheme }: { theme: 'dark' | 'light', tog
     try {
       const rows = await getNotifications();
       setNotifications(rows);
+      setUnreadNotificationCount(rows.filter((notification) => !notification.isRead).length);
     } catch (error) {
       console.error('Failed to load notifications:', error);
     }
   }, [isSignedIn]);
 
   useEffect(() => {
-    loadNotificationSummary();
-  }, [loadNotificationSummary]);
+    loadHeaderSummary();
+  }, [loadHeaderSummary]);
+
+  useEffect(() => {
+    if (!isSignedIn) {
+      setShowMessages(false);
+      setShowNotifications(false);
+      setShowLogoutConfirm(false);
+    }
+  }, [isSignedIn]);
+
+  useEffect(() => {
+    const interval = window.setInterval(() => {
+      loadHeaderSummary();
+      if (showMessages) {
+        loadRecentMessages();
+      }
+      if (showNotifications) {
+        loadNotifications();
+      }
+    }, 20000);
+
+    return () => window.clearInterval(interval);
+  }, [loadHeaderSummary, loadNotifications, loadRecentMessages, showMessages, showNotifications]);
+
+  useEffect(() => {
+    if (showMessages) {
+      loadRecentMessages();
+    }
+  }, [loadRecentMessages, showMessages]);
 
   useEffect(() => {
     if (showNotifications) {
@@ -142,17 +266,40 @@ export const TopHeader = ({ theme, toggleTheme }: { theme: 'dark' | 'light', tog
         setNotifications((current) =>
           current.map((entry) => (entry.id === notification.id ? { ...entry, isRead: true } : entry)),
         );
-        setUnreadCount((current) => Math.max(0, current - 1));
+        setUnreadNotificationCount((current) => Math.max(0, current - 1));
       } catch (error) {
         console.error('Failed to mark notification as read:', error);
       }
     }
   };
 
-  const messages = [
-    { id: 1, sender: 'Alice', text: 'Hey, are you available for a new project?', time: '10m ago', unread: true },
-    { id: 2, sender: 'Bob', text: 'The designs look great, thanks!', time: '2h ago', unread: false },
-  ];
+  const handleMessageClick = (conversation: ApiConversation) => {
+    if (conversation.unreadCount > 0) {
+      setRecentMessages((current) =>
+        current.map((entry) => (entry.id === conversation.id ? { ...entry, unreadCount: 0 } : entry)),
+      );
+      setUnreadMessageCount((current) => Math.max(0, current - conversation.unreadCount));
+    }
+
+    setShowMessages(false);
+    navigate(`/messages?conversation=${conversation.id}`);
+  };
+
+  const handleMenuSelection = (item: PlatformMenuItem) => {
+    setMenuQuery('');
+    navigate(item.path);
+  };
+
+  const handleSearchKeyDown = (event: React.KeyboardEvent<HTMLInputElement>) => {
+    if (event.key === 'Enter' && searchResults[0]) {
+      event.preventDefault();
+      handleMenuSelection(searchResults[0]);
+    }
+
+    if (event.key === 'Escape') {
+      setMenuQuery('');
+    }
+  };
 
   return (
     <>
@@ -164,13 +311,53 @@ export const TopHeader = ({ theme, toggleTheme }: { theme: 'dark' | 'light', tog
         <Link to="/" className="hidden md:flex items-center">
           <Shared.Logo className="text-3xl" />
         </Link>
-        <div className="flex items-center gap-4 bg-surface px-4 py-2 rounded-[15px] border border-border w-40 md:w-64 xl:w-96">
-          <Search size={18} className="text-muted" />
-          <input
-            type="text"
-            placeholder="Search for anything..."
-            className="bg-transparent border-none focus:ring-0 text-sm w-full placeholder:text-muted"
-          />
+        <div className="relative w-40 md:w-64 xl:w-96">
+          <div className="flex items-center gap-4 bg-surface px-4 py-2 rounded-[15px] border border-border">
+            <Search size={18} className="text-muted" />
+            <input
+              type="text"
+              value={menuQuery}
+              onChange={(event) => setMenuQuery(event.target.value)}
+              onKeyDown={handleSearchKeyDown}
+              placeholder="Search platform menus..."
+              className="bg-transparent border-none focus:ring-0 text-sm w-full placeholder:text-muted outline-none"
+            />
+          </div>
+
+          <AnimatePresence>
+            {menuQuery.trim().length > 0 && (
+              <motion.div
+                initial={{ opacity: 0, y: 8, scale: 0.98 }}
+                animate={{ opacity: 1, y: 0, scale: 1 }}
+                exit={{ opacity: 0, y: 8, scale: 0.98 }}
+                className="absolute top-full left-0 right-0 mt-3 bg-surface border border-border rounded-[15px] shadow-2xl overflow-hidden z-50"
+              >
+                {searchResults.length > 0 ? (
+                  searchResults.map((item) => {
+                    const Icon = menuIconMap[item.iconKey];
+
+                    return (
+                      <button
+                        key={item.id}
+                        onClick={() => handleMenuSelection(item)}
+                        className="w-full px-4 py-3 text-left flex items-center gap-3 hover:bg-ink/5 transition-colors border-b border-border/50 last:border-b-0"
+                      >
+                        <div className="w-8 h-8 rounded-[12px] bg-ink/5 border border-border flex items-center justify-center shrink-0">
+                          <Icon size={16} className="text-muted" />
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <p className="text-sm font-bold truncate">{item.label}</p>
+                          <p className="text-[10px] text-muted truncate">{item.path}</p>
+                        </div>
+                      </button>
+                    );
+                  })
+                ) : (
+                  <div className="px-4 py-3 text-[10px] text-muted">No matching menu items.</div>
+                )}
+              </motion.div>
+            )}
+          </AnimatePresence>
         </div>
       </div>
 
@@ -184,7 +371,7 @@ export const TopHeader = ({ theme, toggleTheme }: { theme: 'dark' | 'light', tog
         </button>
 
         <button
-          onClick={() => (isSignedIn ? handleDisconnect() : setShowWalletModal(true))}
+          onClick={() => (isSignedIn ? setShowLogoutConfirm(true) : setShowWalletModal(true))}
           className={`flex items-center gap-2 px-4 py-2 rounded-[15px] text-xs font-bold transition-all ${isSignedIn ? 'bg-accent-cyan/10 text-accent-cyan border border-accent-cyan/20' : 'bg-ink text-bg hover:bg-accent-orange'} ${isBlocked ? 'opacity-70 cursor-not-allowed' : ''}`}
           disabled={isBlocked}
         >
@@ -199,10 +386,14 @@ export const TopHeader = ({ theme, toggleTheme }: { theme: 'dark' | 'light', tog
         <div className="relative">
           <button
             onClick={() => { setShowMessages(!showMessages); setShowNotifications(false); }}
-            className={`relative text-muted hover:text-ink transition-colors p-2 rounded-[15px] hover:bg-ink/5 ${showMessages ? 'text-ink bg-ink/5' : ''}`}
+            className={`relative transition-colors p-2 rounded-[15px] hover:bg-ink/5 ${showMessages ? 'text-ink bg-ink/5' : unreadMessageCount > 0 ? 'text-accent-cyan' : 'text-muted hover:text-ink'}`}
           >
             <MessageCircle size={20} />
-            <span className="absolute top-1 right-1 w-2 h-2 bg-accent-cyan rounded-full"></span>
+            {unreadMessageCount > 0 && (
+              <span className="absolute -top-1 -right-1 min-w-[18px] h-[18px] px-1 bg-accent-cyan text-bg rounded-full text-[9px] font-black flex items-center justify-center">
+                {unreadMessageCount > 9 ? '9+' : unreadMessageCount}
+              </span>
+            )}
           </button>
 
           <AnimatePresence>
@@ -218,20 +409,36 @@ export const TopHeader = ({ theme, toggleTheme }: { theme: 'dark' | 'light', tog
                   <button onClick={() => setShowMessages(false)} className="text-muted hover:text-ink"><X size={16} /></button>
                 </div>
                 <div className="max-h-96 overflow-y-auto no-scrollbar">
-                  {messages.map((message) => (
-                    <div key={message.id} className={`p-4 flex items-start gap-4 hover:bg-ink/5 cursor-pointer transition-colors border-b border-border/50 last:border-0 ${message.unread ? 'bg-ink/5' : ''}`}>
-                      <div className="w-8 h-8 rounded-[10px] bg-ink/10 overflow-hidden shrink-0 flex items-center justify-center font-black">
-                        {message.sender.slice(0, 1)}
-                      </div>
-                      <div className="flex-1">
-                        <div className="flex justify-between items-center mb-1">
-                          <p className={`text-xs ${message.unread ? 'font-black' : 'font-bold'}`}>{message.sender}</p>
-                          <p className="text-[10px] text-muted">{message.time}</p>
+                  {!isSignedIn && (
+                    <div className="p-4 text-[10px] text-muted">Connect your wallet to view messages.</div>
+                  )}
+                  {isSignedIn && recentMessages.map((conversation) => {
+                    const displayName = toDisplayName(conversation.participant || null);
+
+                    return (
+                      <button
+                        key={conversation.id}
+                        onClick={() => handleMessageClick(conversation)}
+                        className={`w-full text-left p-4 flex items-start gap-4 hover:bg-ink/5 cursor-pointer transition-colors border-b border-border/50 last:border-0 ${conversation.unreadCount > 0 ? 'bg-ink/5' : ''}`}
+                      >
+                        <div className="w-8 h-8 rounded-[10px] bg-ink/10 overflow-hidden shrink-0 flex items-center justify-center font-black">
+                          {displayName.slice(0, 1).toUpperCase()}
                         </div>
-                        <p className={`text-[10px] truncate max-w-[200px] ${message.unread ? 'text-ink font-bold' : 'text-muted'}`}>{message.text}</p>
-                      </div>
-                    </div>
-                  ))}
+                        <div className="flex-1 min-w-0">
+                          <div className="flex justify-between items-center mb-1 gap-3">
+                            <p className={`text-xs truncate ${conversation.unreadCount > 0 ? 'font-black' : 'font-bold'}`}>{displayName}</p>
+                            <p className="text-[10px] text-muted shrink-0">{formatRelativeTime(conversation.lastMessageAt)}</p>
+                          </div>
+                          <p className={`text-[10px] truncate ${conversation.unreadCount > 0 ? 'text-ink font-bold' : 'text-muted'}`}>
+                            {conversation.lastMessage || 'No messages yet'}
+                          </p>
+                        </div>
+                      </button>
+                    );
+                  })}
+                  {isSignedIn && recentMessages.length === 0 && (
+                    <div className="p-4 text-[10px] text-muted">No conversations yet.</div>
+                  )}
                 </div>
                 <Link
                   to="/messages"
@@ -248,10 +455,14 @@ export const TopHeader = ({ theme, toggleTheme }: { theme: 'dark' | 'light', tog
         <div className="relative">
           <button
             onClick={() => { setShowNotifications(!showNotifications); setShowMessages(false); }}
-            className={`relative text-muted hover:text-ink transition-colors p-2 rounded-[15px] hover:bg-ink/5 ${showNotifications ? 'text-ink bg-ink/5' : ''}`}
+            className={`relative transition-colors p-2 rounded-[15px] hover:bg-ink/5 ${showNotifications ? 'text-ink bg-ink/5' : unreadNotificationCount > 0 ? 'text-accent-red' : 'text-muted hover:text-ink'}`}
           >
             <Bell size={20} />
-            {unreadCount > 0 && <span className="absolute top-1 right-1 w-2 h-2 bg-accent-red rounded-full"></span>}
+            {unreadNotificationCount > 0 && (
+              <span className="absolute -top-1 -right-1 min-w-[18px] h-[18px] px-1 bg-accent-red text-bg rounded-full text-[9px] font-black flex items-center justify-center">
+                {unreadNotificationCount > 9 ? '9+' : unreadNotificationCount}
+              </span>
+            )}
           </button>
 
           <AnimatePresence>
@@ -280,9 +491,12 @@ export const TopHeader = ({ theme, toggleTheme }: { theme: 'dark' | 'light', tog
                         <div className={`w-8 h-8 rounded-[15px] ${meta.color} flex items-center justify-center text-bg`}>
                           <Icon size={14} className={meta.color === 'bg-ink/20' ? 'text-ink' : ''} />
                         </div>
-                        <div className="flex-1">
-                          <p className="text-xs font-bold mb-1">{notification.title}</p>
-                          <p className="text-[10px] text-muted">{formatRelativeTime(notification.createdAt)}</p>
+                        <div className="flex-1 min-w-0">
+                          <div className="flex items-center justify-between gap-3">
+                            <p className={`text-xs truncate ${notification.isRead ? 'font-bold' : 'font-black'}`}>{notification.title}</p>
+                            <p className="text-[10px] text-muted shrink-0">{formatRelativeTime(notification.createdAt)}</p>
+                          </div>
+                          <p className={`text-[10px] truncate mt-1 ${notification.isRead ? 'text-muted' : 'text-ink font-bold'}`}>{notification.message}</p>
                         </div>
                       </button>
                     );
@@ -400,6 +614,44 @@ export const TopHeader = ({ theme, toggleTheme }: { theme: 'dark' | 'light', tog
                 </button>
               </div>
             )}
+          </motion.div>
+        </div>
+      )}
+    </AnimatePresence>
+
+    <AnimatePresence>
+      {showLogoutConfirm && (
+        <div className="fixed inset-0 bg-bg/80 backdrop-blur-sm z-[100] flex items-center justify-center p-4">
+          <motion.div
+            initial={{ opacity: 0, scale: 0.95 }}
+            animate={{ opacity: 1, scale: 1 }}
+            exit={{ opacity: 0, scale: 0.95 }}
+            className="bg-surface border border-border rounded-[15px] p-8 max-w-sm w-full shadow-2xl relative"
+          >
+            <button
+              onClick={() => setShowLogoutConfirm(false)}
+              className="absolute top-4 right-4 text-muted hover:text-ink"
+            >
+              <X size={20} />
+            </button>
+            <h3 className="text-2xl font-black mb-3 text-center">Logout Wallet?</h3>
+            <p className="text-sm text-muted text-center leading-relaxed">
+              You are about to disconnect {displayWalletAddress}. Your current wallet session will be signed out.
+            </p>
+            <div className="mt-8 grid grid-cols-2 gap-3">
+              <button
+                onClick={() => setShowLogoutConfirm(false)}
+                className="w-full py-3 rounded-[15px] border border-border hover:bg-ink/5 transition-all font-bold text-sm"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={handleDisconnect}
+                className="w-full py-3 rounded-[15px] bg-accent-red text-bg hover:opacity-90 transition-all font-bold text-sm"
+              >
+                Logout
+              </button>
+            </div>
           </motion.div>
         </div>
       )}

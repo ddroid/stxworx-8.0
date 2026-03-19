@@ -659,6 +659,10 @@ export async function getConversations() {
   return apiRequest<ApiConversation[]>('/messages/conversations', { method: 'GET' });
 }
 
+export async function getUnreadMessageCount() {
+  return apiRequest<{ count: number }>('/messages/unread-count', { method: 'GET' });
+}
+
 export async function startConversation(participantId: number, message?: string) {
   return apiRequest<{ id: number }>(`/messages/conversations`, {
     method: 'POST',

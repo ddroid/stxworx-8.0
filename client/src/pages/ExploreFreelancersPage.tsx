@@ -12,12 +12,15 @@ type FreelancerCard = ApiLeaderboardEntry & {
 export const FreelancersPage = () => {
   const [isMessageModalOpen, setIsMessageModalOpen] = useState(false);
   const [selectedRecipient, setSelectedRecipient] = useState('');
+  const [selectedRecipientAddress, setSelectedRecipientAddress] = useState('');
   const [selectedFilter, setSelectedFilter] = useState('All');
   const [searchQuery, setSearchQuery] = useState('');
   const [freelancers, setFreelancers] = useState<FreelancerCard[]>([]);
 
-  const handleOpenMessage = (recipient: string) => {
+  const handleOpenMessage = (recipient: string, recipientAddress: string) => {
+    console.log('Opening message modal for:', recipient, recipientAddress);
     setSelectedRecipient(recipient);
+    setSelectedRecipientAddress(recipientAddress);
     setIsMessageModalOpen(true);
   };
 
@@ -99,7 +102,7 @@ export const FreelancersPage = () => {
         <Shared.MessageModal
           isOpen={isMessageModalOpen}
           onClose={() => setIsMessageModalOpen(false)}
-          recipient={selectedRecipient}
+          recipientAddress={selectedRecipientAddress}
         />
         <div className="mb-12">
           <h1 className="text-8xl font-black tracking-tighter mb-12">Freelancers</h1>
@@ -168,7 +171,7 @@ export const FreelancersPage = () => {
                   </div>
                 </div>
 
-                <button onClick={() => handleOpenMessage(toDisplayName(freelancer))} className="w-full btn-outline py-4 rounded-[15px] text-xs font-bold hover:bg-white hover:text-bg transition-all">
+                <button onClick={() => handleOpenMessage(toDisplayName(freelancer), freelancer.stxAddress)} className="w-full btn-outline py-4 rounded-[15px] text-xs font-bold hover:bg-white hover:text-bg transition-all">
                   Message
                 </button>
               </div>

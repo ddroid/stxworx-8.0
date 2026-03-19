@@ -22,6 +22,16 @@ export const messagesController = {
     }
   },
 
+  async unreadCount(req: Request, res: Response) {
+    try {
+      const count = await messagesService.getUnreadCount(req.user!.id);
+      return res.status(200).json({ count });
+    } catch (error) {
+      console.error("Unread message count error:", error);
+      return res.status(500).json({ message: "Internal server error" });
+    }
+  },
+
   async startConversation(req: Request, res: Response) {
     try {
       const result = startConversationSchema.safeParse(req.body);

@@ -26,7 +26,7 @@ export const ReviewProposalsPage = () => {
   const [proposals, setProposals] = useState<ApiProposal[]>([]);
   const [profilesByAddress, setProfilesByAddress] = useState<Record<string, ApiUserProfile>>({});
   const [reviewsByAddress, setReviewsByAddress] = useState<Record<string, ApiUserReview[]>>({});
-  const [messageRecipient, setMessageRecipient] = useState('');
+  const [messageRecipientAddress, setMessageRecipientAddress] = useState('');
   const [isMessageModalOpen, setIsMessageModalOpen] = useState(false);
   const [escrowTxId, setEscrowTxId] = useState('');
   const [onChainId, setOnChainId] = useState('');
@@ -145,7 +145,7 @@ export const ReviewProposalsPage = () => {
         <Shared.MessageModal
           isOpen={isMessageModalOpen}
           onClose={() => setIsMessageModalOpen(false)}
-          recipient={messageRecipient}
+          recipientAddress={messageRecipientAddress}
         />
         <Link to="/dashboard" className="inline-flex items-center gap-2 text-xs font-bold text-muted hover:text-ink mb-8 transition-colors">
           <ChevronRight size={14} className="rotate-180" /> Back to Dashboard
@@ -248,7 +248,7 @@ export const ReviewProposalsPage = () => {
                     </button>
                     <button
                       onClick={() => {
-                        setMessageRecipient(displayName);
+                        setMessageRecipientAddress(proposal.freelancerAddress || '');
                         setIsMessageModalOpen(true);
                       }}
                       className="flex-1 btn-outline py-3 justify-center"

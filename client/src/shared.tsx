@@ -12,8 +12,9 @@ import {
 } from 'lucide-react';
 import { GoogleGenAI } from '@google/genai';
 import type { UserSession } from '@stacks/connect';
-import { createProject, createProposal, getCategories, submitMilestone } from './lib/api';
+import { createProject, createProposal, getCategories, submitMilestone, startConversation, getConversationMessages, sendConversationMessage, getUserProfile, getCurrentUser, toDisplayName, formatRelativeTime, type ApiConversationMessage } from './lib/api';
 import type { ApiCategory } from './types/job';
+import type { ApiUserProfile } from './types/user';
 
 export interface WalletContextType {
     walletAddress: string | null;
@@ -330,37 +331,101 @@ export const ReviewWorkModal = ({ isOpen, onClose, work }: { isOpen: boolean, on
         </AnimatePresence>
       );
     };
-export const MessageModal = ({ isOpen, onClose, recipient }: { isOpen: boolean, onClose: () => void, recipient: string }) => {
+export const MessageModal = ({ isOpen, onClose, recipientAddress }: { isOpen: boolean, onClose: () => void, recipientAddress: string }) => {
       const [message, setMessage] = useState('');
-      const [isRequestSent, setIsRequestSent] = useState(false);
-      const [chat, setChat] = useState<{type: string, text: string}[]>([]);
+      const [conversationId, setConversationId] = useState<number | null>(null);
+      const [messages, setMessages] = useState<ApiConversationMessage[]>([]);
+      const [currentUserId, setCurrentUserId] = useState<number | null>(null);
+      const [recipientProfile, setRecipientProfile] = useState<ApiUserProfile | null>(null);
+      const [loading, setLoading] = useState(false);
+      const [sending, setSending] = useState(false);
+      const [error, setError] = useState<string | null>(null);
 
       useEffect(() => {
-        if (isOpen) {
-          setIsRequestSent(false);
-          setChat([]);
+        if (isOpen && recipientAddress) {
+          const abortController = new AbortController();
+          const initialize = async () => {
+            setLoading(true);
+            setError(null);
+            try {
+              const [currentUser, recipient] = await Promise.all([
+                getCurrentUser(),
+                getUserProfile(recipientAddress).catch(() => null)
+              ]);
+              
+              if (abortController.signal.aborted) return;
+              
+              if (!currentUser || !currentUser.user) {
+                throw new Error('Failed to get current user');
+              }
+              
+              setCurrentUserId(currentUser.user.id);
+              setRecipientProfile(recipient);
+              
+              if (recipient) {
+                const conversationResponse = await startConversation(recipient.id);
+                
+                if (abortController.signal.aborted) return;
+                
+                setConversationId(conversationResponse.id);
+                
+                const conversationMessages = await getConversationMessages(conversationResponse.id);
+                
+                if (!abortController.signal.aborted) {
+                  setMessages(conversationMessages);
+                }
+              }
+            } catch (error) {
+              if (!abortController.signal.aborted) {
+                console.error('Failed to initialize conversation:', error);
+                setError(error instanceof Error ? error.message : 'Failed to load conversation');
+                setTimeout(() => {
+                  onClose();
+                }, 2000);
+              }
+            } finally {
+              if (!abortController.signal.aborted) {
+                setLoading(false);
+              }
+            }
+          };
+          
+          initialize();
+          
+          return () => {
+            abortController.abort();
+          };
+        }
+      }, [isOpen, recipientAddress, onClose]);
+      
+      useEffect(() => {
+        if (!isOpen) {
+          setConversationId(null);
+          setMessages([]);
+          setCurrentUserId(null);
+          setRecipientProfile(null);
           setMessage('');
+          setError(null);
         }
       }, [isOpen]);
 
-      const handleSendRequest = () => {
-        setIsRequestSent(true);
-        setChat([
-          { type: 'them', text: `Hi, I'm ${recipient}. How can we collaborate?` }
-        ]);
-      };
-
-      const handleSend = (e: React.FormEvent) => {
+      const handleSend = async (e: React.FormEvent) => {
         e.preventDefault();
-        if (!message.trim()) return;
-        setChat(prev => [...prev, { type: 'me', text: message }]);
-        setMessage('');
-        setTimeout(() => {
-          setChat(prev => [...prev, { type: 'them', text: "Thanks for the message! I'll review and get back to you." }]);
-        }, 1000);
+        if (!message.trim() || !conversationId || sending) return;
+        
+        setSending(true);
+        try {
+          const sentMessage = await sendConversationMessage(conversationId, message.trim());
+          setMessages(prev => [...prev, sentMessage]);
+          setMessage('');
+        } catch (error) {
+          console.error('Failed to send message:', error);
+        } finally {
+          setSending(false);
+        }
       };
 
-      if (!isOpen) return null;
+      if (!isOpen || !recipientAddress) return null;
 
       return (
         <AnimatePresence>
@@ -375,46 +440,78 @@ export const MessageModal = ({ isOpen, onClose, recipient }: { isOpen: boolean, 
                 <div className="p-4 border-b border-border flex items-center justify-between bg-ink/5">
                   <div className="flex items-center gap-3">
                     <div className="w-8 h-8 rounded-[10px] bg-accent-orange/20 flex items-center justify-center text-accent-orange font-bold">
-                      {recipient.charAt(0) || 'U'}
+                      {recipientProfile?.username?.charAt(0) || recipientAddress.charAt(0) || 'U'}
                     </div>
                     <div>
-                      <h3 className="font-bold text-sm">{recipient || 'User'}</h3>
-                      <p className="text-[10px] text-muted">Online</p>
+                      <h3 className="font-bold text-sm">{toDisplayName(recipientProfile) || 'User'}</h3>
+                      <p className="text-[10px] text-muted">{recipientProfile?.role || 'User'}</p>
                     </div>
                   </div>
                   <button onClick={onClose} className="text-muted hover:text-ink"><X size={20} /></button>
                 </div>
                 
-                <div className="flex-1 p-4 overflow-y-auto no-scrollbar space-y-4">
-                  {!isRequestSent ? (
-                    <div className="h-full flex flex-col items-center justify-center text-center text-muted">
+                <div className="flex-1 p-4 overflow-y-auto no-scrollbar">
+                  {loading ? (
+                    <div className="h-full flex items-center justify-center text-muted">
+                      <div className="text-sm">Loading conversation...</div>
+                    </div>
+                  ) : error ? (
+                    <div className="h-full flex items-center justify-center text-center text-muted">
+                      <AlertTriangle size={48} className="mb-4 opacity-20" />
+                      <h3 className="text-xl font-black mb-2">Error</h3>
+                      <p className="text-sm mb-4">{error}</p>
+                      <button onClick={onClose} className="btn-primary py-2 px-4 text-sm">Close</button>
+                    </div>
+                  ) : !recipientProfile ? (
+                    <div className="h-full flex items-center justify-center text-center text-muted">
                       <MessageCircle size={48} className="mb-4 opacity-20" />
-                      <h3 className="text-xl font-black mb-2">Start a Conversation</h3>
-                      <p className="text-sm mb-6">Send a request to {recipient} to initiate a chat.</p>
-                      <button onClick={handleSendRequest} className="btn-primary py-3 px-6 text-sm">Send Request</button>
+                      <h3 className="text-xl font-black mb-2">User Not Found</h3>
+                      <p className="text-sm">Unable to find this user's profile.</p>
                     </div>
                   ) : (
-                    chat.map((m, i) => (
-                      <div key={i} className={`flex ${m.type === 'me' ? 'justify-end' : 'justify-start'}`}>
-                        <div className={`max-w-[80%] p-3 rounded-[15px] text-xs font-medium ${m.type === 'me' ? 'bg-ink text-bg rounded-tr-none' : 'bg-ink/5 text-ink rounded-tl-none border border-border'}`}>
-                          {m.text}
+                    <div className="space-y-4">
+                      {messages.length === 0 && (
+                        <div className="text-center text-[10px] text-muted font-bold uppercase tracking-widest my-4">
+                          No messages yet. Start the conversation below.
                         </div>
-                      </div>
-                    ))
+                      )}
+                      {messages.map((msg) => {
+                        const isMine = msg.senderId === currentUserId;
+                        return (
+                          <div key={msg.id} className={`flex ${isMine ? 'justify-end' : 'justify-start'}`}>
+                            <div className={`max-w-[80%] p-3 rounded-[15px] text-xs font-medium ${isMine ? 'bg-ink text-bg rounded-tr-none' : 'bg-ink/5 text-ink rounded-tl-none border border-border'}`}>
+                              <p>{msg.body}</p>
+                              <p className={`text-[9px] mt-1 ${isMine ? 'text-bg/70' : 'text-muted'}`}>
+                                {formatRelativeTime(msg.createdAt)}
+                              </p>
+                            </div>
+                          </div>
+                        );
+                      })}
+                    </div>
                   )}
                 </div>
 
-                {isRequestSent && (
+                {conversationId && (
                   <form onSubmit={handleSend} className="p-4 border-t border-border flex gap-2">
                     <input 
                       type="text" 
                       value={message}
                       onChange={(e) => setMessage(e.target.value)}
                       placeholder="Type a message..."
-                      className="flex-1 bg-ink/5 border border-border rounded-[15px] px-4 py-2 text-xs focus:ring-1 focus:ring-accent-orange outline-none"
+                      disabled={sending}
+                      className="flex-1 bg-ink/5 border border-border rounded-[15px] px-4 py-2 text-xs focus:ring-1 focus:ring-accent-orange outline-none disabled:opacity-50"
                     />
-                    <button type="submit" className="w-10 h-10 bg-ink text-bg rounded-[15px] flex items-center justify-center hover:scale-105 transition-transform">
-                      <Send size={16} />
+                    <button 
+                      type="submit" 
+                      disabled={sending || !message.trim()}
+                      className="w-10 h-10 bg-ink text-bg rounded-[15px] flex items-center justify-center hover:scale-105 transition-transform disabled:opacity-50"
+                    >
+                      {sending ? (
+                        <div className="w-4 h-4 border-2 border-bg/30 border-t-bg rounded-full animate-spin" />
+                      ) : (
+                        <Send size={16} />
+                      )}
                     </button>
                   </form>
                 )}

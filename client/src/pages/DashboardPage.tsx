@@ -55,7 +55,7 @@ export const DashboardPage = () => {
   const [isSubmitModalOpen, setIsSubmitModalOpen] = useState(false);
   const [selectedMilestone, setSelectedMilestone] = useState<MilestoneView | null>(null);
   const [isMessageModalOpen, setIsMessageModalOpen] = useState(false);
-  const [selectedRecipient, setSelectedRecipient] = useState('');
+  const [selectedRecipientAddress, setSelectedRecipientAddress] = useState('');
   const [isPostJobModalOpen, setIsPostJobModalOpen] = useState(false);
   const [postedProjects, setPostedProjects] = useState<ApiProject[]>([]);
   const [activeProjects, setActiveProjects] = useState<ApiProject[]>([]);
@@ -71,8 +71,8 @@ export const DashboardPage = () => {
     setIsSubmitModalOpen(true);
   };
 
-  const handleOpenMessage = (recipient: string) => {
-    setSelectedRecipient(recipient);
+  const handleOpenMessage = (recipientAddress: string) => {
+    setSelectedRecipientAddress(recipientAddress);
     setIsMessageModalOpen(true);
   };
 
@@ -172,7 +172,7 @@ export const DashboardPage = () => {
         <Shared.MessageModal
           isOpen={isMessageModalOpen}
           onClose={() => setIsMessageModalOpen(false)}
-          recipient={selectedRecipient}
+          recipientAddress={selectedRecipientAddress}
         />
         <Shared.PostJobModal
           isOpen={isPostJobModalOpen}

@@ -405,41 +405,297 @@ const displayAmount = microUnits / getTokenDecimals(tokenType);
 ## 🏗️ Project Structure
 
 ```
-stx-freelance-platform/
-├── client/                    # Frontend React application
-│   ├── src/
-│   │   ├── components/        # Reusable UI components
-│   │   ├── pages/             # Page components
-│   │   ├── lib/               # Utilities and helpers
-│   │   │   ├── stacks.ts      # Blockchain interaction
-│   │   │   ├── prices.ts      # Token price fetching
-│   │   │   └── utils.ts       # Helper functions
-│   │   └── hooks/             # Custom React hooks
-│   └── index.html             # Entry HTML file
-├── server/                    # Backend Express server
-│   ├── index.ts               # Server entry point
-│   ├── routes.ts              # API route handlers
-│   ├── db.ts                  # Database connection
-│   └── storage.ts             # Session storage
-├── contracts/                 # Clarity smart contracts
-│   └── escrow-multi-token.clar # Main escrow contract
-├── shared/                    # Shared TypeScript types
-│   └── schema.ts              # Database schema & types
-├── deployments/               # Contract deployment configs
-│   ├── default.testnet-plan.yaml
-│   └── default.devnet-plan.yaml
-├── settings/                  # Clarinet settings
-│   ├── Testnet.toml
-│   └── Devnet.toml
-├── tests/                     # Contract tests
-│   └── escrow-v4_test.ts
-├── Clarinet.toml              # Clarinet configuration
-├── package.json               # Node dependencies
-├── tsconfig.json              # TypeScript config
-├── vite.config.ts             # Vite bundler config
-├── tailwind.config.ts         # Tailwind CSS config
-├── drizzle.config.ts          # Database ORM config
-└── .env                       # Environment variables (gitignored)
+stxworx-8.0/
+├── backend
+│   ├── check-db.ts
+│   ├── controllers
+│   │   ├── admin.controller.ts
+│   │   ├── auth.controller.ts
+│   │   ├── bounty.controller.ts
+│   │   ├── category.controller.ts
+│   │   ├── connections.controller.ts
+│   │   ├── dispute.controller.ts
+│   │   ├── messages.controller.ts
+│   │   ├── milestone.controller.ts
+│   │   ├── nft.controller.ts
+│   │   ├── notification.controller.ts
+│   │   ├── project.controller.ts
+│   │   ├── proposal.controller.ts
+│   │   ├── review.controller.ts
+│   │   ├── settings.controller.ts
+│   │   ├── social.controller.ts
+│   │   └── user.controller.ts
+│   ├── db.ts
+│   ├── drizzle.config.ts
+│   ├── index.ts
+│   ├── middleware
+│   │   ├── admin-auth.ts
+│   │   ├── auth.ts
+│   │   └── x402.ts
+│   ├── routes
+│   │   ├── admin.routes.ts
+│   │   ├── auth.routes.ts
+│   │   ├── bounty.routes.ts
+│   │   ├── category.routes.ts
+│   │   ├── connections.routes.ts
+│   │   ├── dispute.routes.ts
+│   │   ├── messages.routes.ts
+│   │   ├── milestone.routes.ts
+│   │   ├── nft.routes.ts
+│   │   ├── notification.routes.ts
+│   │   ├── project.routes.ts
+│   │   ├── proposal.routes.ts
+│   │   ├── review.routes.ts
+│   │   ├── settings.routes.ts
+│   │   ├── social.routes.ts
+│   │   └── user.routes.ts
+│   ├── seed.ts
+│   ├── services
+│   │   ├── admin-auth.service.ts
+│   │   ├── admin.service.ts
+│   │   ├── auth.service.ts
+│   │   ├── bounty.service.ts
+│   │   ├── connections.service.ts
+│   │   ├── messages.service.ts
+│   │   ├── nft.service.ts
+│   │   ├── notification.service.ts
+│   │   ├── platform-settings.service.ts
+│   │   ├── project.service.ts
+│   │   ├── proposal.service.ts
+│   │   ├── settings.service.ts
+│   │   └── social.service.ts
+│   └── vite.ts
+├── Clarinet.toml
+├── client
+│   ├── components.json
+│   ├── fonts.zip
+│   ├── index.html
+│   ├── metadata.json
+│   ├── package.json
+│   ├── package-lock.json
+│   ├── public
+│   │   ├── 7.png
+│   │   ├── Bronze NFT.png
+│   │   ├── favicon.png
+│   │   ├── fonts/
+│   │   ├── Gold NFT.png
+│   │   ├── Logo.png
+│   │   ├── Platinum NFT.png
+│   │   ├── Silver NFT.png
+│   │   └── Verify NFT.png
+│   ├── README.md
+│   ├── refactor2.ts
+│   ├── refactor3.ts
+│   ├── refactor.ts
+│   ├── src
+│   │   ├── App.tsx
+│   │   ├── components
+│   │   │   ├── admin
+│   │   │   │   ├── AdminApprovals.tsx
+│   │   │   │   ├── AdminChats.tsx
+│   │   │   │   ├── AdminJobsQueue.tsx
+│   │   │   │   ├── AdminNFTRelease.tsx
+│   │   │   │   ├── AdminOverview.tsx
+│   │   │   │   ├── AdminSupport.tsx
+│   │   │   │   └── AdminUsers.tsx
+│   │   │   ├── bounty
+│   │   │   │   ├── BountyCard.tsx
+│   │   │   │   ├── BountyFilters.tsx
+│   │   │   │   ├── BountyTypeSelector.tsx
+│   │   │   │   ├── PayoutPanel.tsx
+│   │   │   │   └── SubmissionList.tsx
+│   │   │   ├── contract
+│   │   │   │   ├── ApproveReleaseButton.tsx
+│   │   │   │   ├── DisputeButton.tsx
+│   │   │   │   ├── EscrowFundButton.tsx
+│   │   │   │   ├── MilestoneCard.tsx
+│   │   │   │   ├── MilestoneTracker.tsx
+│   │   │   │   ├── SubmitWorkForm.tsx
+│   │   │   │   └── TransactionHistory.tsx
+│   │   │   ├── dashboard
+│   │   │   │   ├── ActiveContractCard.tsx
+│   │   │   │   ├── EarningsChart.tsx
+│   │   │   │   ├── EscrowOverview.tsx
+│   │   │   │   ├── NotificationFeed.tsx
+│   │   │   │   └── StatsRow.tsx
+│   │   │   ├── dispute
+│   │   │   │   ├── AdminResolutionPanel.tsx
+│   │   │   │   ├── DisputeTimeline.tsx
+│   │   │   │   └── EvidenceUploader.tsx
+│   │   │   ├── escrow
+│   │   │   │   ├── EscrowCard.tsx
+│   │   │   │   ├── MilestoneTracker.tsx
+│   │   │   │   └── TokenSelector.tsx
+│   │   │   ├── freelancers
+│   │   │   │   ├── FreelancerCard.tsx
+│   │   │   │   └── FreelancerFilters.tsx
+│   │   │   ├── jobs
+│   │   │   │   ├── DeadlineCountdown.tsx
+│   │   │   │   ├── JobCard.tsx
+│   │   │   │   ├── JobFilters.tsx
+│   │   │   │   ├── JobSort.tsx
+│   │   │   │   └── MilestoneBuilder.tsx
+│   │   │   ├── layout
+│   │   │   │   ├── Footer.tsx
+│   │   │   │   ├── Navbar.tsx
+│   │   │   │   ├── PageWrapper.tsx
+│   │   │   │   └── Sidebar.tsx
+│   │   │   ├── leaderboard
+│   │   │   │   ├── LeaderboardTable.tsx
+│   │   │   │   ├── PodiumDisplay.tsx
+│   │   │   │   └── RankHistoryChart.tsx
+│   │   │   ├── nft
+│   │   │   │   ├── BadgeCard.tsx
+│   │   │   │   ├── NFTBadge.tsx
+│   │   │   │   ├── NFTTooltip.tsx
+│   │   │   │   └── VerifiedBadge.tsx
+│   │   │   ├── profile
+│   │   │   │   ├── CompletedJobsList.tsx
+│   │   │   │   ├── NFTBadgeCollection.tsx
+│   │   │   │   ├── ProfileHeader.tsx
+│   │   │   │   ├── ReputationWidget.tsx
+│   │   │   │   └── ReviewsList.tsx
+│   │   │   ├── proposals
+│   │   │   │   ├── AIProposalGenerator.tsx
+│   │   │   │   ├── ProposalCard.tsx
+│   │   │   │   ├── ProposalList.tsx
+│   │   │   │   └── ProposalStatusBadge.tsx
+│   │   │   ├── ui
+│   │   │   │   ├── badge.tsx
+│   │   │   │   ├── Badge.tsx
+│   │   │   │   ├── button.tsx
+│   │   │   │   ├── Button.tsx
+│   │   │   │   ├── card.tsx
+│   │   │   │   ├── dialog.tsx
+│   │   │   │   ├── input.tsx
+│   │   │   │   ├── Input.tsx
+│   │   │   │   ├── Modal.tsx
+│   │   │   │   ├── ProgressBar.tsx
+│   │   │   │   ├── Select.tsx
+│   │   │   │   ├── Spinner.tsx
+│   │   │   │   ├── Tabs.tsx
+│   │   │   │   ├── Textarea.tsx
+│   │   │   │   ├── toast.tsx
+│   │   │   │   ├── Toast.tsx
+│   │   │   │   └── Tooltip.tsx
+│   │   │   └── wallet
+│   │   │       ├── ConnectWallet.tsx
+│   │   │       ├── WalletBalanceDisplay.tsx
+│   │   │       ├── WalletConnectButton.tsx
+│   │   │       ├── WalletGuard.tsx
+│   │   │       ├── WalletInfo.tsx
+│   │   │       └── WalletProvider.tsx
+│   │   ├── hooks
+│   │   │   ├── useDispute.ts
+│   │   │   ├── useEscrow.ts
+│   │   │   ├── useLeaderboard.ts
+│   │   │   ├── useMilestone.ts
+│   │   │   ├── useProjects.ts
+│   │   │   ├── useRole.ts
+│   │   │   └── useWallet.ts
+│   │   ├── index.css
+│   │   ├── index.tsx
+│   │   ├── lib
+│   │   │   ├── api.ts
+│   │   │   ├── constants.ts
+│   │   │   ├── contracts.ts
+│   │   │   ├── stacks.ts
+│   │   │   └── utils.ts
+│   │   ├── pages
+│   │   │   ├── admin
+│   │   │   │   ├── AdminDashboard.tsx
+│   │   │   │   ├── DisputeManager.tsx
+│   │   │   │   └── UserManager.tsx
+│   │   │   ├── AdminPage.tsx
+│   │   │   ├── BountyBoardPage.tsx
+│   │   │   ├── BountyDetailsPage.tsx
+│   │   │   ├── client
+│   │   │   │   ├── ClientDashboard.tsx
+│   │   │   │   ├── CreateProject.tsx
+│   │   │   │   ├── FundProject.tsx
+│   │   │   │   ├── MilestoneApproval.tsx
+│   │   │   │   └── ProjectDetail.tsx
+│   │   │   ├── ContractPage.tsx
+│   │   │   ├── DAOPage.tsx
+│   │   │   ├── DashboardPage.tsx
+│   │   │   ├── DisputePage.tsx
+│   │   │   ├── ExploreFreelancersPage.tsx
+│   │   │   ├── ExploreJobsPage.tsx
+│   │   │   ├── freelancer
+│   │   │   │   ├── ActiveProjects.tsx
+│   │   │   │   ├── Earnings.tsx
+│   │   │   │   ├── FreelancerDashboard.tsx
+│   │   │   │   ├── MilestoneSubmit.tsx
+│   │   │   │   └── ProjectWork.tsx
+│   │   │   ├── HomePage.tsx
+│   │   │   ├── Home.tsx
+│   │   │   ├── JobDetailsPage.tsx
+│   │   │   ├── leaderboard
+│   │   │   │   └── Leaderboard.tsx
+│   │   │   ├── LeaderboardPage.tsx
+│   │   │   ├── Login.tsx
+│   │   │   ├── ManageBountiesPage.tsx
+│   │   │   ├── MessagesPage.tsx
+│   │   │   ├── MySubmissionsPage.tsx
+│   │   │   ├── nft
+│   │   │   │   └── BadgeGallery.tsx
+│   │   │   ├── NotificationsPage.tsx
+│   │   │   ├── PostBountyPage.tsx
+│   │   │   ├── PostJobPage.tsx
+│   │   │   ├── ProfilePage.tsx
+│   │   │   ├── ProPlanPage.tsx
+│   │   │   ├── ProposalSubmitPage.tsx
+│   │   │   ├── ReviewProposalsPage.tsx
+│   │   │   ├── ReviewWorkPage.tsx
+│   │   │   └── SettingsPage.tsx
+│   │   ├── shared.tsx
+│   │   ├── stores
+│   │   │   ├── authStore.ts
+│   │   │   ├── notificationStore.ts
+│   │   │   ├── projectStore.ts
+│   │   │   ├── useAppStore.ts
+│   │   │   ├── useContractStore.ts
+│   │   │   ├── useJobStore.ts
+│   │   │   ├── useLeaderboardStore.ts
+│   │   │   └── useNotificationStore.ts
+│   │   └── types
+│   │       ├── bounty.ts
+│   │       ├── contract.ts
+│   │       ├── job.ts
+│   │       ├── leaderboard.ts
+│   │       ├── nft.ts
+│   │       └── user.ts
+│   ├── tailwind.config.ts
+│   ├── tsconfig.json
+│   └── vite.config.ts
+├── contracts
+│   ├── escrow-multi-token.clar
+│   ├── escrow-multi-token.tests.clar
+│   ├── escrow-multi-token-v7.clar
+│   ├── rep-sft.clar
+│   ├── stxworks-escrow-v8.clar
+│   ├── stxworx-badge.clar
+│   └── verify-soulbound.clar
+├── deployments
+│   ├── default.devnet-plan.yaml
+│   ├── default.simnet-plan.yaml
+│   └── default.testnet-plan.yaml
+├── dist
+│   ├── backend
+│   └── public
+│       ├── assets
+│       └── fonts
+├── docker-compose.yml
+├── package.json
+├── package-lock.json
+├── README.md
+├── settings
+│   ├── Devnet.toml
+│   ├── Mainnet.toml
+│   └── Testnet.toml
+├── shared
+│   └── schema.ts
+└── tsconfig.json
 ```
 
 ---

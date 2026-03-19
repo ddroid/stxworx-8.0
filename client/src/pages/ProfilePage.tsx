@@ -42,6 +42,7 @@ export const ProfilePage = ({ userRole }: { userRole: 'client' | 'freelancer' | 
   const [activeTab, setActiveTab] = useState('Profile');
   const [isEditing, setIsEditing] = useState(false);
   const [isMessageModalOpen, setIsMessageModalOpen] = useState(false);
+  const [recipientAddress, setRecipientAddress] = useState('');
   const [isLoading, setIsLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
   const [profile, setProfile] = useState<ApiUserProfile | null>(null);
@@ -320,8 +321,8 @@ export const ProfilePage = ({ userRole }: { userRole: 'client' | 'freelancer' | 
         <Shared.MessageModal 
           isOpen={isMessageModalOpen} 
           onClose={() => setIsMessageModalOpen(false)} 
-          recipient={displayName} 
-        />
+          recipientAddress={recipientAddress}
+        />  
         
         {/* Image Editor Modal */}
         <AnimatePresence>
@@ -996,12 +997,12 @@ export const ProfilePage = ({ userRole }: { userRole: 'client' | 'freelancer' | 
               </div>
               {!isEditing && (
                 isClient ? (
-                  <button onClick={() => setIsMessageModalOpen(true)} className="w-full bg-bg text-white py-4 rounded-[15px] font-bold hover:bg-white hover:text-bg transition-all flex items-center justify-center">
-                    Message
+                  <button className="w-full bg-bg text-white py-4 rounded-[15px] font-bold hover:bg-white hover:text-bg transition-all flex items-center justify-center">
+                    Share Profile
                   </button>
                 ) : (
-                  <button onClick={() => setIsMessageModalOpen(true)} className="w-full bg-bg text-white py-4 rounded-[15px] font-bold hover:bg-white hover:text-bg transition-all">
-                    Hire Me
+                  <button className="w-full bg-bg text-white py-4 rounded-[15px] font-bold hover:bg-white hover:text-bg transition-all">
+                    Edit Profile
                   </button>
                 )
               )}

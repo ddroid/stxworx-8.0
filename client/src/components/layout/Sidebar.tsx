@@ -12,22 +12,30 @@ import {
 } from 'lucide-react';
 import { GoogleGenAI } from '@google/genai';
 import * as Shared from '../../shared';
+import { platformMenuItems } from './navigation';
+
+const sidebarIconMap = {
+  home: Home,
+  dashboard: LayoutGrid,
+  jobs: Briefcase,
+  freelancers: Users,
+  bounties: Trophy,
+  leaderboard: Star,
+  'ai-proposal': Sparkles,
+  pro: ShieldCheck,
+  settings: Settings,
+} as const;
 
 export const Sidebar = () => {
   const location = useLocation();
   const [isExpanded, setIsExpanded] = useState(false);
 
-  const menuItems = [
-    { icon: Home, path: '/', label: 'Home' },
-    { icon: LayoutGrid, path: '/dashboard', label: 'Dashboard' },
-    { icon: Briefcase, path: '/jobs', label: 'Explore Jobs' },
-    { icon: Users, path: '/freelancers', label: 'Freelancers' },
-    { icon: Trophy, path: '/bounties', label: 'Bounty Board' },
-    { icon: Star, path: '/leaderboard', label: 'Leaderboard' },
-    { icon: Sparkles, path: '/ai-proposal', label: 'AI Proposal Writer' },
-    { icon: ShieldCheck, path: '/pro', label: 'Pro Plan' },
-    { icon: Settings, path: '/settings', label: 'Settings' },
-  ];
+  const menuItems = platformMenuItems
+    .filter((item) => ['home', 'dashboard', 'jobs', 'freelancers', 'bounties', 'leaderboard', 'ai-proposal', 'pro', 'settings'].includes(item.id))
+    .map((item) => ({
+      ...item,
+      icon: sidebarIconMap[item.iconKey as keyof typeof sidebarIconMap],
+    }));
 
   return (
     <aside className="fixed inset-0 pointer-events-none z-50">
@@ -49,6 +57,7 @@ export const Sidebar = () => {
             <nav className="flex-1 py-4 flex flex-col gap-1 overflow-y-auto overflow-x-hidden no-scrollbar">
               {menuItems.map((item) => {
                 const isActive = location.pathname === item.path;
+                const Icon = item.icon;
                 return (
                   <Link 
                     key={item.label} 
@@ -59,7 +68,7 @@ export const Sidebar = () => {
                         : 'text-white hover:bg-[#1f2636]'
                     }`}
                   >
-                    <item.icon size={18} strokeWidth={isActive ? 2.5 : 2} className={`shrink-0 ${!isActive ? 'text-gray-400 group-hover:text-white' : ''}`} />
+                    <Icon size={18} strokeWidth={isActive ? 2.5 : 2} className={`shrink-0 ${!isActive ? 'text-gray-400 group-hover:text-white' : ''}`} />
                     <span 
                       className={`ml-3 font-semibold text-xs whitespace-nowrap transition-all duration-300 ${
                         isExpanded ? 'opacity-100 translate-x-0' : 'opacity-0 -translate-x-4 absolute left-10 pointer-events-none'
@@ -90,6 +99,7 @@ export const Sidebar = () => {
       <div className="fixed bottom-0 left-0 right-0 h-14 bg-[#11151c] border-t border-[#1f2937] md:hidden flex items-center justify-around px-2 z-50 pointer-events-auto">
         {menuItems.slice(0, 5).map((item) => {
           const isActive = location.pathname === item.path;
+          const Icon = item.icon;
           return (
             <Link 
               key={item.label} 
@@ -98,8 +108,8 @@ export const Sidebar = () => {
                 isActive ? 'text-[#70b896]' : 'text-gray-400 hover:text-white'
               }`}
             >
-              <item.icon size={18} strokeWidth={isActive ? 2.5 : 2} />
-              <span className="text-[8px] font-bold mt-1">{item.label.split(' ')[0]}</span>
+              <Icon size={18} strokeWidth={isActive ? 2.5 : 2} />
+              <span className="text-[8px] font-bold mt-1">{item.shortLabel || item.label.split(' ')[0]}</span>
             </Link>
           );
         })}

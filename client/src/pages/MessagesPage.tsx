@@ -1,5 +1,5 @@
-import React, { useEffect, useMemo, useState } from 'react';
-import { Link } from 'react-router-dom';
+import React, { useCallback, useEffect, useMemo, useState } from 'react';
+import { Link, useSearchParams } from 'react-router-dom';
 import { ChevronLeft, MessageCircle, MoreHorizontal, Plus, Search, Send } from 'lucide-react';
 import {
   formatAddress,
@@ -14,6 +14,7 @@ import {
 } from '../lib/api';
 
 export const MessagesPage = () => {
+  const [searchParams, setSearchParams] = useSearchParams();
   const [selectedChat, setSelectedChat] = useState<number | null>(null);
   const [message, setMessage] = useState('');
   const [searchQuery, setSearchQuery] = useState('');
@@ -23,27 +24,69 @@ export const MessagesPage = () => {
   const [loading, setLoading] = useState(true);
   const [sending, setSending] = useState(false);
 
-  useEffect(() => {
-    const load = async () => {
-      setLoading(true);
-      try {
-        const [me, conversationList] = await Promise.all([
-          getCurrentUser(),
-          getConversations(),
-        ]);
+  const requestedConversationId = useMemo(() => {
+    const rawValue = searchParams.get('conversation');
+    if (!rawValue) {
+      return null;
+    }
 
-        setCurrentUserId(me.user.id);
-        setConversations(conversationList);
-        setSelectedChat((current) => current || conversationList[0]?.id || null);
-      } catch (error) {
-        console.error('Failed to load conversations:', error);
-      } finally {
-        setLoading(false);
-      }
-    };
+    const parsed = Number(rawValue);
+    return Number.isInteger(parsed) && parsed > 0 ? parsed : null;
+  }, [searchParams]);
 
-    load();
+  const loadConversations = useCallback(async () => {
+    setLoading(true);
+    try {
+      const [me, conversationList] = await Promise.all([
+        getCurrentUser(),
+        getConversations(),
+      ]);
+
+      setCurrentUserId(me.user.id);
+      setConversations(conversationList);
+      setSelectedChat((current) => {
+        if (requestedConversationId && conversationList.some((conversation) => conversation.id === requestedConversationId)) {
+          return requestedConversationId;
+        }
+
+        if (current && conversationList.some((conversation) => conversation.id === current)) {
+          return current;
+        }
+
+        return conversationList[0]?.id || null;
+      });
+    } catch (error) {
+      console.error('Failed to load conversations:', error);
+    } finally {
+      setLoading(false);
+    }
+  }, [requestedConversationId]);
+
+  const loadMessages = useCallback(async (conversationId: number) => {
+    try {
+      const response = await getConversationMessages(conversationId);
+      setMessages(response);
+      setConversations((current) =>
+        current.map((conversation) =>
+          conversation.id === conversationId
+            ? { ...conversation, unreadCount: 0 }
+            : conversation,
+        ),
+      );
+    } catch (error) {
+      console.error('Failed to load conversation messages:', error);
+    }
   }, []);
+
+  useEffect(() => {
+    loadConversations();
+  }, [loadConversations]);
+
+  useEffect(() => {
+    if (requestedConversationId && requestedConversationId !== selectedChat) {
+      setSelectedChat(requestedConversationId);
+    }
+  }, [requestedConversationId, selectedChat]);
 
   useEffect(() => {
     if (!selectedChat) {
@@ -51,24 +94,25 @@ export const MessagesPage = () => {
       return;
     }
 
-    const loadMessages = async () => {
-      try {
-        const response = await getConversationMessages(selectedChat);
-        setMessages(response);
-        setConversations((current) =>
-          current.map((conversation) =>
-            conversation.id === selectedChat
-              ? { ...conversation, unreadCount: 0 }
-              : conversation,
-          ),
-        );
-      } catch (error) {
-        console.error('Failed to load conversation messages:', error);
-      }
-    };
+    if (searchParams.get('conversation') !== String(selectedChat)) {
+      setSearchParams({ conversation: String(selectedChat) }, { replace: true });
+    }
 
-    loadMessages();
-  }, [selectedChat]);
+    loadMessages(selectedChat);
+  }, [loadMessages, searchParams, selectedChat, setSearchParams]);
+
+  useEffect(() => {
+    const interval = window.setInterval(() => {
+      if (document.visibilityState === 'visible') {
+        loadConversations();
+        if (selectedChat) {
+          loadMessages(selectedChat);
+        }
+      }
+    }, 15000);
+
+    return () => window.clearInterval(interval);
+  }, [loadConversations, loadMessages, selectedChat]);
 
   const visibleConversations = useMemo(() => {
     const query = searchQuery.trim().toLowerCase();
@@ -92,6 +136,16 @@ export const MessagesPage = () => {
   }, [conversations, searchQuery]);
 
   const currentChat = conversations.find((chat) => chat.id === selectedChat) || null;
+
+  const handleSelectChat = (chatId: number) => {
+    setSelectedChat(chatId);
+    setSearchParams({ conversation: String(chatId) }, { replace: true });
+  };
+
+  const handleBackToList = () => {
+    setSelectedChat(null);
+    setSearchParams({}, { replace: true });
+  };
 
   const handleSend = async () => {
     if (!selectedChat || !message.trim()) {
@@ -150,7 +204,7 @@ export const MessagesPage = () => {
                   return (
                     <div
                       key={chat.id}
-                      onClick={() => setSelectedChat(chat.id)}
+                      onClick={() => handleSelectChat(chat.id)}
                       className={`p-4 border-b border-border/50 cursor-pointer transition-colors flex items-start gap-4 ${selectedChat === chat.id ? 'bg-ink/5' : 'hover:bg-ink/5'}`}
                     >
                       <div className="relative">
@@ -184,7 +238,7 @@ export const MessagesPage = () => {
               <>
                 <div className="p-6 border-b border-border flex items-center justify-between bg-ink/5">
                   <div className="flex items-center gap-4">
-                    <button className="md:hidden text-muted hover:text-ink" onClick={() => setSelectedChat(null)}>
+                    <button className="md:hidden text-muted hover:text-ink" onClick={handleBackToList}>
                       <ChevronLeft size={24} />
                     </button>
                     <div className="w-10 h-10 rounded-[10px] bg-accent-orange/15 text-accent-orange flex items-center justify-center font-black">
