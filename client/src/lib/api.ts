@@ -183,6 +183,17 @@ export interface ApiSettings {
   updatedAt?: string;
 }
 
+export interface ApiSocialComment {
+  id: number;
+  postId: number;
+  userId: number;
+  content: string;
+  authorStxAddress?: string | null;
+  authorUsername?: string | null;
+  authorAvatar?: string | null;
+  createdAt?: string;
+}
+
 export interface ApiConnection {
   id: number;
   requesterId: number;
@@ -496,6 +507,7 @@ export function toAppJob(project: ApiProject): AppJob {
     fullDescription: project.description,
     tags: tags.slice(0, 3),
     budget: formatTokenAmount(budget),
+    rawBudget: budget,
     currency: project.tokenType,
     color: getJobColor(project.tokenType),
     status: project.status,
@@ -743,12 +755,30 @@ export async function getSocialPosts(address: string) {
   return apiRequest<ApiSocialPost[]>(`/social/${address}/posts`, { method: 'GET' });
 }
 
-export async function getSocialFeed() {
-  return apiRequest<ApiSocialPost[]>('/social/feed', { method: 'GET' });
+export async function getSocialFeed(limit?: number) {
+  return apiRequest<ApiSocialPost[]>('/social/feed', {
+    method: 'GET',
+    searchParams: { limit },
+  });
+}
+
+export async function getSocialPost(postId: number) {
+  return apiRequest<ApiSocialPost>(`/social/posts/${postId}`, { method: 'GET' });
+}
+
+export async function getSocialPostComments(postId: number) {
+  return apiRequest<ApiSocialComment[]>(`/social/posts/${postId}/comments`, { method: 'GET' });
 }
 
 export async function createSocialPost(input: { content?: string; imageDataUrl?: string }) {
   return apiRequest<ApiSocialPost>('/social/posts', {
+    method: 'POST',
+    body: JSON.stringify(input),
+  });
+}
+
+export async function createSocialPostComment(postId: number, input: { content: string }) {
+  return apiRequest<ApiSocialComment>(`/social/posts/${postId}/comments`, {
     method: 'POST',
     body: JSON.stringify(input),
   });

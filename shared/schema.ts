@@ -317,6 +317,18 @@ export const postLikes = mysqlTable("post_likes", {
   createdAt: timestamp("created_at").defaultNow().notNull(),
 });
 
+export const postComments = mysqlTable("post_comments", {
+  id: bigint("id", { mode: "number", unsigned: true }).autoincrement().primaryKey(),
+  postId: bigint("post_id", { mode: "number", unsigned: true })
+    .references(() => socialPosts.id)
+    .notNull(),
+  userId: bigint("user_id", { mode: "number", unsigned: true })
+    .references(() => users.id)
+    .notNull(),
+  content: text("content").notNull(),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+});
+
 export const userConnections = mysqlTable("user_connections", {
   id: bigint("id", { mode: "number", unsigned: true }).autoincrement().primaryKey(),
   requesterId: bigint("requester_id", { mode: "number", unsigned: true })
@@ -459,6 +471,12 @@ export const insertNotificationSchema = createInsertSchema(notifications, {
 
 export const selectNotificationSchema = createSelectSchema(notifications);
 
+export const insertPostCommentSchema = createInsertSchema(postComments, {
+  content: z.string().trim().min(1).max(2000),
+}).omit({ id: true, createdAt: true });
+
+export const selectPostCommentSchema = createSelectSchema(postComments);
+
 // TypeScript Types
 export type User = typeof users.$inferSelect;
 export type InsertUser = z.infer<typeof insertUserSchema>;
@@ -486,6 +504,8 @@ export type ConversationParticipant = typeof conversationParticipants.$inferSele
 export type Message = typeof messages.$inferSelect;
 export type SocialPost = typeof socialPosts.$inferSelect;
 export type PostLike = typeof postLikes.$inferSelect;
+export type PostComment = typeof postComments.$inferSelect;
+export type InsertPostComment = z.infer<typeof insertPostCommentSchema>;
 export type UserConnection = typeof userConnections.$inferSelect;
 export type Bounty = typeof bounties.$inferSelect;
 export type BountySubmission = typeof bountySubmissions.$inferSelect;

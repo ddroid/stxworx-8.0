@@ -1,6 +1,5 @@
-
-import React, { useState, useEffect } from 'react';
-import { BrowserRouter as Router, Routes, Route, Link, useLocation, useNavigate } from 'react-router-dom';
+import React, { useCallback, useEffect, useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'motion/react';
 import { 
   Search, Bell, Globe, LayoutGrid, Users, BookOpen, Briefcase, Calendar, ShoppingBag, Newspaper,
@@ -12,35 +11,175 @@ import {
 } from 'lucide-react';
 import { GoogleGenAI } from '@google/genai';
 import * as Shared from '../shared';
-import { formatAddress, formatRelativeTime, getLeaderboard, getProjects, getSocialFeed, toApiAssetUrl, toAppJob, toDisplayName, type ApiSocialPost } from '../lib/api';
+import {
+  createSocialPostComment,
+  formatAddress,
+  formatRelativeTime,
+  getLeaderboard,
+  getProjects,
+  getSocialFeed,
+  getSocialPostComments,
+  toApiAssetUrl,
+  toAppJob,
+  toDisplayName,
+  toggleSocialPostLike,
+  type ApiSocialComment,
+  type ApiSocialPost,
+} from '../lib/api';
 import type { ApiLeaderboardEntry } from '../types/leaderboard';
 import type { AppJob } from '../types/job';
 
 export const HomePage = () => {
   const navigate = useNavigate();
+  const { isSignedIn, walletAddress } = Shared.useWallet();
   const [featuredJobs, setFeaturedJobs] = useState<AppJob[]>([]);
   const [topFreelancers, setTopFreelancers] = useState<ApiLeaderboardEntry[]>([]);
   const [feedPosts, setFeedPosts] = useState<ApiSocialPost[]>([]);
+  const [feedComments, setFeedComments] = useState<Record<number, ApiSocialComment[]>>({});
+  const [expandedComments, setExpandedComments] = useState<Record<number, boolean>>({});
+  const [commentDrafts, setCommentDrafts] = useState<Record<number, string>>({});
+  const [loadingComments, setLoadingComments] = useState<Record<number, boolean>>({});
+  const [submittingComments, setSubmittingComments] = useState<Record<number, boolean>>({});
+
+  const canInteract = isSignedIn && Boolean(walletAddress);
+
+  const loadCommentsForPost = useCallback(async (postId: number) => {
+    setLoadingComments((current) => ({
+      ...current,
+      [postId]: true,
+    }));
+
+    try {
+      const comments = await getSocialPostComments(postId);
+      setFeedComments((current) => ({
+        ...current,
+        [postId]: comments,
+      }));
+    } catch (error) {
+      console.error('Failed to load post comments:', error);
+    } finally {
+      setLoadingComments((current) => ({
+        ...current,
+        [postId]: false,
+      }));
+    }
+  }, []);
 
   useEffect(() => {
+    let isMounted = true;
+
     const loadHomeData = async () => {
       try {
         const [projects, leaderboard, feed] = await Promise.all([
           getProjects(),
           getLeaderboard(),
-          getSocialFeed().catch(() => []),
+          getSocialFeed(4).catch(() => []),
         ]);
+
+        const commentEntries = await Promise.all(
+          feed.map(async (post) => [post.id, await getSocialPostComments(post.id).catch(() => [])] as const),
+        );
+
+        if (!isMounted) {
+          return;
+        }
 
         setFeaturedJobs(projects.slice(0, 2).map(toAppJob));
         setTopFreelancers(leaderboard.slice(0, 4));
-        setFeedPosts(feed.slice(0, 4));
+        setFeedPosts(feed);
+        setFeedComments(Object.fromEntries(commentEntries) as Record<number, ApiSocialComment[]>);
       } catch (error) {
         console.error('Failed to load home page data:', error);
       }
     };
 
     loadHomeData();
+
+    return () => {
+      isMounted = false;
+    };
   }, []);
+
+  const handleToggleFeedLike = async (postId: number) => {
+    if (!canInteract) {
+      return;
+    }
+
+    try {
+      const response = await toggleSocialPostLike(postId);
+      setFeedPosts((current) =>
+        current.map((post) =>
+          post.id === postId
+            ? {
+                ...post,
+                likesCount: response.likesCount,
+                likedByViewer: response.likedByViewer,
+              }
+            : post,
+        ),
+      );
+    } catch (error) {
+      console.error('Failed to toggle post like:', error);
+    }
+  };
+
+  const handleToggleComments = async (postId: number) => {
+    const nextExpanded = !expandedComments[postId];
+
+    setExpandedComments((current) => ({
+      ...current,
+      [postId]: nextExpanded,
+    }));
+
+    if (nextExpanded && feedComments[postId] === undefined && !loadingComments[postId]) {
+      await loadCommentsForPost(postId);
+    }
+  };
+
+  const handleSubmitComment = async (postId: number) => {
+    const content = commentDrafts[postId]?.trim() || '';
+    if (!content || !canInteract || submittingComments[postId]) {
+      return;
+    }
+
+    setSubmittingComments((current) => ({
+      ...current,
+      [postId]: true,
+    }));
+
+    try {
+      const created = await createSocialPostComment(postId, { content });
+      setFeedComments((current) => ({
+        ...current,
+        [postId]: [created, ...(current[postId] || [])],
+      }));
+      setFeedPosts((current) =>
+        current.map((post) =>
+          post.id === postId
+            ? {
+                ...post,
+                commentsCount: post.commentsCount + 1,
+              }
+            : post,
+        ),
+      );
+      setCommentDrafts((current) => ({
+        ...current,
+        [postId]: '',
+      }));
+      setExpandedComments((current) => ({
+        ...current,
+        [postId]: true,
+      }));
+    } catch (error) {
+      console.error('Failed to create comment:', error);
+    } finally {
+      setSubmittingComments((current) => ({
+        ...current,
+        [postId]: false,
+      }));
+    }
+  };
 
   const completedJobs = topFreelancers.reduce((sum, freelancer) => sum + freelancer.jobsCompleted, 0);
   const averageRating =
@@ -148,6 +287,10 @@ export const HomePage = () => {
             {feedPosts.map((post) => {
               const authorName = post.authorUsername?.trim() || formatAddress(post.authorStxAddress) || 'Anonymous User';
               const avatarUrl = toApiAssetUrl(post.authorAvatar);
+              const comments = feedComments[post.id] || [];
+              const isCommentsOpen = Boolean(expandedComments[post.id]);
+              const isLoadingPostComments = Boolean(loadingComments[post.id]);
+              const isSubmittingPostComment = Boolean(submittingComments[post.id]);
 
               return (
               <div key={post.id} className="card p-6">
@@ -170,10 +313,93 @@ export const HomePage = () => {
                 {post.content && <p className="text-sm mb-4">{post.content}</p>}
                 {post.imageUrl && <img src={toApiAssetUrl(post.imageUrl)} className="w-full rounded-[15px] mb-4 object-cover max-h-64" alt="Post content" referrerPolicy="no-referrer" />}
                 <div className="flex items-center gap-6 text-muted border-t border-border pt-4">
-                  <button className={`flex items-center gap-2 text-xs font-bold transition-colors ${post.likedByViewer ? 'text-accent-red' : 'hover:text-accent-red'}`}><Heart size={16} /> {post.likesCount}</button>
-                  <button className="flex items-center gap-2 text-xs font-bold hover:text-accent-blue transition-colors"><MessageCircle size={16} /> {post.commentsCount}</button>
-                  <button className="flex items-center gap-2 text-xs font-bold hover:text-accent-orange transition-colors ml-auto"><Share size={16} /> Share</button>
+                  <button
+                    onClick={() => handleToggleFeedLike(post.id)}
+                    disabled={!canInteract}
+                    className={`flex items-center gap-2 text-xs font-bold transition-colors ${post.likedByViewer ? 'text-accent-red' : 'hover:text-accent-red'} ${canInteract ? '' : 'cursor-not-allowed opacity-60'}`}
+                  >
+                    <Heart size={16} /> {post.likesCount}
+                  </button>
+                  <button
+                    onClick={() => handleToggleComments(post.id)}
+                    className="flex items-center gap-2 text-xs font-bold hover:text-accent-blue transition-colors"
+                  >
+                    <MessageCircle size={16} /> {post.commentsCount}
+                  </button>
+                  <button
+                    onClick={() => navigate(`/post/${post.id}`)}
+                    className="flex items-center gap-2 text-xs font-bold hover:text-accent-orange transition-colors ml-auto"
+                  >
+                    <ArrowRight size={16} /> Open
+                  </button>
                 </div>
+                {isCommentsOpen && (
+                  <div className="mt-4 border-t border-border pt-4 space-y-4">
+                    {canInteract ? (
+                      <div className="flex items-start gap-3">
+                        <div className="w-10 h-10 rounded-[10px] bg-surface border border-border flex items-center justify-center text-[10px] font-black uppercase shrink-0">
+                          {(walletAddress || 'YO').slice(0, 2)}
+                        </div>
+                        <div className="flex-1 space-y-3">
+                          <textarea
+                            value={commentDrafts[post.id] || ''}
+                            onChange={(event) =>
+                              setCommentDrafts((current) => ({
+                                ...current,
+                                [post.id]: event.target.value,
+                              }))
+                            }
+                            placeholder="Write a comment..."
+                            className="w-full bg-ink/5 border border-border rounded-[15px] p-4 text-sm focus:ring-1 focus:ring-accent-orange outline-none resize-none h-24"
+                          />
+                          <div className="flex justify-end">
+                            <button
+                              onClick={() => handleSubmitComment(post.id)}
+                              disabled={isSubmittingPostComment || !(commentDrafts[post.id] || '').trim()}
+                              className="btn-primary py-2 px-6 disabled:opacity-60"
+                            >
+                              {isSubmittingPostComment ? 'Posting...' : 'Post Comment'}
+                            </button>
+                          </div>
+                        </div>
+                      </div>
+                    ) : (
+                      <div className="text-xs text-muted">Sign in to like and comment on posts from the homepage.</div>
+                    )}
+
+                    {isLoadingPostComments ? (
+                      <div className="text-sm text-muted">Loading comments...</div>
+                    ) : comments.length > 0 ? (
+                      <div className="space-y-4">
+                        {comments.map((comment) => {
+                          const commentAuthorName = comment.authorUsername?.trim() || formatAddress(comment.authorStxAddress) || 'Anonymous User';
+                          const commentAvatarUrl = toApiAssetUrl(comment.authorAvatar);
+
+                          return (
+                            <div key={comment.id} className="flex gap-3">
+                              {commentAvatarUrl ? (
+                                <img src={commentAvatarUrl} className="w-10 h-10 rounded-[10px] object-cover shrink-0" alt={commentAuthorName} referrerPolicy="no-referrer" />
+                              ) : (
+                                <div className="w-10 h-10 rounded-[10px] bg-surface border border-border flex items-center justify-center text-[10px] font-black uppercase shrink-0">
+                                  {commentAuthorName.slice(0, 2)}
+                                </div>
+                              )}
+                              <div className="flex-1 bg-ink/5 rounded-[15px] p-4">
+                                <div className="flex justify-between items-start gap-4 mb-2">
+                                  <h4 className="font-bold text-sm">{commentAuthorName}</h4>
+                                  <span className="text-xs text-muted shrink-0">{formatRelativeTime(comment.createdAt)}</span>
+                                </div>
+                                <p className="text-sm">{comment.content}</p>
+                              </div>
+                            </div>
+                          );
+                        })}
+                      </div>
+                    ) : (
+                      <div className="text-sm text-muted">No comments yet.</div>
+                    )}
+                  </div>
+                )}
               </div>
             )})}
             {feedPosts.length === 0 && (

@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect, createContext, useContext } from 'react';
 import { BrowserRouter as Router, Routes, Route, Link, useLocation, useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'motion/react';
@@ -8,11 +7,12 @@ import {
   Facebook, MoreHorizontal, ArrowRight, Filter, CheckCircle2, Trophy, ChevronLeft, ChevronsRight, ChevronDown,
   Wallet, Send, X, Settings, ShieldCheck, LogOut, Mail, Phone, MessageCircle, Sun, Moon, Maximize2, Minimize2,
   HelpCircle, AlertTriangle, Folder, GraduationCap, Home, PenTool, Camera, Edit2, Share, Shield, Upload, FileText,
-  Download, Sparkles, Bot, ZoomIn, ZoomOut
+  Download, Sparkles, Bot, ZoomIn, ZoomOut, Loader2
 } from 'lucide-react';
 import { GoogleGenAI } from '@google/genai';
 import type { UserSession } from '@stacks/connect';
 import { createProject, createProposal, getCategories, submitMilestone, startConversation, getConversationMessages, sendConversationMessage, getUserProfile, getCurrentUser, toDisplayName, formatRelativeTime, type ApiConversationMessage } from './lib/api';
+import { convertAmount, getUSDValue } from './lib/currency';
 import { completeEscrowMilestone } from './lib/escrow';
 import type { ApiCategory } from './types/job';
 import type { ApiUserProfile } from './types/user';
@@ -802,19 +802,40 @@ export const PostJobModal = ({ isOpen, onClose, onCreated }: { isOpen: boolean, 
       );
     };
 export const JobApplyModal = ({ isOpen, onClose, job }: { isOpen: boolean, onClose: () => void, job?: any }) => {
-      const [amount, setAmount] = useState(1000);
-      const [currency, setCurrency] = useState('STX');
+      const [amount, setAmount] = useState(typeof job?.rawBudget === 'number' ? job.rawBudget : 1000);
+      const [currency, setCurrency] = useState(job?.currency || 'STX');
       const [milestones, setMilestones] = useState(2);
       const [useEscrow, setUseEscrow] = useState(true);
       const [coverLetter, setCoverLetter] = useState('');
       const [isSubmitting, setIsSubmitting] = useState(false);
+      const [isConverting, setIsConverting] = useState(false);
+      const [usdValue, setUsdValue] = useState<number | null>(null);
 
       useEffect(() => {
         if (isOpen) {
           setCoverLetter('');
           setIsSubmitting(false);
+          // Set initial amount and currency from job if available
+          if (job) {
+            setAmount(typeof job.rawBudget === 'number' ? job.rawBudget : 1000);
+            setCurrency(job.currency || 'STX');
+          }
         }
-      }, [isOpen]);
+      }, [isOpen, job]);
+
+      // Update USD value when amount or currency changes
+      useEffect(() => {
+        const updateUSDValue = async () => {
+          try {
+            const value = await getUSDValue(amount, currency);
+            setUsdValue(value);
+          } catch (error) {
+            console.error('Failed to get USD value:', error);
+            setUsdValue(null);
+          }
+        };
+        updateUSDValue();
+      }, [amount, currency]);
 
       if (!isOpen) return null;
 
@@ -953,8 +974,31 @@ export const JobApplyModal = ({ isOpen, onClose, job }: { isOpen: boolean, onClo
                       <input 
                         type="number" 
                         value={amount}
-                        onChange={(e) => setAmount(Number(e.target.value))}
+                        onChange={(e) => {
+                          const value = e.target.value;
+                          
+                          // Prevent negative values
+                          if (value.startsWith('-')) return;
+                          
+                          // Check decimal precision based on currency
+                          const decimalIndex = value.indexOf('.');
+                          if (decimalIndex !== -1) {
+                            const decimalPlaces = value.length - decimalIndex - 1;
+                            const maxDecimalPlaces = currency === 'sBTC' ? 8 : currency === 'USDCx' ? 3 : 2;
+                            
+                            // Prevent typing more decimals than allowed
+                            if (decimalPlaces > maxDecimalPlaces) return;
+                          }
+                          
+                          // Update amount if valid
+                          const numValue = Number(value);
+                          if (!isNaN(numValue) && numValue >= 0) {
+                            setAmount(numValue);
+                          }
+                        }}
                         className="w-full bg-transparent border border-border rounded-[15px] p-4 text-sm focus:border-accent-orange outline-none transition-colors"
+                        min="0"
+                        step={currency === 'sBTC' ? '0.00000001' : currency === 'USDCx' ? '0.001' : '0.01'}
                       />
                     </div>
                     <div>
@@ -963,10 +1007,36 @@ export const JobApplyModal = ({ isOpen, onClose, job }: { isOpen: boolean, onClo
                         {['STX', 'sBTC', 'USDCx'].map(curr => (
                           <button 
                             key={curr}
-                            onClick={() => setCurrency(curr)}
-                            className={`flex-1 py-4 rounded-[15px] border font-bold transition-all text-sm ${currency === curr ? 'border-accent-cyan bg-accent-cyan/10 text-accent-cyan' : 'border-border hover:border-ink/30'}`}
+                            onClick={async () => {
+                              // If clicking the same currency, do nothing
+                              if (curr === currency) return;
+                              
+                              setIsConverting(true);
+                              try {
+                                // Convert the amount to the new currency
+                                const convertedAmount = await convertAmount(amount, currency, curr);
+                                setAmount(convertedAmount);
+                                setCurrency(curr);
+                              } catch (error) {
+                                console.error('Currency conversion failed:', error);
+                                // Keep original amount if conversion fails
+                                setCurrency(curr);
+                              } finally {
+                                setIsConverting(false);
+                              }
+                            }}
+                            disabled={isConverting}
+                            className={`flex-1 py-4 rounded-[15px] border font-bold transition-all text-sm relative ${
+                              currency === curr 
+                                ? 'border-accent-cyan bg-accent-cyan/10 text-accent-cyan' 
+                                : 'border-border hover:border-ink/30'
+                            } ${isConverting ? 'opacity-50 cursor-not-allowed' : ''}`}
                           >
-                            {curr}
+                            {isConverting && curr !== currency ? (
+                              <Loader2 size={14} className="animate-spin mx-auto" />
+                            ) : (
+                              curr
+                            )}
                           </button>
                         ))}
                       </div>
@@ -977,16 +1047,43 @@ export const JobApplyModal = ({ isOpen, onClose, job }: { isOpen: boolean, onClo
                   <div className="bg-ink/5 rounded-[15px] p-4 space-y-2">
                     <div className="flex justify-between text-sm">
                       <span className="text-muted">Total Amount</span>
-                      <span className="font-bold">{amount} {currency}</span>
+                      <div className="text-right">
+                        <span className="font-bold">
+                          {currency === 'sBTC' ? amount.toFixed(8) : currency === 'USDCx' ? amount.toFixed(3) : amount.toFixed(2)} {currency}
+                        </span>
+                        {usdValue !== null && (
+                          <div className="text-xs text-muted">
+                            ≈ ${usdValue.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                          </div>
+                        )}
+                      </div>
                     </div>
                     <div className="flex justify-between text-sm">
                       <span className="text-muted">Platform Fee (10%)</span>
-                      <span className="font-bold text-accent-red">-{platformFee} {currency}</span>
+                      <div className="text-right">
+                        <span className="font-bold text-accent-red">
+                          -{currency === 'sBTC' ? platformFee.toFixed(8) : currency === 'USDCx' ? platformFee.toFixed(3) : platformFee.toFixed(2)} {currency}
+                        </span>
+                        {usdValue !== null && (
+                          <div className="text-xs text-muted">
+                            ≈ -${(usdValue * 0.1).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                          </div>
+                        )}
+                      </div>
                     </div>
                     <div className="h-[1px] bg-border my-2"></div>
                     <div className="flex justify-between text-base font-black">
                       <span>You'll Receive (90%)</span>
-                      <span className="text-accent-cyan">{freelancerAmount} {currency}</span>
+                      <div className="text-right">
+                        <span className="text-accent-cyan">
+                          {currency === 'sBTC' ? freelancerAmount.toFixed(8) : currency === 'USDCx' ? freelancerAmount.toFixed(3) : freelancerAmount.toFixed(2)} {currency}
+                        </span>
+                        {usdValue !== null && (
+                          <div className="text-xs text-accent-cyan">
+                            ≈ ${(usdValue * 0.9).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                          </div>
+                        )}
+                      </div>
                     </div>
                   </div>
 

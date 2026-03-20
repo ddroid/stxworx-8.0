@@ -260,6 +260,53 @@ export const DashboardPage = () => {
             </div>
 
             <div className="card mb-8">
+              <h3 className="font-bold text-xl mb-6">Active Contracts ({activeProjects.length})</h3>
+              <div className="space-y-6">
+                {activeProjects.map((project) => {
+                  const submissions = milestonesByProject[project.id] || [];
+                  const milestones = buildMilestones(project, submissions);
+                  const pendingReview = submissions.find((submission) => submission.status === 'submitted');
+                  const approvedCount = submissions.filter((submission) => submission.status === 'approved').length;
+                  const progressWidth = `${Math.min(100, Math.round((approvedCount / Math.max(project.numMilestones || 1, 1)) * 100))}%`;
+                  const currentMilestone = milestones.find((milestone) => milestone.status !== 'approved') || milestones[milestones.length - 1];
+
+                  return (
+                    <div key={project.id} className="border border-border rounded-[15px] p-6">
+                      <div className="flex justify-between items-start mb-4">
+                        <div>
+                          <h4 className="font-bold text-lg mb-1">{project.title}</h4>
+                          <p className="text-xs text-muted">Freelancer: {formatAddress(project.freelancerAddress || '')}</p>
+                        </div>
+                        <span className="px-3 py-1 bg-accent-orange/10 text-accent-orange rounded-full text-[10px] font-bold uppercase tracking-widest">{project.status}</span>
+                      </div>
+                      <div className="mb-4">
+                        <p className="text-sm text-muted mb-2">Current Milestone: <span className="text-ink font-bold">{currentMilestone?.title || 'N/A'}</span></p>
+                        <div className="w-full bg-ink/10 h-2 rounded-full overflow-hidden">
+                          <div className="bg-accent-orange h-full" style={{ width: progressWidth }}></div>
+                        </div>
+                      </div>
+                      <div className="flex items-center justify-between border-t border-border pt-4">
+                        <div>
+                          <p className="text-[10px] text-muted uppercase tracking-widest font-bold mb-1">Escrow Status</p>
+                          <p className="font-bold text-accent-cyan flex items-center gap-1"><ShieldCheck size={14} /> Locked ({formatTokenAmount(project.budget)} {project.tokenType})</p>
+                        </div>
+                        <div className="flex gap-2">
+                          <button onClick={() => handleOpenMessage(project.freelancerAddress || 'Freelancer')} className="btn-outline py-2 px-4 text-xs flex items-center justify-center">Message</button>
+                          {pendingReview ? (
+                            <Link to="/review-work" state={{ projectId: project.id, submissionId: pendingReview.id }} className="btn-primary py-2 px-4 text-xs flex items-center justify-center">Review Work</Link>
+                          ) : (
+                            <button disabled className="btn-primary py-2 px-4 text-xs flex items-center justify-center opacity-50 cursor-not-allowed">No Submission Yet</button>
+                          )}
+                        </div>
+                      </div>
+                    </div>
+                  );
+                })}
+                {activeProjects.length === 0 && <div className="text-sm text-muted">No active contracts yet.</div>}
+              </div>
+            </div>
+
+            <div className="card mb-8">
               <div className="flex items-center justify-between mb-6">
                 <h3 className="font-bold text-xl">Active Job Postings</h3>
                 <button onClick={() => setIsPostJobModalOpen(true)} className="btn-primary py-2 px-4 text-xs">Post New Job</button>
@@ -412,53 +459,6 @@ export const DashboardPage = () => {
                 <div className="text-sm text-muted">No completed jobs yet.</div>
               </div>
             )}
-
-            <div className="card">
-              <h3 className="font-bold text-xl mb-6">Active Contracts ({activeProjects.length})</h3>
-              <div className="space-y-6">
-                {activeProjects.map((project) => {
-                  const submissions = milestonesByProject[project.id] || [];
-                  const milestones = buildMilestones(project, submissions);
-                  const pendingReview = submissions.find((submission) => submission.status === 'submitted');
-                  const approvedCount = submissions.filter((submission) => submission.status === 'approved').length;
-                  const progressWidth = `${Math.min(100, Math.round((approvedCount / Math.max(project.numMilestones || 1, 1)) * 100))}%`;
-                  const currentMilestone = milestones.find((milestone) => milestone.status !== 'approved') || milestones[milestones.length - 1];
-
-                  return (
-                    <div key={project.id} className="border border-border rounded-[15px] p-6">
-                      <div className="flex justify-between items-start mb-4">
-                        <div>
-                          <h4 className="font-bold text-lg mb-1">{project.title}</h4>
-                          <p className="text-xs text-muted">Freelancer: {formatAddress(project.freelancerAddress || '')}</p>
-                        </div>
-                        <span className="px-3 py-1 bg-accent-orange/10 text-accent-orange rounded-full text-[10px] font-bold uppercase tracking-widest">{project.status}</span>
-                      </div>
-                      <div className="mb-4">
-                        <p className="text-sm text-muted mb-2">Current Milestone: <span className="text-ink font-bold">{currentMilestone?.title || 'N/A'}</span></p>
-                        <div className="w-full bg-ink/10 h-2 rounded-full overflow-hidden">
-                          <div className="bg-accent-orange h-full" style={{ width: progressWidth }}></div>
-                        </div>
-                      </div>
-                      <div className="flex items-center justify-between border-t border-border pt-4">
-                        <div>
-                          <p className="text-[10px] text-muted uppercase tracking-widest font-bold mb-1">Escrow Status</p>
-                          <p className="font-bold text-accent-cyan flex items-center gap-1"><ShieldCheck size={14} /> Locked ({formatTokenAmount(project.budget)} {project.tokenType})</p>
-                        </div>
-                        <div className="flex gap-2">
-                          <button onClick={() => handleOpenMessage(project.freelancerAddress || 'Freelancer')} className="btn-outline py-2 px-4 text-xs flex items-center justify-center">Message</button>
-                          {pendingReview ? (
-                            <Link to="/review-work" state={{ projectId: project.id, submissionId: pendingReview.id }} className="btn-primary py-2 px-4 text-xs flex items-center justify-center">Review Work</Link>
-                          ) : (
-                            <button disabled className="btn-primary py-2 px-4 text-xs flex items-center justify-center opacity-50 cursor-not-allowed">No Submission Yet</button>
-                          )}
-                        </div>
-                      </div>
-                    </div>
-                  );
-                })}
-                {activeProjects.length === 0 && <div className="text-sm text-muted">No active contracts yet.</div>}
-              </div>
-            </div>
           </>
         ) : (
           <>

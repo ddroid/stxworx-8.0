@@ -5,7 +5,7 @@
  */
 
 import React, { useState, useEffect } from 'react';
-import { BrowserRouter as Router, Routes, Route, Link, useLocation, useNavigate, useParams } from 'react-router-dom';
+import { BrowserRouter as Router, Routes, Route, Link, useLocation, useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'motion/react';
 import { 
   Search, 
@@ -81,6 +81,7 @@ import { Leaderboard } from "./pages/leaderboard/Leaderboard";
 import { ClientDashboard } from "./pages/client/ClientDashboard";
 import { FreelancerDashboard } from "./pages/freelancer/FreelancerDashboard";
 import { ProfilePage } from "./pages/ProfilePage";
+import { PostPage as SocialPostPage } from "./pages/PostPage";
 import { SettingsPage } from "./pages/SettingsPage";
 import { ProPlanPage } from "./pages/ProPlanPage";
 import { AdminDashboard } from "./pages/admin/AdminDashboard";
@@ -268,108 +269,6 @@ const ContactPage = () => (
     </div>
   </div>
 );
-const PostPage = () => {
-  const { id } = useParams();
-  const { userRole } = Shared.useWallet();
-  const isClient = userRole === 'client';
-  
-  const [post, setPost] = useState({
-    id,
-    text: 'Just wrapped up an amazing project! Check out the details below. #design #stxworx',
-    image: 'https://picsum.photos/seed/feed1/800/400',
-    likes: 24,
-    comments: 5,
-    time: '2 hours ago',
-    author: {
-      name: isClient ? 'Acme Corp' : 'Elodie Hardin',
-      avatar: `https://picsum.photos/seed/${isClient ? 'company' : 'avatar'}/100/100`,
-      handle: isClient ? '@acmecorp' : '@elhardin.3dart'
-    }
-  });
-  
-  const [comments, setComments] = useState([
-    { id: 1, author: 'Acme Corp', avatar: 'https://picsum.photos/seed/company/100/100', text: 'Looks great! Keep up the good work.', time: '1 hour ago' },
-    { id: 2, author: 'John Doe', avatar: 'https://picsum.photos/seed/john/100/100', text: 'Amazing design!', time: '30 mins ago' }
-  ]);
-  const [newComment, setNewComment] = useState('');
-
-  const handlePostComment = () => {
-    if (newComment.trim()) {
-      setComments([...comments, { id: Date.now(), author: 'You', avatar: 'https://picsum.photos/seed/you/100/100', text: newComment, time: 'Just now' }]);
-      setNewComment('');
-      setPost({ ...post, comments: post.comments + 1 });
-    }
-  };
-
-  return (
-    <div className="pt-28 pb-20 px-6 md:pl-[92px]">
-      <div className="container-custom max-w-3xl">
-        <div className="flex items-center gap-4 mb-8">
-          <Link to="/profile" className="w-10 h-10 bg-surface border border-border rounded-[10px] flex items-center justify-center text-muted hover:text-ink hover:border-ink transition-colors">
-            <ChevronLeft size={20} />
-          </Link>
-          <h1 className="text-2xl font-black tracking-tighter">Post</h1>
-        </div>
-
-        <div className="card p-6 mb-8">
-          <div className="flex items-center justify-between mb-4">
-            <div className="flex items-center gap-3">
-              <img src={post.author.avatar} className="w-12 h-12 rounded-[10px] object-cover" alt="Avatar" referrerPolicy="no-referrer" />
-              <div>
-                <h4 className="font-bold text-base">{post.author.name}</h4>
-                <p className="text-xs text-muted">{post.author.handle} • {post.time}</p>
-              </div>
-            </div>
-            <button className="text-muted hover:text-ink"><MoreHorizontal size={20} /></button>
-          </div>
-          <p className="text-base mb-6 leading-relaxed">{post.text}</p>
-          {post.image && (
-            <img src={post.image} className="w-full rounded-[15px] mb-6 object-cover max-h-96" alt="Post content" referrerPolicy="no-referrer" />
-          )}
-          <div className="flex items-center gap-8 text-muted border-t border-border pt-4">
-            <button className="flex items-center gap-2 text-sm font-bold hover:text-accent-red transition-colors"><Heart size={20} /> {post.likes}</button>
-            <button className="flex items-center gap-2 text-sm font-bold hover:text-accent-blue transition-colors"><MessageCircle size={20} /> {post.comments}</button>
-            <button className="flex items-center gap-2 text-sm font-bold hover:text-accent-orange transition-colors ml-auto"><Share2 size={20} /> Share</button>
-          </div>
-        </div>
-
-        <div className="card p-6">
-          <h3 className="font-black text-lg mb-6">Comments ({post.comments})</h3>
-          
-          <div className="flex gap-4 items-start mb-8">
-            <img src="https://picsum.photos/seed/you/100/100" className="w-10 h-10 rounded-[10px] object-cover shrink-0" alt="Your Avatar" referrerPolicy="no-referrer" />
-            <div className="flex-1">
-              <textarea 
-                value={newComment}
-                onChange={(e) => setNewComment(e.target.value)}
-                placeholder="Write a comment..." 
-                className="w-full bg-ink/5 border border-border rounded-[15px] p-4 text-sm focus:ring-1 focus:ring-accent-orange outline-none resize-none h-24 mb-3"
-              />
-              <div className="flex justify-end">
-                <button onClick={handlePostComment} className="btn-primary py-2 px-6">Post Comment</button>
-              </div>
-            </div>
-          </div>
-
-          <div className="space-y-6">
-            {comments.map(comment => (
-              <div key={comment.id} className="flex gap-4">
-                <img src={comment.avatar} className="w-10 h-10 rounded-[10px] object-cover shrink-0" alt={comment.author} referrerPolicy="no-referrer" />
-                <div className="flex-1 bg-ink/5 rounded-[15px] p-4">
-                  <div className="flex justify-between items-start mb-2">
-                    <h4 className="font-bold text-sm">{comment.author}</h4>
-                    <span className="text-xs text-muted">{comment.time}</span>
-                  </div>
-                  <p className="text-sm">{comment.text}</p>
-                </div>
-              </div>
-            ))}
-          </div>
-        </div>
-      </div>
-    </div>
-  );
-};
 
 // --- Main App ---
 
@@ -595,9 +494,9 @@ export default function App() {
                       initial={{ opacity: 0, x: 20 }}
                       animate={{ opacity: 1, x: 0 }}
                       exit={{ opacity: 0, x: -20 }}
-                      transition={{ duration: 0.4 }}
+                      transition={{ duration: 0.3 }}
                     >
-                      <PostPage />
+                      <SocialPostPage />
                     </motion.div>
                   } />
                   <Route path="/profile" element={

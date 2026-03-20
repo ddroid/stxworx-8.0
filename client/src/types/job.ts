@@ -54,6 +54,7 @@ export interface AppJob {
   fullDescription: string;
   tags: string[];
   budget: string;
+  rawBudget: number;
   currency: string;
   color: string;
   status: string;
