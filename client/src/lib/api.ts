@@ -86,6 +86,8 @@ export interface CreateProjectInput {
   milestone4Amount?: string;
 }
 
+type X402TokenType = CreateProjectInput['tokenType'];
+
 export interface CreateProposalInput {
   projectId: number;
   coverLetter: string;
@@ -329,6 +331,12 @@ function buildUrl(path: string, searchParams?: RequestOptions['searchParams']) {
   return `${url.pathname}${url.search}`;
 }
 
+function createX402Headers(tokenType: X402TokenType) {
+  return {
+    'x-pay-token': tokenType,
+  };
+}
+
 async function apiRequest<T>(path: string, options: RequestOptions = {}): Promise<T> {
   const { searchParams, headers, ...init } = options;
   const response = await fetch(buildUrl(path, searchParams), {
@@ -567,14 +575,18 @@ export async function getMyCompletedProjects() {
 export async function createProject(input: CreateProjectInput) {
   return apiRequest<ApiProject>('/projects', {
     method: 'POST',
+    headers: createX402Headers(input.tokenType),
     body: JSON.stringify(input),
   });
 }
 
-export async function activateProject(projectId: number, input: { escrowTxId: string; onChainId: number }) {
+export async function activateProject(projectId: number, input: { escrowTxId: string; onChainId: number; tokenType: X402TokenType }) {
+  const { tokenType, ...payload } = input;
+
   return apiRequest<ApiProject>(`/projects/${projectId}/activate`, {
     method: 'PATCH',
-    body: JSON.stringify(input),
+    headers: createX402Headers(tokenType),
+    body: JSON.stringify(payload),
   });
 }
 

@@ -37,7 +37,8 @@ const CORS_ORIGIN = process.env.CORS_ORIGIN || "http://localhost:5173";
 app.use((req, res, next) => {
   res.header("Access-Control-Allow-Origin", CORS_ORIGIN);
   res.header("Access-Control-Allow-Methods", "GET, POST, PATCH, DELETE, OPTIONS");
-  res.header("Access-Control-Allow-Headers", "Content-Type, Authorization");
+  res.header("Access-Control-Allow-Headers", "Content-Type, Authorization, X-Pay-Token");
+  res.header("Access-Control-Expose-Headers", "WWW-Authenticate");
   res.header("Access-Control-Allow-Credentials", "true");
   if (req.method === "OPTIONS") {
     return res.sendStatus(200);

@@ -13,10 +13,12 @@ import {
   CONTRACT_NAME,
   SBTC_CONTRACT_ADDRESS,
   SBTC_CONTRACT_NAME,
+  USDCX_CONTRACT_ADDRESS,
+  USDCX_CONTRACT_NAME,
 } from './constants';
 import { network } from './stacks';
 
-type EscrowTokenType = 'STX' | 'sBTC';
+type EscrowTokenType = 'STX' | 'sBTC' | 'USDCx';
 
 type ContractCallOptions = {
   contractAddress: string;
@@ -27,7 +29,7 @@ type ContractCallOptions = {
 };
 
 function isEscrowTokenType(tokenType: ApiProject['tokenType']): tokenType is EscrowTokenType {
-  return tokenType === 'STX' || tokenType === 'sBTC';
+  return tokenType === 'STX' || tokenType === 'sBTC' || tokenType === 'USDCx';
 }
 
 function toBaseUnits(amount: string | number | null | undefined, tokenType: EscrowTokenType) {
@@ -36,7 +38,7 @@ function toBaseUnits(amount: string | number | null | undefined, tokenType: Escr
     return 0;
   }
 
-  const multiplier = tokenType === 'STX' ? 1_000_000 : 100_000_000;
+  const multiplier = tokenType === 'sBTC' ? 100_000_000 : 1_000_000;
   return Math.floor(numeric * multiplier);
 }
 
@@ -105,6 +107,9 @@ export async function createEscrowForProject(project: ApiProject, freelancerAddr
   if (project.tokenType === 'sBTC') {
     functionName = 'create-project-sbtc';
     functionArgs.push(contractPrincipalCV(SBTC_CONTRACT_ADDRESS, SBTC_CONTRACT_NAME));
+  } else if (project.tokenType === 'USDCx') {
+    functionName = 'create-project-usdcx';
+    functionArgs.push(contractPrincipalCV(USDCX_CONTRACT_ADDRESS, USDCX_CONTRACT_NAME));
   }
 
   const txId = await contractCall({
@@ -146,6 +151,9 @@ export async function releaseEscrowMilestone(
   if (tokenType === 'sBTC') {
     functionName = 'release-milestone-sbtc';
     functionArgs.push(contractPrincipalCV(SBTC_CONTRACT_ADDRESS, SBTC_CONTRACT_NAME));
+  } else if (tokenType === 'USDCx') {
+    functionName = 'release-milestone-usdcx';
+    functionArgs.push(contractPrincipalCV(USDCX_CONTRACT_ADDRESS, USDCX_CONTRACT_NAME));
   }
 
   return contractCall({

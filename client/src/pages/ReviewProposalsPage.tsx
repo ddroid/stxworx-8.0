@@ -120,6 +120,7 @@ export const ReviewProposalsPage = () => {
       await activateProject(project.id, {
         escrowTxId: escrow.txId,
         onChainId: escrow.onChainId,
+        tokenType: project.tokenType,
       });
       await loadProposals(project?.id);
     } catch (error) {

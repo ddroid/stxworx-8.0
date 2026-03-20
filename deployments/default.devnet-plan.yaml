@@ -29,13 +29,6 @@ plan:
       anchor-block-only: true
       clarity-version: 4
     - transaction-type: contract-publish
-      contract-name: stxworks-escrow-v8
-      expected-sender: ST1PQHQKV0RJXZFY1DGX8MNSNYVE3VGZJSRTPGZGM
-      cost: 55630
-      path: contracts/stxworks-escrow-v8.clar
-      anchor-block-only: true
-      clarity-version: 4
-    - transaction-type: contract-publish
       contract-name: stxworx-badge
       expected-sender: ST1PQHQKV0RJXZFY1DGX8MNSNYVE3VGZJSRTPGZGM
       cost: 130230

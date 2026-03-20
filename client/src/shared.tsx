@@ -191,7 +191,7 @@ export const MilestoneSubmitModal = ({ isOpen, onClose, milestone, onSubmitted }
       const isResubmission = milestone?.status === 'rejected';
 
       const handleSubmit = async () => {
-        if (!milestone?.projectId || !milestone?.milestoneNum || !deliverableUrl.trim() || !milestone?.projectOnChainId || milestone?.tokenType === 'USDCx') {
+        if (!milestone?.projectId || !milestone?.milestoneNum || !deliverableUrl.trim() || !milestone?.projectOnChainId) {
           return;
         }
 
@@ -279,7 +279,7 @@ export const MilestoneSubmitModal = ({ isOpen, onClose, milestone, onSubmitted }
 
                   <button 
                     onClick={handleSubmit}
-                    disabled={isSubmitting || !deliverableUrl.trim() || !milestone?.projectOnChainId || milestone?.tokenType === 'USDCx'}
+                    disabled={isSubmitting || !deliverableUrl.trim() || !milestone?.projectOnChainId}
                     className="w-full btn-primary py-4 font-bold text-lg justify-center"
                   >
                     {isSubmitting ? 'Opening Wallet...' : (isResubmission ? 'Resubmit Work' : 'Submit Work')}
@@ -545,7 +545,7 @@ export const PostJobModal = ({ isOpen, onClose, onCreated }: { isOpen: boolean, 
       const [title, setTitle] = useState('');
       const [description, setDescription] = useState('');
       const [totalBudget, setTotalBudget] = useState('');
-      const [currency, setCurrency] = useState('STX');
+      const [currency, setCurrency] = useState<'STX' | 'sBTC' | 'USDCx'>('STX');
       const [categories, setCategories] = useState<ApiCategory[]>([]);
       const [selectedCategory, setSelectedCategory] = useState('');
       const [selectedSubcategory, setSelectedSubcategory] = useState('');
@@ -579,7 +579,8 @@ export const PostJobModal = ({ isOpen, onClose, onCreated }: { isOpen: boolean, 
 
       if (!isOpen) return null;
 
-      const amountPerMilestone = totalBudget ? (Number(totalBudget) / milestones).toFixed(2) : '';
+      const budgetPrecision = currency === 'sBTC' ? 8 : currency === 'USDCx' ? 3 : 2;
+      const amountPerMilestone = totalBudget ? (Number(totalBudget) / milestones).toFixed(budgetPrecision) : '';
 
       const handlePostJob = async () => {
         if (!title.trim() || !description.trim() || !totalBudget || !selectedCategory || milestoneTitles.slice(0, milestones).some((entry) => !entry.trim())) {
@@ -593,7 +594,7 @@ export const PostJobModal = ({ isOpen, onClose, onCreated }: { isOpen: boolean, 
             description: description.trim(),
             category: selectedCategory,
             subcategory: selectedSubcategory || undefined,
-            tokenType: currency as 'STX' | 'sBTC' | 'USDCx',
+            tokenType: currency,
             numMilestones: milestones,
             milestone1Title: milestoneTitles[0].trim(),
             milestone1Description: milestoneTitles[0].trim(),
@@ -704,15 +705,16 @@ export const PostJobModal = ({ isOpen, onClose, onCreated }: { isOpen: boolean, 
                         type="number" 
                         value={totalBudget}
                         onChange={(e) => setTotalBudget(e.target.value)}
+                        step={currency === 'sBTC' ? '0.00000001' : currency === 'USDCx' ? '0.001' : '0.01'}
                         className="flex-1 bg-ink/5 border border-border rounded-[15px] px-4 py-3 text-sm focus:ring-1 focus:ring-accent-orange outline-none"
                         placeholder="e.g. 1000"
                       />
                       <div className="flex gap-2 md:w-1/2">
-                        {['STX', 'sBTC'].map((c) => (
+                        {['STX', 'sBTC', 'USDCx'].map((c) => (
                           <button
                             key={c}
                             type="button"
-                            onClick={() => setCurrency(c)}
+                            onClick={() => setCurrency(c as 'STX' | 'sBTC' | 'USDCx')}
                             className={`flex-1 py-3 px-2 rounded-[15px] font-bold text-sm transition-all border ${
                               currency === c 
                                 ? 'bg-accent-orange text-white border-transparent' 

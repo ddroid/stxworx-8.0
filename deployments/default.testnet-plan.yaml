@@ -10,14 +10,14 @@ plan:
     - transaction-type: contract-publish
       contract-name: escrow-multi-token
       expected-sender: STTCT2FCG2AE0T2Q70KBA1GDM4VN14FRW5A1NBR0
-      cost: 407450
+      cost: 407770
       path: contracts/escrow-multi-token.clar
       anchor-block-only: true
       clarity-version: 4
     - transaction-type: contract-publish
       contract-name: escrow-multi-token-v7
       expected-sender: STTCT2FCG2AE0T2Q70KBA1GDM4VN14FRW5A1NBR0
-      cost: 408090
+      cost: 552020
       path: contracts/escrow-multi-token-v7.clar
       anchor-block-only: true
       clarity-version: 4
@@ -26,13 +26,6 @@ plan:
       expected-sender: STTCT2FCG2AE0T2Q70KBA1GDM4VN14FRW5A1NBR0
       cost: 130230
       path: contracts/rep-sft.clar
-      anchor-block-only: true
-      clarity-version: 4
-    - transaction-type: contract-publish
-      contract-name: stxworks-escrow-v8
-      expected-sender: STTCT2FCG2AE0T2Q70KBA1GDM4VN14FRW5A1NBR0
-      cost: 94980
-      path: contracts/stxworks-escrow-v8.clar
       anchor-block-only: true
       clarity-version: 4
     - transaction-type: contract-publish

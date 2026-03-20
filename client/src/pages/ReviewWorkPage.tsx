@@ -170,7 +170,7 @@ export const ReviewWorkPage = () => {
             <div className="flex gap-4">
               <button
                 onClick={handleApprove}
-                disabled={selectedSubmission.status !== 'submitted' || !project.onChainId || project.tokenType === 'USDCx' || isApproving}
+                disabled={selectedSubmission.status !== 'submitted' || !project.onChainId || isApproving}
                 className="flex-1 btn-primary py-4 justify-center disabled:opacity-50"
               >
                 {isApproving ? 'Opening Wallet...' : selectedSubmission.status === 'approved' ? 'Funds Released' : 'Approve & Release Funds'}

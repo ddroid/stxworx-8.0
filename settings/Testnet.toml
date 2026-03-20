@@ -13,3 +13,4 @@ deployment_fee_rate = 10
 #
 # Otherwise, use the mnemonic field below:
 encrypted_mnemonic = "4YapvsZ2KKTFUn71m6NMqCj46B8WUm7CeB5YTozZFSZQfGurJMDfQkAMAd9vyuHK72cfWt2R6DQRq665payaDjYBP6VYTXzy1DXgGMq7XfWFQUWEcKocG4E8zg1QyuAYxTinLV1rJzF8qkBwUcsfsKHBJrooFQzTNVxgxw3VMvDkCNn5ZqP62TaUp4qPuoXSUqQXr9Qc8BJa58ocjSSMZegHf2mN67ZRCQwpnwemPmVkUYbHf4zDh"
+derivation_path = "m/44'/5757'/0'/0/0"

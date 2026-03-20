@@ -6,7 +6,7 @@ type TokenSelectorProps = {
   options?: string[];
 };
 
-export const TokenSelector = ({ value = 'STX', onChange, options = ['STX', 'sBTC'] }: TokenSelectorProps) => {
+export const TokenSelector = ({ value = 'STX', onChange, options = ['STX', 'sBTC', 'USDCx'] }: TokenSelectorProps) => {
   return (
     <select
       value={value}

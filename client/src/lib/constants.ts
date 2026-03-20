@@ -1,7 +1,7 @@
-export const CONTRACT_ADDRESS = import.meta.env.VITE_CONTRACT_ADDRESS || 'ST4RX4SP7XYEC9BSA6XJFA74Y45M3TQFH13NT2M9';
-export const CONTRACT_NAME = import.meta.env.VITE_ESCROW_CONTRACT_NAME || 'escrow-multi-token-v7';
-export const VERIFY_SOULBOUND_CONTRACT_NAME = import.meta.env.VITE_VERIFY_SOULBOUND_CONTRACT_NAME || 'verify-soulbound';
-export const REPUTATION_CONTRACT_NAME = import.meta.env.VITE_REPUTATION_CONTRACT_NAME || 'rep-sft';
+export const CONTRACT_ADDRESS = import.meta.env.VITE_CONTRACT_ADDRESS || 'STTCT2FCG2AE0T2Q70KBA1GDM4VN14FRW5A1NBR0';
+export const CONTRACT_NAME = import.meta.env.VITE_ESCROW_CONTRACT_NAME || 'stxworks-escrow-v7';
+export const VERIFY_SOULBOUND_CONTRACT_NAME = import.meta.env.VITE_VERIFY_SOULBOUND_CONTRACT_NAME || 'stxworx-verify-sip009';
+export const REPUTATION_CONTRACT_NAME = import.meta.env.VITE_REPUTATION_CONTRACT_NAME || 'stxworx-rep-sip013';
 
 export const SBTC_CONTRACT_ADDRESS = import.meta.env.VITE_SBTC_CONTRACT_ADDRESS || CONTRACT_ADDRESS;
 export const SBTC_CONTRACT_NAME = import.meta.env.VITE_SBTC_CONTRACT_NAME || 'sbtc-token';

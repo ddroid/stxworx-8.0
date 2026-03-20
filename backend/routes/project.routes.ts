@@ -1,6 +1,7 @@
 import { Router } from "express";
 import { projectController } from "../controllers/project.controller";
 import { requireAuth, requireRole } from "../middleware/auth";
+import { x402Paywall } from "../middleware/x402";
 
 export const projectRoutes = Router();
 
@@ -15,7 +16,7 @@ projectRoutes.get("/", projectController.getAll);
 projectRoutes.get("/:id", projectController.getById);
 
 // Protected
-projectRoutes.post("/", requireAuth, requireRole("client"), projectController.create);
+projectRoutes.post("/", requireAuth, requireRole("client"), x402Paywall, projectController.create);
 projectRoutes.patch("/:id", requireAuth, projectController.update);
 projectRoutes.delete("/:id", requireAuth, projectController.cancel);
-projectRoutes.patch("/:id/activate", requireAuth, projectController.activate);
+projectRoutes.patch("/:id/activate", requireAuth, x402Paywall, projectController.activate);

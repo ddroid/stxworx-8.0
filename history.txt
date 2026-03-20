@@ -1,0 +1,43 @@
+#V2
+(contract-call? .escrow-multi-token-v7 set-sbtc-contract 'ST1F7QA2MDF17S807EPA36TSS8AMEFY4KA9TVGWXT.sbtc-token)
+::set_tx_sender STTCT2FCG2AE0T2Q70KBA1GDM4VN14FRW5A1NBR0\n(contract-call? .escrow-multi-token-v7 set-sbtc-contract 'ST1F7QA2MDF17S807EPA36TSS8AMEFY4KA9TVGWXT.sbtc-token)
+::set_tx_sender 'STTCT2FCG2AE0T2Q70KBA1GDM4VN14FRW5A1NBR0\n(contract-call? .escrow-multi-token-v7 set-sbtc-contract 'ST1F7QA2MDF17S807EPA36TSS8AMEFY4KA9TVGWXT.sbtc-token)
+(::set_tx_sender STTCT2FCG2AE0T2Q70KBA1GDM4VN14FRW5A1NBR0)
+(set_tx_sender STTCT2FCG2AE0T2Q70KBA1GDM4VN14FRW5A1NBR0)
+::set_tx_sender STTCT2FCG2AE0T2Q70KBA1GDM4VN14FRW5A1NBR0
+(contract-call? .escrow-multi-token-v7 set-sbtc-contract 'ST1F7QA2MDF17S807EPA36TSS8AMEFY4KA9TVGWXT.sbtc-token)
+(contract-call? 'ST1PQHQKV0RJXZFY1DGX8MNSNYVE3VGZJSRTPGZGM.escrow-multi-token-v7 set-sbtc-contract 'ST1F7QA2MDF17S807EPA36TSS8AMEFY4KA9TVGWXT.sbtc-token)
+::set_tx_sender STTCT2FCG2AE0T2Q70KBA1GDM4VN14FRW5A1NBR0\n(contract-call? 'ST1PQHQKV0RJXZFY1DGX8MNSNYVE3VGZJSRTPGZGM.escrow-multi-token-v7 set-sbtc-contract 'ST1F7QA2MDF17S807EPA36TSS8AMEFY4KA9TVGWXT.sbtc-token)
+::set_tx_sender STTCT2FCG2AE0T2Q70KBA1GDM4VN14FRW5A1NBR0
+(contract-call? .escrow-multi-token-v7 set-sbtc-contract 'ST1F7QA2MDF17S807EPA36TSS8AMEFY4KA9TVGWXT.sbtc-token)
+(contract-call? 'ST1PQHQKV0RJXZFY1DGX8MNSNYVE3VGZJSRTPGZGM.escrow-multi-token-v7 set-sbtc-contract 'ST1F7QA2MDF17S807EPA36TSS8AMEFY4KA9TVGWXT.sbtc-token)
+(contract-call? .escrow-multi-token-v7 get-contract-owner)
+(contract-call? .escrow-multi-token-v7 get-usdcx-contract)
+(contract-call? .escrow-multi-token-v7 get-project-count)
+(contract-call? .escrow-multi-token-v7 get-committed-usdcx)
+::set_tx_sender STTCT2FCG2AE0T2Q70KBA1GDM4VN14FRW5A1NBR0
+(contract-call? .escrow-multi-token-v7 set-usdcx-contract .rep-sft)
+(contract-call? .escrow-multi-token-v7 get-usdcx-contract)
+::set_tx_sender ST1PQHQKV0RJXZFY1DGX8MNSNYVE3VGZJSRTPGZGM
+(contract-call? .escrow-multi-token-v7 create-project-usdcx 'ST1SJ3DTE5DN7X54YDH5D64R3BCB6A2AG2ZQ8YPD5 u1000 u1000 u0 u0 .rep-sft)
+::set_tx_sender STTCT2FCG2AE0T2Q70KBA1GDM4VN14FRW5A1NBR0
+(contract-call? ST1PQHQKV0RJXZFY1DGX8MNSNYVE3VGZJSRTPGZGM.escrow-multi-token-v7 set-usdcx-contract ST1PQHQKV0RJXZFY1DGX8MNSNYVE3VGZJSRTPGZGM.rep-sft)
+(contract-call? ST1PQHQKV0RJXZFY1DGX8MNSNYVE3VGZJSRTPGZGM.escrow-multi-token-v7 get-usdcx-contract)
+::set_tx_sender STTCT2FCG2AE0T2Q70KBA1GDM4VN14FRW5A1NBR0
+(contract-call? 'ST1PQHQKV0RJXZFY1DGX8MNSNYVE3VGZJSRTPGZGM.escrow-multi-token-v7 set-usdcx-contract 'ST1PQHQKV0RJXZFY1DGX8MNSNYVE3VGZJSRTPGZGM.rep-sft)
+(contract-call? 'ST1PQHQKV0RJXZFY1DGX8MNSNYVE3VGZJSRTPGZGM.escrow-multi-token-v7 get-usdcx-contract)
+(get-sbtc-contract)
+(contract-call? .escrow-multi-token-v7 get-sbtc-contract)
+(contract-call? .escrow-multi-token-v7 set-sbtc-contract 'ST1F7QA2MDF17S807EPA36TSS8AMEFY4KA9TVGWXT.sbtc-token)
+::set_tx_sender 'ST4RX4SP7XYEC9BSA6XJFA74Y45M3TQFH13NT2M9
+::set_tx_sender ST4RX4SP7XYEC9BSA6XJFA74Y45M3TQFH13NT2M9
+(contract-call? .escrow-multi-token-v7 set-sbtc-contract 'ST1F7QA2MDF17S807EPA36TSS8AMEFY4KA9TVGWXT.sbtc-token)
+::set_tx_sender STTCT2FCG2AE0T2Q70KBA1GDM4VN14FRW5A1NBR0
+(contract-call? .escrow-multi-token-v7 set-sbtc-contract 'ST1F7QA2MDF17S807EPA36TSS8AMEFY4KA9TVGWXT.sbtc-token)
+::set_tx_sender STTCT2FCG2AE0T2Q70KBA1GDM4VN14FRW5A1NBR0
+(contract-call? .escrow-multi-token-v7 set-sbtc-contract 'ST1F7QA2MDF17S807EPA36TSS8AMEFY4KA9TVGWXT.sbtc-token)
+clear
+::set_tx_sender ST1PQHQKV0RJXZFY1DGX8MNSNYVE3VGZJSRTPGZGM
+(contract-call? .escrow-multi-token-v7 get-contract-owner)
+::set_tx_sender STTCT2FCG2AE0T2Q70KBA1GDM4VN14FRW5A1NBR0
+(contract-call? .escrow-multi-token-v7 get-contract-owner)

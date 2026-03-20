@@ -43,11 +43,6 @@ path = "contracts/rep-sft.clar"
 clarity_version = 4
 epoch = "latest"
 
-[contracts.stxworks-escrow-v8]
-path = "contracts/stxworks-escrow-v8.clar"
-clarity_version = 4
-epoch = "latest"
-
 [contracts.stxworx-badge]
 path = "contracts/stxworx-badge.clar"
 clarity_version = 4

@@ -78,11 +78,6 @@ plan:
       path: contracts/rep-sft.clar
       clarity-version: 4
     - transaction-type: emulated-contract-publish
-      contract-name: stxworks-escrow-v8
-      emulated-sender: ST1PQHQKV0RJXZFY1DGX8MNSNYVE3VGZJSRTPGZGM
-      path: contracts/stxworks-escrow-v8.clar
-      clarity-version: 4
-    - transaction-type: emulated-contract-publish
       contract-name: stxworx-badge
       emulated-sender: ST1PQHQKV0RJXZFY1DGX8MNSNYVE3VGZJSRTPGZGM
       path: contracts/stxworx-badge.clar

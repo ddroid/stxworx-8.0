@@ -41,6 +41,10 @@ export const projectController = {
         return res.status(400).json({ message: "Validation error", errors: result.error.errors });
       }
 
+      if (res.locals.x402Token !== result.data.tokenType) {
+        return res.status(402).json({ message: `x402 pay token must match project token type ${result.data.tokenType}` });
+      }
+
       const project = await projectService.create({ ...result.data, clientId: req.user!.id });
       return res.status(201).json(project);
     } catch (error) {
@@ -196,6 +200,9 @@ export const projectController = {
       const project = await projectService.getById(id);
       if (!project) return res.status(404).json({ message: "Project not found" });
       if (project.clientId !== req.user!.id) return res.status(403).json({ message: "Not authorized" });
+      if (res.locals.x402Token !== project.tokenType) {
+        return res.status(402).json({ message: `x402 pay token must match project token type ${project.tokenType}` });
+      }
 
       const activated = await projectService.activate(id, result.data.escrowTxId, result.data.onChainId);
       return res.status(200).json(activated);
