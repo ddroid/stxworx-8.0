@@ -1,3 +1,7 @@
 import React from 'react';
 
-export const Button = () => <div>Button</div>;
+type ButtonProps = React.ButtonHTMLAttributes<HTMLButtonElement>;
+
+export const Button = ({ className = '', type = 'button', ...props }: ButtonProps) => {
+  return <button type={type} className={`btn-primary ${className}`.trim()} {...props} />;
+};

@@ -84,7 +84,7 @@ export interface WorkProps {
 
 export const Logo = ({ className = "" }: { className?: string }) => (
       <img 
-        src="/Logo.png" 
+        src="/logo.png" 
         alt="STXWORX Logo" 
         className={`h-[1.5em] w-auto object-contain shrink-0 transition-all duration-300 hover:drop-shadow-[0_0_25px_rgba(255,94,0,0.8)] cursor-pointer ${className}`} 
         referrerPolicy="no-referrer"
