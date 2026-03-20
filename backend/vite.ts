@@ -92,8 +92,10 @@ export async function setupVite(app: Express, server: Server) {
 }
 
 export function serveStatic(app: Express) {
-  // In production, __dirname is dist/server, so we need to go up one level to dist, then to public
-  const distPath = path.resolve(_currentDir, "..", "public");
+  // In production, the client is built to dist/public relative to the project root
+  // Since we're running from backend/source, we need to go up to project root, then to dist/public
+  const distPath = path.resolve(_currentDir, "..", "dist", "public");
+  console.log("Looking for public directory at:", distPath);
 
   if (!fs.existsSync(distPath)) {
     throw new Error(

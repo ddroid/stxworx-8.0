@@ -29,9 +29,11 @@ export interface WalletContextType {
     setIsWorkSubmitted: (submitted: boolean) => void;
     connect: (role?: 'client' | 'freelancer') => void;
     disconnect: () => void;
+    completeRoleSelection: (role: 'client' | 'freelancer') => Promise<void>;
     isSignedIn: boolean;
     userSession: UserSession | null;
     userData: any;
+    needsRoleSelection: boolean;
 }
 
 export const WalletContext = createContext<WalletContextType>({
@@ -46,9 +48,11 @@ export const WalletContext = createContext<WalletContextType>({
       setIsWorkSubmitted: () => {},
       connect: () => {},
       disconnect: () => {},
+      completeRoleSelection: async () => {},
       isSignedIn: false,
       userSession: null,
       userData: null,
+      needsRoleSelection: false,
     });
 export const useWallet = () => useContext(WalletContext);
 
@@ -1058,8 +1062,8 @@ export const CustomCursor = () => {
       );
     };
 export const RequireWallet = ({ children }: { children: React.ReactNode }) => {
-      const { walletAddress } = useWallet();
-      if (!walletAddress) {
+      const { isSignedIn } = useWallet();
+      if (!isSignedIn) {
         return (
           <div className="pt-28 pb-20 px-6 md:pl-[92px]">
             <div className="container-custom flex flex-col items-center justify-center min-h-[60vh]">
@@ -1073,10 +1077,10 @@ export const RequireWallet = ({ children }: { children: React.ReactNode }) => {
       return <>{children}</>;
     };
 export const ProtectedContent = ({ children }: { children: React.ReactNode }) => {
-      const { walletAddress } = useWallet();
+      const { isSignedIn } = useWallet();
       const location = useLocation();
 
-      if (!walletAddress && location.pathname !== '/') {
+      if (!isSignedIn && location.pathname !== '/') {
         return (
           <motion.div
             key="protected"

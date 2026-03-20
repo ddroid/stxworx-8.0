@@ -1,41 +1,31 @@
 import React, { useCallback, useEffect, useMemo, useState } from "react";
 import * as Shared from "../../shared";
-import { getCurrentUser, logoutUser, verifyWallet } from "../../lib/api";
+import { getCurrentUser, getUserProfile, logoutUser, verifyWallet } from "../../lib/api";
 import { authenticate, userSession, getUserData, getUserAddress, requestSignMessage } from "../../lib/stacks";
 import type { UserRole } from "../../types/user";
 
 type WalletProviderProps = {
-  value: Omit<Shared.WalletContextType, "connect" | "disconnect" | "isSignedIn" | "userSession" | "userData">;
+  value: Omit<Shared.WalletContextType, "connect" | "disconnect" | "completeRoleSelection" | "isSignedIn" | "userSession" | "userData" | "needsRoleSelection">;
   children: React.ReactNode;
 };
 
 const PENDING_ROLE_KEY = "stxworx_pending_role";
+const USER_ROLE_KEY = "stxworx_user_role";
 
 export function WalletProvider({ value, children }: WalletProviderProps) {
   const { setWalletAddress, setUserRole } = value;
   const [userData, setUserData] = useState<any>(null);
   const [isSignedIn, setIsSignedIn] = useState(false);
+  const [needsRoleSelection, setNeedsRoleSelection] = useState(false);
 
-  const authenticateBackendSession = useCallback(
-    async (roleOverride?: UserRole | null) => {
+  const establishBackendSession = useCallback(
+    async (role: UserRole) => {
       const address = getUserAddress();
       if (!address) {
-        return;
+        throw new Error("No wallet connected");
       }
 
-      try {
-        const currentUser = await getCurrentUser();
-        setUserRole(currentUser.user.role);
-        window.localStorage.removeItem(PENDING_ROLE_KEY);
-        return;
-      } catch {}
-
-      const pendingRole = roleOverride || (window.localStorage.getItem(PENDING_ROLE_KEY) as UserRole | null);
-      if (!pendingRole) {
-        return;
-      }
-
-      const message = `Sign in to STXWORX as ${pendingRole} on ${window.location.host} at ${new Date().toISOString()}`;
+      const message = `Sign in to STXWORX as ${role} on ${window.location.host} at ${new Date().toISOString()}`;
       const signedMessage = await requestSignMessage(message);
 
       if (!signedMessage) {
@@ -47,13 +37,57 @@ export function WalletProvider({ value, children }: WalletProviderProps) {
         publicKey: signedMessage.publicKey,
         signature: signedMessage.signature,
         message,
-        role: pendingRole,
+        role,
       });
 
       setUserRole(session.user.role);
+      window.localStorage.setItem(USER_ROLE_KEY, session.user.role);
+      setIsSignedIn(true);
+      setNeedsRoleSelection(false);
       window.localStorage.removeItem(PENDING_ROLE_KEY);
     },
     [setUserRole],
+  );
+
+  const authenticateBackendSession = useCallback(
+    async (roleOverride?: UserRole | null) => {
+      const address = getUserAddress();
+      if (!address) {
+        setIsSignedIn(false);
+        return;
+      }
+
+      try {
+        const currentUser = await getCurrentUser();
+        setUserRole(currentUser.user.role);
+        window.localStorage.setItem(USER_ROLE_KEY, currentUser.user.role);
+        setIsSignedIn(true);
+        setNeedsRoleSelection(false);
+        window.localStorage.removeItem(PENDING_ROLE_KEY);
+        return;
+      } catch {}
+
+      let existingRole: UserRole | null = null;
+
+      try {
+        const profile = await getUserProfile(address);
+        existingRole = profile.role;
+      } catch (error) {
+        console.error("Error loading wallet profile:", error);
+      }
+
+      const pendingRole = roleOverride || (window.localStorage.getItem(PENDING_ROLE_KEY) as UserRole | null);
+      const resolvedRole = existingRole || pendingRole;
+
+      if (!resolvedRole) {
+        setIsSignedIn(false);
+        setNeedsRoleSelection(true);
+        return;
+      }
+
+      await establishBackendSession(resolvedRole);
+    },
+    [establishBackendSession, setUserRole],
   );
 
   useEffect(() => {
@@ -65,10 +99,10 @@ export function WalletProvider({ value, children }: WalletProviderProps) {
           const address =
             data.profile?.stxAddress?.testnet || data.profile?.stxAddress?.mainnet || null;
           setWalletAddress(address);
-          setIsSignedIn(true);
           await authenticateBackendSession();
         } catch (error) {
           console.error("Error handling pending sign in:", error);
+          setIsSignedIn(false);
         }
         return;
       }
@@ -78,11 +112,13 @@ export function WalletProvider({ value, children }: WalletProviderProps) {
           const data = getUserData();
           setUserData(data);
           setWalletAddress(getUserAddress());
-          setIsSignedIn(true);
           await authenticateBackendSession();
         } catch (error) {
           console.error("Error loading user session:", error);
+          setIsSignedIn(false);
         }
+      } else {
+        setIsSignedIn(false);
       }
     };
 
@@ -99,13 +135,20 @@ export function WalletProvider({ value, children }: WalletProviderProps) {
         const data = getUserData();
         setUserData(data);
         setWalletAddress(getUserAddress());
-        setIsSignedIn(true);
+        setIsSignedIn(false);
         authenticateBackendSession(role).catch((error) => {
           console.error("Error creating backend session:", error);
         });
       }
     });
   }, [authenticateBackendSession, setWalletAddress]);
+
+  const completeRoleSelection = useCallback(
+    async (role: UserRole) => {
+      await establishBackendSession(role);
+    },
+    [establishBackendSession],
+  );
 
   const disconnect = useCallback(() => {
     logoutUser().catch(() => undefined);
@@ -114,7 +157,10 @@ export function WalletProvider({ value, children }: WalletProviderProps) {
     setUserData(null);
     setWalletAddress(null);
     setUserRole(null);
+    setNeedsRoleSelection(false);
+    // Clear persisted role on disconnect
     window.localStorage.removeItem(PENDING_ROLE_KEY);
+    window.localStorage.removeItem(USER_ROLE_KEY);
   }, [setUserRole, setWalletAddress]);
 
   const providerValue = useMemo<Shared.WalletContextType>(
@@ -122,11 +168,13 @@ export function WalletProvider({ value, children }: WalletProviderProps) {
       ...value,
       connect,
       disconnect,
+      completeRoleSelection,
       isSignedIn,
       userSession,
       userData,
+      needsRoleSelection,
     }),
-    [value, connect, disconnect, isSignedIn, userData],
+    [value, connect, disconnect, completeRoleSelection, isSignedIn, userData, needsRoleSelection],
   );
 
   return (

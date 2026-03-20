@@ -105,8 +105,8 @@ function scoreMenuItem(item: PlatformMenuItem, terms: string[]) {
 
 export const TopHeader = ({ theme, toggleTheme }: { theme: 'dark' | 'light', toggleTheme: () => void }) => {
   const navigate = useNavigate();
-  const { walletAddress, userRole, setUserRole, blockedWallets, connect, disconnect, isSignedIn } = Shared.useWallet();
-  const [showWalletModal, setShowWalletModal] = useState(false);
+  const { walletAddress, userRole, setUserRole, blockedWallets, connect, disconnect, isSignedIn, needsRoleSelection, completeRoleSelection } = Shared.useWallet();
+  const [showRoleModal, setShowRoleModal] = useState(false);
   const [showLogoutConfirm, setShowLogoutConfirm] = useState(false);
   const [selectedProvider, setSelectedProvider] = useState<string | null>(null);
   const [showMessages, setShowMessages] = useState(false);
@@ -119,6 +119,14 @@ export const TopHeader = ({ theme, toggleTheme }: { theme: 'dark' | 'light', tog
   const [profile, setProfile] = useState<ApiUserProfile | null>(null);
 
   const isBlocked = walletAddress && blockedWallets.includes(walletAddress);
+
+  useEffect(() => {
+    if (needsRoleSelection && !showLogoutConfirm && !isBlocked) {
+      setShowRoleModal(true);
+    } else {
+      setShowRoleModal(false);
+    }
+  }, [needsRoleSelection, showLogoutConfirm, isBlocked]);
 
   const displayWalletAddress = useMemo(() => {
     if (!walletAddress) return 'Connect Wallet';
@@ -138,18 +146,30 @@ export const TopHeader = ({ theme, toggleTheme }: { theme: 'dark' | 'light', tog
     return 'Guest';
   }, [profile?.username, walletAddress]);
 
-  const handleConnect = (role: 'client' | 'freelancer') => {
-    setUserRole(role);
-    connect(role);
-    setShowWalletModal(false);
+  const handleConnect = async () => {
+    // Just connect wallet without role for login
+    connect();
+    setShowRoleModal(false);
     setShowLogoutConfirm(false);
     setSelectedProvider(null);
+  };
+
+  const handleRoleSelection = async (role: 'client' | 'freelancer') => {
+    setShowRoleModal(false);
+    setShowLogoutConfirm(false);
+    setSelectedProvider(null);
+    
+    try {
+      await completeRoleSelection(role);
+    } catch (error) {
+      console.error('Error completing role selection:', error);
+    }
   };
 
   const handleDisconnect = () => {
     disconnect();
     setSelectedProvider(null);
-    setShowWalletModal(false);
+    setShowRoleModal(false);
     setShowLogoutConfirm(false);
   };
 
@@ -371,7 +391,7 @@ export const TopHeader = ({ theme, toggleTheme }: { theme: 'dark' | 'light', tog
         </button>
 
         <button
-          onClick={() => (isSignedIn ? setShowLogoutConfirm(true) : setShowWalletModal(true))}
+          onClick={() => (isSignedIn ? setShowLogoutConfirm(true) : handleConnect())}
           className={`flex items-center gap-2 px-4 py-2 rounded-[15px] text-xs font-bold transition-all ${isSignedIn ? 'bg-accent-cyan/10 text-accent-cyan border border-accent-cyan/20' : 'bg-ink text-bg hover:bg-accent-orange'} ${isBlocked ? 'opacity-70 cursor-not-allowed' : ''}`}
           disabled={isBlocked}
         >
@@ -540,7 +560,7 @@ export const TopHeader = ({ theme, toggleTheme }: { theme: 'dark' | 'light', tog
     </header>
 
     <AnimatePresence>
-      {showWalletModal && (
+      {showRoleModal && (
         <div className="fixed inset-0 bg-bg/80 backdrop-blur-sm z-[100] flex items-center justify-center">
           <motion.div
             initial={{ opacity: 0, scale: 0.95 }}
@@ -550,70 +570,35 @@ export const TopHeader = ({ theme, toggleTheme }: { theme: 'dark' | 'light', tog
           >
             <button
               onClick={() => {
-                setShowWalletModal(false);
+                setShowRoleModal(false);
                 setSelectedProvider(null);
               }}
               className="absolute top-4 right-4 text-muted hover:text-ink"
             >
               <X size={20} />
             </button>
-            <h3 className="text-2xl font-black mb-6 text-center">
-              {selectedProvider ? 'Select Role' : 'Connect Wallet'}
-            </h3>
+            <h3 className="text-2xl font-black mb-6 text-center">Select Role</h3>
             {isBlocked && (
               <div className="bg-accent-red/10 border border-accent-red text-accent-red p-4 rounded-[15px] mb-6 text-sm text-center font-bold">
                 This wallet has been blocked by the administrator.
               </div>
             )}
-
-            {!selectedProvider ? (
-              <div className="space-y-4">
-                <button
-                  onClick={() => setSelectedProvider('xverse')}
-                  className="w-full py-4 rounded-[15px] border border-border hover:border-accent-orange hover:bg-accent-orange/5 transition-all font-bold flex items-center justify-center gap-3"
-                >
-                  <div className="w-6 h-6 bg-ink rounded-full flex items-center justify-center text-bg text-xs">X</div>
-                  Xverse Wallet
-                </button>
-                <button
-                  onClick={() => setSelectedProvider('leather')}
-                  className="w-full py-4 rounded-[15px] border border-border hover:border-accent-cyan hover:bg-accent-cyan/5 transition-all font-bold flex items-center justify-center gap-3"
-                >
-                  <div className="w-6 h-6 bg-ink rounded-full flex items-center justify-center text-bg text-xs">L</div>
-                  Leather Wallet
-                </button>
-                <button
-                  onClick={() => setSelectedProvider('other')}
-                  className="w-full py-4 rounded-[15px] border border-border hover:border-blue-500 hover:bg-blue-500/5 transition-all font-bold flex items-center justify-center gap-3"
-                >
-                  <Wallet size={24} className="text-blue-500" />
-                  Any Bitcoin Wallet
-                </button>
-              </div>
-            ) : (
-              <div className="space-y-4">
-                <button
-                  onClick={() => handleConnect('client')}
-                  className="w-full py-4 rounded-[15px] border border-border hover:border-accent-cyan hover:bg-accent-cyan/5 transition-all font-bold flex flex-col items-center gap-2"
-                >
-                  <span className="text-accent-cyan"><Briefcase size={24} /></span>
-                  Connect as Client
-                </button>
-                <button
-                  onClick={() => handleConnect('freelancer')}
-                  className="w-full py-4 rounded-[15px] border border-border hover:border-accent-orange hover:bg-accent-orange/5 transition-all font-bold flex flex-col items-center gap-2"
-                >
-                  <span className="text-accent-orange"><PenTool size={24} /></span>
-                  Connect as Freelancer
-                </button>
-                <button
-                  onClick={() => setSelectedProvider(null)}
-                  className="w-full py-2 text-xs font-bold text-muted hover:text-ink transition-colors mt-2"
-                >
-                  Back to Wallets
-                </button>
-              </div>
-            )}
+            <div className="space-y-4">
+              <button
+                onClick={() => handleRoleSelection('client')}
+                className="w-full py-4 rounded-[15px] border border-border hover:border-accent-cyan hover:bg-accent-cyan/5 transition-all font-bold flex flex-col items-center gap-2"
+              >
+                <span className="text-accent-cyan"><Briefcase size={24} /></span>
+                Connect as Client
+              </button>
+              <button
+                onClick={() => handleRoleSelection('freelancer')}
+                className="w-full py-4 rounded-[15px] border border-border hover:border-accent-orange hover:bg-accent-orange/5 transition-all font-bold flex flex-col items-center gap-2"
+              >
+                <span className="text-accent-orange"><PenTool size={24} /></span>
+                Connect as Freelancer
+              </button>
+            </div>
           </motion.div>
         </div>
       )}
