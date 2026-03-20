@@ -12,6 +12,7 @@ import {
   getAdminMe,
   getAdminPlatformConfig,
   getAdminUsers,
+  toDisplayName,
   resolveAdminDispute,
   resetAdminDispute,
   updateAdminPlatformConfig,
@@ -291,7 +292,7 @@ export const AdminDashboard = () => {
                 <div key={user.id} className="bg-ink/5 rounded-[15px] p-4">
                   <div className="flex items-center justify-between gap-4">
                     <div>
-                      <p className="text-sm font-bold">{user.username || formatAddress(user.stxAddress)}</p>
+                      <p className="text-sm font-bold">{toDisplayName(user)}</p>
                       <p className="text-[10px] text-muted uppercase tracking-widest">{user.role}</p>
                     </div>
                     <button

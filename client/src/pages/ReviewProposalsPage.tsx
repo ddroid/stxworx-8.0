@@ -13,6 +13,7 @@ import {
   getUserProfile,
   getUserReviews,
   rejectProposal,
+  toDisplayName,
   type ApiProposal,
 } from '../lib/api';
 import { createEscrowForProject } from '../lib/escrow';
@@ -183,7 +184,7 @@ export const ReviewProposalsPage = () => {
               const rating = reviews.length
                 ? (reviews.reduce((sum, review) => sum + review.rating, 0) / reviews.length).toFixed(1)
                 : '0.0';
-              const displayName = profile?.username || proposal.freelancerUsername || formatAddress(address || `freelancer-${proposal.freelancerId}`);
+              const displayName = profile ? toDisplayName(profile) : toDisplayName({ name: proposal.freelancerName, username: proposal.freelancerUsername, stxAddress: address || `freelancer-${proposal.freelancerId}` });
               const canFundEscrow = proposal.status === 'accepted' && project?.status !== 'active';
               const canAcceptProposal = proposal.status === 'pending' || canFundEscrow;
 

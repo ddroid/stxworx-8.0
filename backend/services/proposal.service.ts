@@ -35,6 +35,7 @@ export const proposalService = {
         createdAt: proposals.createdAt,
         updatedAt: proposals.updatedAt,
         freelancerAddress: users.stxAddress,
+        freelancerName: users.name,
         freelancerUsername: users.username,
       })
       .from(proposals)
@@ -87,6 +88,7 @@ export const proposalService = {
       .update(projects)
       .set({ 
         freelancerId: proposal.freelancerId, 
+        status: "active",
         updatedAt: new Date() 
       })
       .where(eq(projects.id, proposal.projectId));

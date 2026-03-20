@@ -285,7 +285,7 @@ export const HomePage = () => {
           </div>
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
             {feedPosts.map((post) => {
-              const authorName = post.authorUsername?.trim() || formatAddress(post.authorStxAddress) || 'Anonymous User';
+              const authorName = toDisplayName({ name: post.authorName, username: post.authorUsername, stxAddress: post.authorStxAddress });
               const avatarUrl = toApiAssetUrl(post.authorAvatar);
               const comments = feedComments[post.id] || [];
               const isCommentsOpen = Boolean(expandedComments[post.id]);
@@ -372,7 +372,7 @@ export const HomePage = () => {
                     ) : comments.length > 0 ? (
                       <div className="space-y-4">
                         {comments.map((comment) => {
-                          const commentAuthorName = comment.authorUsername?.trim() || formatAddress(comment.authorStxAddress) || 'Anonymous User';
+                          const commentAuthorName = toDisplayName({ name: comment.authorName, username: comment.authorUsername, stxAddress: comment.authorStxAddress });
                           const commentAvatarUrl = toApiAssetUrl(comment.authorAvatar);
 
                           return (

@@ -312,7 +312,7 @@ export const DashboardPage = () => {
                 <button onClick={() => setIsPostJobModalOpen(true)} className="btn-primary py-2 px-4 text-xs">Post New Job</button>
               </div>
               <div className="space-y-6">
-                {postedProjects.filter(p => p.status !== 'completed').map((project) => {
+                {postedProjects.filter(p => p.status === 'open').map((project) => {
                   const milestones = buildMilestones(project, milestonesByProject[project.id] || []);
                   return (
                     <div key={project.id} className="border border-border rounded-[15px] p-6 bg-ink/5">
@@ -347,7 +347,7 @@ export const DashboardPage = () => {
                     </div>
                   );
                 })}
-                {postedProjects.filter(p => p.status !== 'completed').length === 0 && <div className="text-sm text-muted">You have no active job postings.</div>}
+                {postedProjects.filter(p => p.status === 'open').length === 0 && <div className="text-sm text-muted">You have no active job postings.</div>}
               </div>
             </div>
 

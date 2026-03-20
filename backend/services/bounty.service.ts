@@ -16,6 +16,7 @@ export const bountyService = {
         createdAt: bounties.createdAt,
         updatedAt: bounties.updatedAt,
         creatorAddress: users.stxAddress,
+        creatorName: users.name,
         creatorUsername: users.username,
       })
       .from(bounties)

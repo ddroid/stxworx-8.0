@@ -10,6 +10,7 @@ type SocialPostRecord = {
   createdAt: Date;
   updatedAt: Date;
   authorStxAddress: string | null;
+  authorName: string | null;
   authorUsername: string | null;
   authorAvatar: string | null;
 };
@@ -21,6 +22,7 @@ type SocialCommentRecord = {
   content: string;
   createdAt: Date;
   authorStxAddress: string | null;
+  authorName: string | null;
   authorUsername: string | null;
   authorAvatar: string | null;
 };
@@ -35,6 +37,7 @@ async function getPostRecord(postId: number): Promise<SocialPostRecord | null> {
       createdAt: socialPosts.createdAt,
       updatedAt: socialPosts.updatedAt,
       authorStxAddress: users.stxAddress,
+      authorName: users.name,
       authorUsername: users.username,
       authorAvatar: users.avatar,
     })
@@ -84,6 +87,7 @@ export const socialService = {
         createdAt: socialPosts.createdAt,
         updatedAt: socialPosts.updatedAt,
         authorStxAddress: users.stxAddress,
+        authorName: users.name,
         authorUsername: users.username,
         authorAvatar: users.avatar,
       })
@@ -115,6 +119,7 @@ export const socialService = {
         createdAt: socialPosts.createdAt,
         updatedAt: socialPosts.updatedAt,
         authorStxAddress: users.stxAddress,
+        authorName: users.name,
         authorUsername: users.username,
         authorAvatar: users.avatar,
       })
@@ -142,6 +147,7 @@ export const socialService = {
         createdAt: socialPosts.createdAt,
         updatedAt: socialPosts.updatedAt,
         authorStxAddress: users.stxAddress,
+        authorName: users.name,
         authorUsername: users.username,
         authorAvatar: users.avatar,
       })
@@ -193,6 +199,7 @@ export const socialService = {
         content: postComments.content,
         createdAt: postComments.createdAt,
         authorStxAddress: users.stxAddress,
+        authorName: users.name,
         authorUsername: users.username,
         authorAvatar: users.avatar,
       })
@@ -223,6 +230,7 @@ export const socialService = {
         content: postComments.content,
         createdAt: postComments.createdAt,
         authorStxAddress: users.stxAddress,
+        authorName: users.name,
         authorUsername: users.username,
         authorAvatar: users.avatar,
       })

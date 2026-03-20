@@ -36,6 +36,7 @@ export const authController = {
         user: {
           id: user.id,
           stxAddress: user.stxAddress,
+          name: user.name,
           username: user.username,
           role: user.role,
         },
@@ -75,6 +76,7 @@ export const authController = {
         user: {
           id: user.id,
           stxAddress: user.stxAddress,
+          name: user.name,
           username: user.username,
           role: user.role,
           isActive: user.isActive,

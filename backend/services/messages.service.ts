@@ -149,6 +149,7 @@ export const messagesService = {
           .select({
             id: users.id,
             stxAddress: users.stxAddress,
+            name: users.name,
             username: users.username,
             role: users.role,
             avatar: users.avatar,
@@ -194,6 +195,7 @@ export const messagesService = {
         body: messages.body,
         createdAt: messages.createdAt,
         senderAddress: users.stxAddress,
+        senderName: users.name,
         senderUsername: users.username,
         senderRole: users.role,
       })
@@ -248,6 +250,7 @@ export const messagesService = {
         body: messages.body,
         createdAt: messages.createdAt,
         senderAddress: users.stxAddress,
+        senderName: users.name,
         senderUsername: users.username,
         senderRole: users.role,
       })

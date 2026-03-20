@@ -4,12 +4,12 @@ import { ChevronLeft, Heart, MessageCircle, MoreHorizontal } from 'lucide-react'
 import * as Shared from '../shared';
 import {
   createSocialPostComment,
-  formatAddress,
   formatRelativeTime,
   getSocialPost,
   getSocialPostComments,
   toggleSocialPostLike,
   toApiAssetUrl,
+  toDisplayName,
   type ApiSocialComment,
   type ApiSocialPost,
 } from '../lib/api';
@@ -151,7 +151,7 @@ export const PostPage = () => {
     );
   }
 
-  const authorName = post.authorUsername?.trim() || formatAddress(post.authorStxAddress) || 'Anonymous User';
+  const authorName = toDisplayName({ name: post.authorName, username: post.authorUsername, stxAddress: post.authorStxAddress });
   const avatarUrl = toApiAssetUrl(post.authorAvatar);
   const imageUrl = toApiAssetUrl(post.imageUrl);
 
@@ -228,7 +228,7 @@ export const PostPage = () => {
 
           <div className="space-y-6">
             {comments.map((comment) => {
-              const commentAuthorName = comment.authorUsername?.trim() || formatAddress(comment.authorStxAddress) || 'Anonymous User';
+              const commentAuthorName = toDisplayName({ name: comment.authorName, username: comment.authorUsername, stxAddress: comment.authorStxAddress });
               const commentAvatarUrl = toApiAssetUrl(comment.authorAvatar);
 
               return (

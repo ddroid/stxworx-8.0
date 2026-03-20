@@ -2,7 +2,6 @@ import { randomUUID } from "node:crypto";
 import path from "node:path";
 import { mkdir, writeFile } from "node:fs/promises";
 
-const UPLOAD_ROOT = path.resolve(process.cwd(), "uploads", "social-posts");
 const MAX_IMAGE_SIZE_BYTES = 5 * 1024 * 1024;
 const MIME_EXTENSION_MAP: Record<string, string> = {
   "image/jpeg": "jpg",
@@ -36,15 +35,20 @@ function parseImageDataUrl(dataUrl: string) {
   };
 }
 
-export async function saveSocialPostImage(dataUrl: string) {
+export async function saveUploadedImage(dataUrl: string, directory: string) {
   const { buffer, extension } = parseImageDataUrl(dataUrl);
+  const uploadRoot = path.resolve(process.cwd(), "uploads", directory);
 
-  await mkdir(UPLOAD_ROOT, { recursive: true });
+  await mkdir(uploadRoot, { recursive: true });
 
   const fileName = `${Date.now()}-${randomUUID()}.${extension}`;
-  const filePath = path.join(UPLOAD_ROOT, fileName);
+  const filePath = path.join(uploadRoot, fileName);
 
   await writeFile(filePath, buffer);
 
-  return `/uploads/social-posts/${fileName}`;
+  return `/uploads/${directory}/${fileName}`;
+}
+
+export async function saveSocialPostImage(dataUrl: string) {
+  return saveUploadedImage(dataUrl, "social-posts");
 }

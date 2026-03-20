@@ -1,5 +1,5 @@
 import React, { useMemo, useState, useEffect } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useParams } from 'react-router-dom';
 import { motion, AnimatePresence } from 'motion/react';
 import { 
   Search, Bell, Globe, LayoutGrid, Users, BookOpen, Briefcase, Calendar, ShoppingBag, Newspaper,
@@ -13,6 +13,7 @@ import { GoogleGenAI } from '@google/genai';
 import * as Shared from '../shared';
 import {
   acceptConnection,
+  checkUsernameAvailability,
   createSocialPost,
   declineConnection,
   formatRelativeTime,
@@ -21,8 +22,10 @@ import {
   getConnections,
   getMyBountyDashboard,
   getSocialPosts,
+  toDisplayName,
   toApiAssetUrl,
   getUserProfile,
+  getUserProfileByUsername,
   getUserNfts,
   getUserProjects,
   getUserReviews,
@@ -35,10 +38,97 @@ import {
   type ApiSocialPost,
 } from '../lib/api';
 import type { ApiProject } from '../types/job';
-import type { ApiUserProfile, ApiUserReview } from '../types/user';
+import type { ApiUserProfile, ApiUserReview, UserRole } from '../types/user';
 
-export const ProfilePage = ({ userRole }: { userRole: 'client' | 'freelancer' | null }) => {
-  const { walletAddress } = Shared.useWallet();
+type LinkTypeValue = 'website' | 'github' | 'linkedin' | 'twitter' | 'instagram' | 'custom';
+
+type PortfolioLinkDraft = {
+  id: number;
+  type: LinkTypeValue;
+  url: string;
+};
+
+type UsernameStatus = 'idle' | 'checking' | 'available' | 'taken' | 'invalid';
+
+const linkTypeOptions: Array<{ value: LinkTypeValue; label: string }> = [
+  { value: 'website', label: 'Website' },
+  { value: 'github', label: 'GitHub' },
+  { value: 'linkedin', label: 'LinkedIn' },
+  { value: 'twitter', label: 'Twitter / X' },
+  { value: 'instagram', label: 'Instagram' },
+  { value: 'custom', label: 'Custom' },
+];
+
+function normalizeUrl(input: string) {
+  const trimmed = input.trim();
+
+  if (!trimmed) {
+    return '';
+  }
+
+  const withProtocol = /^https?:\/\//i.test(trimmed) ? trimmed : `https://${trimmed}`;
+
+  try {
+    const parsed = new URL(withProtocol);
+    if (!['http:', 'https:'].includes(parsed.protocol)) {
+      return '';
+    }
+    return parsed.toString();
+  } catch {
+    return '';
+  }
+}
+
+function inferLinkType(url: string): LinkTypeValue {
+  const normalized = url.toLowerCase();
+
+  if (normalized.includes('github.com')) {
+    return 'github';
+  }
+
+  if (normalized.includes('linkedin.com')) {
+    return 'linkedin';
+  }
+
+  if (normalized.includes('twitter.com') || normalized.includes('x.com')) {
+    return 'twitter';
+  }
+
+  if (normalized.includes('instagram.com')) {
+    return 'instagram';
+  }
+
+  return 'website';
+}
+
+function parsePortfolioLinks(links?: string[] | null): PortfolioLinkDraft[] {
+  return (links || []).map((url, index) => ({
+    id: Date.now() + index,
+    type: inferLinkType(url),
+    url,
+  }));
+}
+
+function imageToDataUrl(file: File) {
+  return new Promise<string>((resolve, reject) => {
+    const fileReader = new FileReader();
+    fileReader.onload = () => resolve(typeof fileReader.result === 'string' ? fileReader.result : '');
+    fileReader.onerror = () => reject(fileReader.error || new Error('Failed to read image file'));
+    fileReader.readAsDataURL(file);
+  });
+}
+
+function fallbackAvatar(role: UserRole | null | undefined) {
+  return role === 'client' ? 'https://picsum.photos/seed/client/300/300' : 'https://picsum.photos/seed/elodie/300/300';
+}
+
+function fallbackCover() {
+  return 'https://picsum.photos/seed/banner/1920/600';
+}
+
+export const ProfilePage = ({ userRole }: { userRole: UserRole | null }) => {
+  const { walletAddress, isSignedIn } = Shared.useWallet();
+  const { walletAddressParam, profileIdentifier } = useParams<{ walletAddressParam?: string; profileIdentifier?: string }>();
   const tabs = ['Timeline', 'Profile', 'Bounties', 'Friends', 'NFTs'];
   const [activeTab, setActiveTab] = useState('Profile');
   const [isEditing, setIsEditing] = useState(false);
@@ -46,15 +136,18 @@ export const ProfilePage = ({ userRole }: { userRole: 'client' | 'freelancer' | 
   const [recipientAddress, setRecipientAddress] = useState('');
   const [isLoading, setIsLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
+  const [loadError, setLoadError] = useState('');
+  const [globalError, setGlobalError] = useState('');
   const [profile, setProfile] = useState<ApiUserProfile | null>(null);
   const [projects, setProjects] = useState<ApiProject[]>([]);
   const [reviews, setReviews] = useState<ApiUserReview[]>([]);
   const [timelinePosts, setTimelinePosts] = useState<ApiSocialPost[]>([]);
   const [connections, setConnections] = useState<ApiConnection[]>([]);
-  const [connectionSuggestions, setConnectionSuggestions] = useState<Array<Pick<ApiUserProfile, 'id' | 'stxAddress' | 'username' | 'role' | 'isActive' | 'specialty' | 'avatar'>>>([]);
+  const [connectionSuggestions, setConnectionSuggestions] = useState<Array<Pick<ApiUserProfile, 'id' | 'stxAddress' | 'name' | 'username' | 'role' | 'isActive' | 'specialty' | 'avatar'>>>([]);
   const [bountyDashboard, setBountyDashboard] = useState<ApiBountyDashboard | null>(null);
   const [nfts, setNfts] = useState<ApiReputationNft[]>([]);
   const [profileDraft, setProfileDraft] = useState({
+    name: '',
     username: '',
     about: '',
     specialty: '',
@@ -65,48 +158,103 @@ export const ProfilePage = ({ userRole }: { userRole: 'client' | 'freelancer' | 
   });
   
   // New profile fields
-  const [language, setLanguage] = useState('English');
-  const [country, setCountry] = useState('USA');
-  const [city, setCity] = useState('San Francisco');
+  const [language, setLanguage] = useState('');
+  const [country, setCountry] = useState('');
+  const [city, setCity] = useState('');
   
   // Image editing modal state
   const [isImageModalOpen, setIsImageModalOpen] = useState(false);
   const [imageToEdit, setImageToEdit] = useState<'profile' | 'cover' | null>(null);
-  const [profileImage, setProfileImage] = useState(userRole === 'client' ? "https://picsum.photos/seed/client/300/300" : "https://picsum.photos/seed/elodie/300/300");
-  const [coverImage, setCoverImage] = useState("https://picsum.photos/seed/banner/1920/600");
+  const [profileImage, setProfileImage] = useState(fallbackAvatar(userRole));
+  const [coverImage, setCoverImage] = useState(fallbackCover());
+  const [pendingImage, setPendingImage] = useState('');
+  const [imageZoom, setImageZoom] = useState(1);
+  const [usernameStatus, setUsernameStatus] = useState<UsernameStatus>('idle');
+  const [usernameMessage, setUsernameMessage] = useState('');
+  const [skillInput, setSkillInput] = useState('');
+  const timelineImageInputRef = React.useRef<HTMLInputElement | null>(null);
+  const imageUploadInputRef = React.useRef<HTMLInputElement | null>(null);
+  const skillInputRef = React.useRef<HTMLInputElement | null>(null);
+
+  const profilePathMode = walletAddressParam ? 'wallet' : profileIdentifier ? 'username' : 'me';
 
   const openImageEditor = (type: 'profile' | 'cover') => {
     setImageToEdit(type);
+    setPendingImage(type === 'profile' ? profileImage : coverImage);
+    setImageZoom(1);
     setIsImageModalOpen(true);
   };
 
-  const handleImageSave = () => {
-    // In a real app, this would handle the cropped/reframed image
-    // For now, we'll just close the modal
+  const closeImageEditor = () => {
     setIsImageModalOpen(false);
     setImageToEdit(null);
+    setPendingImage('');
+    setImageZoom(1);
   };
 
-  useEffect(() => {
-    if (!walletAddress) {
-      setIsLoading(false);
+  const handleImageSave = () => {
+    if (!pendingImage || !imageToEdit) {
+      closeImageEditor();
       return;
     }
 
+    if (imageToEdit === 'profile') {
+      setProfileImage(pendingImage);
+    } else {
+      setCoverImage(pendingImage);
+    }
+
+    closeImageEditor();
+  };
+
+  useEffect(() => {
     let isMounted = true;
 
     const loadProfile = async () => {
       setIsLoading(true);
+      setLoadError('');
       try {
-        const [profileResponse, projectResponse, reviewResponse, socialResponse, connectionResponse, suggestionResponse, bountyResponse, nftResponse] = await Promise.all([
-          getUserProfile(walletAddress),
-          getUserProjects(walletAddress),
-          getUserReviews(walletAddress).catch(() => []),
-          getSocialPosts(walletAddress).catch(() => []),
-          getConnections().catch(() => []),
-          getConnectionSuggestions().catch(() => []),
-          getMyBountyDashboard().catch(() => null),
-          getUserNfts(walletAddress).catch(() => []),
+        let profileResponse: ApiUserProfile;
+
+        if (profilePathMode === 'wallet' && walletAddressParam) {
+          profileResponse = await getUserProfile(walletAddressParam);
+        } else if (profilePathMode === 'username' && profileIdentifier) {
+          profileResponse = await getUserProfileByUsername(profileIdentifier);
+        } else if (walletAddress) {
+          profileResponse = await getUserProfile(walletAddress);
+        } else {
+          if (!isMounted) {
+            return;
+          }
+
+          setProfile(null);
+          setProjects([]);
+          setReviews([]);
+          setTimelinePosts([]);
+          setConnections([]);
+          setConnectionSuggestions([]);
+          setBountyDashboard(null);
+          setNfts([]);
+          setIsLoading(false);
+          return;
+        }
+
+        if (!profileResponse?.stxAddress) {
+          throw new Error('Profile not found');
+        }
+
+        if (profilePathMode !== 'me' && profileResponse.id === 0) {
+          throw new Error('User not found');
+        }
+
+        const [projectResponse, reviewResponse, socialResponse, nftResponse, connectionResponse, suggestionResponse, bountyResponse] = await Promise.all([
+          getUserProjects(profileResponse.stxAddress).catch(() => []),
+          getUserReviews(profileResponse.stxAddress).catch(() => []),
+          getSocialPosts(profileResponse.stxAddress).catch(() => []),
+          getUserNfts(profileResponse.stxAddress).catch(() => []),
+          isSignedIn ? getConnections().catch(() => []) : Promise.resolve([]),
+          isSignedIn && walletAddress === profileResponse.stxAddress ? getConnectionSuggestions().catch(() => []) : Promise.resolve([]),
+          isSignedIn && walletAddress === profileResponse.stxAddress ? getMyBountyDashboard().catch(() => null) : Promise.resolve(null),
         ]);
 
         if (!isMounted) {
@@ -122,6 +270,7 @@ export const ProfilePage = ({ userRole }: { userRole: 'client' | 'freelancer' | 
         setBountyDashboard(bountyResponse);
         setNfts(nftResponse);
         setProfileDraft({
+          name: profileResponse.name || '',
           username: profileResponse.username || '',
           about: profileResponse.about || '',
           specialty: profileResponse.specialty || '',
@@ -130,19 +279,29 @@ export const ProfilePage = ({ userRole }: { userRole: 'client' | 'freelancer' | 
           skills: profileResponse.skills || [],
           portfolio: profileResponse.portfolio || [],
         });
-        if (profileResponse.avatar) {
-          setProfileImage(profileResponse.avatar);
-        }
-        setPortfolioLinks(
-          (profileResponse.portfolio || []).map((url, index) => ({
-            id: Date.now() + index,
-            title: new URL(url).hostname.replace('www.', ''),
-            url,
-            icon: <Globe size={16} />,
-          })),
-        );
+        setCity(profileResponse.city || '');
+        setCountry(profileResponse.country || '');
+        setLanguage(profileResponse.language || '');
+        setProfileImage(profileResponse.avatar || fallbackAvatar(profileResponse.role));
+        setCoverImage(profileResponse.coverImage || fallbackCover());
+        setPortfolioLinks(parsePortfolioLinks(profileResponse.portfolio));
+        setUsernameStatus('idle');
+        setUsernameMessage('');
+        setGlobalError('');
       } catch (error) {
-        console.error('Failed to load profile:', error);
+        if (!isMounted) {
+          return;
+        }
+
+        setLoadError(error instanceof Error ? error.message : 'Failed to load profile');
+        setProfile(null);
+        setProjects([]);
+        setReviews([]);
+        setTimelinePosts([]);
+        setConnections([]);
+        setConnectionSuggestions([]);
+        setBountyDashboard(null);
+        setNfts([]);
       } finally {
         if (isMounted) {
           setIsLoading(false);
@@ -155,19 +314,18 @@ export const ProfilePage = ({ userRole }: { userRole: 'client' | 'freelancer' | 
     return () => {
       isMounted = false;
     };
-  }, [walletAddress]);
+  }, [walletAddress, walletAddressParam, profileIdentifier, profilePathMode, isSignedIn]);
 
   const [experiences, setExperiences] = useState([
     { id: 1, role: 'Senior Product Designer', company: 'STXWORX', period: '2021 - Present', desc: 'Leading the design system and core product features.' },
     { id: 2, role: 'UI Designer', company: 'Creative Agency', period: '2018 - 2021', desc: 'Worked on various client projects from fintech to e-commerce.' },
   ]);
 
-  const [portfolioLinks, setPortfolioLinks] = useState<{ id: number; title: string; url: string; icon: React.ReactNode }[]>([]);
+  const [portfolioLinks, setPortfolioLinks] = useState<PortfolioLinkDraft[]>([]);
   const [newPostText, setNewPostText] = useState('');
   const [newPostImageDataUrl, setNewPostImageDataUrl] = useState('');
   const [newPostImageName, setNewPostImageName] = useState('');
   const [isPostingTimeline, setIsPostingTimeline] = useState(false);
-  const timelineImageInputRef = React.useRef<HTMLInputElement | null>(null);
 
   const handleAddExperience = () => {
     setExperiences([...experiences, { id: Date.now(), role: '', company: '', period: '', desc: '' }]);
@@ -178,7 +336,7 @@ export const ProfilePage = ({ userRole }: { userRole: 'client' | 'freelancer' | 
   };
 
   const handleAddLink = () => {
-    setPortfolioLinks([...portfolioLinks, { id: Date.now(), title: '', url: '', icon: <Globe size={16} /> }]);
+    setPortfolioLinks([...portfolioLinks, { id: Date.now(), type: 'website', url: '' }]);
   };
 
   const handleRemoveLink = (id: number) => {
@@ -187,31 +345,30 @@ export const ProfilePage = ({ userRole }: { userRole: 'client' | 'freelancer' | 
 
   const handleTimelineImageChange = async (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
+    event.target.value = '';
 
     if (!file) {
       return;
     }
 
     if (!file.type.startsWith('image/')) {
-      event.target.value = '';
+      setGlobalError('Please select an image file.');
       return;
     }
 
-    const fileReader = new FileReader();
+    try {
+      const dataUrl = await imageToDataUrl(file);
 
-    const dataUrl = await new Promise<string>((resolve, reject) => {
-      fileReader.onload = () => resolve(typeof fileReader.result === 'string' ? fileReader.result : '');
-      fileReader.onerror = () => reject(fileReader.error || new Error('Failed to read image file'));
-      fileReader.readAsDataURL(file);
-    });
+      if (!dataUrl) {
+        return;
+      }
 
-    if (!dataUrl) {
-      event.target.value = '';
-      return;
+      setNewPostImageDataUrl(dataUrl);
+      setNewPostImageName(file.name);
+      setGlobalError('');
+    } catch (error) {
+      setGlobalError(error instanceof Error ? error.message : 'Failed to read image file');
     }
-
-    setNewPostImageDataUrl(dataUrl);
-    setNewPostImageName(file.name);
   };
 
   const clearTimelineImage = () => {
@@ -223,8 +380,99 @@ export const ProfilePage = ({ userRole }: { userRole: 'client' | 'freelancer' | 
     }
   };
 
+  useEffect(() => {
+    if (!isEditing || !profile || !walletAddress || walletAddress !== profile.stxAddress) {
+      return;
+    }
+
+    const trimmed = profileDraft.username.trim();
+    const original = profile.username?.trim().toLowerCase() || '';
+
+    if (!trimmed) {
+      setUsernameStatus('idle');
+      setUsernameMessage('');
+      return;
+    }
+
+    if (!/^[a-zA-Z0-9_]{3,30}$/.test(trimmed)) {
+      setUsernameStatus('invalid');
+      setUsernameMessage('Use 3-30 letters, numbers, or underscores.');
+      return;
+    }
+
+    if (trimmed.toLowerCase() === original) {
+      setUsernameStatus('available');
+      setUsernameMessage('This is your current username.');
+      return;
+    }
+
+    setUsernameStatus('checking');
+    setUsernameMessage('Checking username...');
+
+    const timeoutId = window.setTimeout(async () => {
+      try {
+        const result = await checkUsernameAvailability(trimmed);
+        setUsernameStatus(result.available ? 'available' : 'taken');
+        setUsernameMessage(result.available ? 'Username is available.' : 'Another user already has this username.');
+      } catch (error) {
+        setUsernameStatus('invalid');
+        setUsernameMessage(error instanceof Error ? error.message : 'Could not validate username.');
+      }
+    }, 300);
+
+    return () => window.clearTimeout(timeoutId);
+  }, [isEditing, profile, profileDraft.username, walletAddress]);
+
+  const handleModalUploadChange = async (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    event.target.value = '';
+
+    if (!file) {
+      return;
+    }
+
+    if (!file.type.startsWith('image/')) {
+      setGlobalError('Please select an image file.');
+      return;
+    }
+
+    try {
+      const dataUrl = await imageToDataUrl(file);
+      if (!dataUrl) {
+        return;
+      }
+      setPendingImage(dataUrl);
+      setImageZoom(1);
+      setGlobalError('');
+    } catch (error) {
+      setGlobalError(error instanceof Error ? error.message : 'Failed to read image file');
+    }
+  };
+
+  const addSkill = () => {
+    const next = skillInput.trim();
+
+    if (!next) {
+      return;
+    }
+
+    setProfileDraft((current) => {
+      const existingSkills = current.skills.map((skill) => skill.toLowerCase());
+      if (existingSkills.includes(next.toLowerCase())) {
+        return current;
+      }
+
+      return {
+        ...current,
+        skills: [...current.skills, next],
+      };
+    });
+    setSkillInput('');
+    window.requestAnimationFrame(() => skillInputRef.current?.focus());
+  };
+
   const handlePostTimeline = async () => {
-    if ((!newPostText.trim() && !newPostImageDataUrl) || isPostingTimeline) {
+    if ((!newPostText.trim() && !newPostImageDataUrl) || isPostingTimeline || !profile || walletAddress !== profile.stxAddress) {
       return;
     }
 
@@ -241,14 +489,19 @@ export const ProfilePage = ({ userRole }: { userRole: 'client' | 'freelancer' | 
       ]);
       setNewPostText('');
       clearTimelineImage();
+      setGlobalError('');
     } catch (error) {
-      console.error('Failed to create timeline post:', error);
+      setGlobalError(error instanceof Error ? error.message : 'Failed to create timeline post.');
     } finally {
       setIsPostingTimeline(false);
     }
   };
 
   const handleToggleTimelineLike = async (postId: number) => {
+    if (!isSignedIn) {
+      return;
+    }
+
     try {
       const response = await toggleSocialPostLike(postId);
       setTimelinePosts((current) =>
@@ -263,18 +516,25 @@ export const ProfilePage = ({ userRole }: { userRole: 'client' | 'freelancer' | 
         ),
       );
     } catch (error) {
-      console.error('Failed to toggle post like:', error);
+      setGlobalError(error instanceof Error ? error.message : 'Failed to update post like.');
     }
   };
 
-  const handleRequestConnection = async (userId: number) => {
+  const handleRequestConnection = async (userId?: number) => {
+    const nextUserId = userId || profile?.id;
+
+    if (!nextUserId || !profile || (walletAddress && walletAddress === profile.stxAddress)) {
+      return;
+    }
+
     try {
-      await requestConnection(userId);
-      setConnectionSuggestions((current) => current.filter((entry) => entry.id !== userId));
+      await requestConnection(nextUserId);
+      setConnectionSuggestions((current) => current.filter((entry) => entry.id !== nextUserId));
       const refreshed = await getConnections();
       setConnections(refreshed);
+      setGlobalError('');
     } catch (error) {
-      console.error('Failed to request connection:', error);
+      setGlobalError(error instanceof Error ? error.message : 'Failed to request connection.');
     }
   };
 
@@ -288,17 +548,21 @@ export const ProfilePage = ({ userRole }: { userRole: 'client' | 'freelancer' | 
         current.map((connection) => (connection.id === updated.id ? { ...connection, status: updated.status } : connection)),
       );
     } catch (error) {
-      console.error('Failed to update connection:', error);
+      setGlobalError(error instanceof Error ? error.message : 'Failed to update connection.');
     }
   };
 
+  const isOwnProfile = Boolean(walletAddress && profile?.stxAddress && walletAddress === profile.stxAddress);
   const resolvedRole = profile?.role || userRole;
   const isClient = resolvedRole === 'client';
-  const displayName = profileDraft.username || profile?.username || (walletAddress ? `${walletAddress.slice(0, 6)}...${walletAddress.slice(-4)}` : isClient ? 'Client Profile' : 'Freelancer Profile');
-  const displayHandle = profileDraft.username
-    ? `@${profileDraft.username.toLowerCase().replace(/\s+/g, '')}`
-    : walletAddress
-      ? `@${walletAddress.slice(0, 8).toLowerCase()}`
+  const normalizedUsername = profileDraft.username.trim().toLowerCase();
+  const displayName = profileDraft.name.trim() || profile?.name || profileDraft.username.trim() || profile?.username || (profile?.stxAddress ? `${profile.stxAddress.slice(0, 6)}...${profile.stxAddress.slice(-4)}` : isClient ? 'Client Profile' : 'Freelancer Profile');
+  const displayHandle = profileDraft.username.trim()
+    ? `@${normalizedUsername}`
+    : profile?.username
+      ? `@${profile.username}`
+      : profile?.stxAddress
+        ? `@${profile.stxAddress.slice(0, 8).toLowerCase()}`
       : '@stxworx';
   const averageRating = useMemo(
     () => (reviews.length ? (reviews.reduce((sum, review) => sum + review.rating, 0) / reviews.length).toFixed(1) : '0.0'),
@@ -313,53 +577,128 @@ export const ProfilePage = ({ userRole }: { userRole: 'client' | 'freelancer' | 
     [projects],
   );
   const websiteLink = portfolioLinks[0]?.url || profile?.portfolio?.[0] || '';
+  const normalizedWebsite = normalizeUrl(websiteLink);
   const joinedDate = profile?.createdAt
     ? new Date(profile.createdAt).toLocaleDateString('en-US', { month: 'short', year: 'numeric' })
     : 'N/A';
   const displaySkills = profileDraft.skills.length ? profileDraft.skills : profile?.skills || [];
   const displaySpecialty = profileDraft.specialty || profile?.specialty || (isClient ? 'Decentralized Finance' : 'Freelancer');
-  const websiteHref = websiteLink ? (websiteLink.startsWith('http') ? websiteLink : `https://${websiteLink}`) : '#';
-  const acceptedConnections = connections.filter((connection) => connection.status === 'accepted');
-  const incomingConnectionRequests = connections.filter((connection) => connection.status === 'pending' && connection.direction === 'incoming');
-  const outgoingConnectionRequests = connections.filter((connection) => connection.status === 'pending' && connection.direction === 'outgoing');
+  const websiteHref = normalizedWebsite || '#';
+  const hasInvalidLinks = portfolioLinks.some((link) => link.url.trim().length > 0 && !normalizeUrl(link.url));
+  const canSaveProfile = isOwnProfile && !isSaving && !hasInvalidLinks && usernameStatus !== 'checking' && usernameStatus !== 'taken' && usernameStatus !== 'invalid';
+  const acceptedConnections = isOwnProfile ? connections.filter((connection) => connection.status === 'accepted') : [];
+  const incomingConnectionRequests = isOwnProfile ? connections.filter((connection) => connection.status === 'pending' && connection.direction === 'incoming') : [];
+  const outgoingConnectionRequests = isOwnProfile ? connections.filter((connection) => connection.status === 'pending' && connection.direction === 'outgoing') : [];
+  const relationship = !isOwnProfile && profile ? connections.find((connection) => connection.otherUser?.id === profile.id) || null : null;
 
   const handleSaveProfile = async () => {
-    if (!walletAddress) {
+    if (!profile || !canSaveProfile) {
       return;
     }
+
+    const normalizedLinks = portfolioLinks.map((link) => normalizeUrl(link.url)).filter(Boolean);
 
     setIsSaving(true);
     try {
       const updated = await updateMyProfile({
-        username: profileDraft.username || undefined,
-        about: profileDraft.about || undefined,
-        specialty: profileDraft.specialty || undefined,
-        hourlyRate: profileDraft.hourlyRate || undefined,
-        company: profileDraft.company || undefined,
+        name: profileDraft.name.trim() || undefined,
+        username: normalizedUsername || undefined,
+        about: profileDraft.about.trim() || undefined,
+        specialty: profileDraft.specialty.trim() || undefined,
+        hourlyRate: profileDraft.hourlyRate.trim() || undefined,
+        company: profileDraft.company.trim() || undefined,
         skills: profileDraft.skills.filter(Boolean),
-        portfolio: portfolioLinks.map((link) => {
-          const url = link.url.trim();
-          return url.startsWith('http') ? url : `https://${url}`;
-        }).filter(Boolean),
-        avatar: profileImage || undefined,
+        portfolio: normalizedLinks,
+        avatar: profileImage || '',
+        coverImage: coverImage || '',
+        city: city.trim() || undefined,
+        country: country.trim() || undefined,
+        language: language.trim() || undefined,
       });
       setProfile(updated);
+      setProfileDraft((current) => ({
+        ...current,
+        name: updated.name || '',
+        username: updated.username || '',
+        about: updated.about || '',
+        specialty: updated.specialty || '',
+        hourlyRate: updated.hourlyRate || '',
+        company: updated.company || '',
+        skills: updated.skills || [],
+        portfolio: updated.portfolio || [],
+      }));
+      setCity(updated.city || '');
+      setCountry(updated.country || '');
+      setLanguage(updated.language || '');
+      setProfileImage(updated.avatar || fallbackAvatar(updated.role));
+      setCoverImage(updated.coverImage || fallbackCover());
+      setPortfolioLinks(parsePortfolioLinks(updated.portfolio));
+      setUsernameStatus('idle');
+      setUsernameMessage('');
+      setGlobalError('');
       setIsEditing(false);
     } catch (error) {
-      console.error('Failed to update profile:', error);
+      setGlobalError(error instanceof Error ? error.message : 'Failed to update profile.');
     } finally {
       setIsSaving(false);
     }
   };
 
   const handleEditToggle = () => {
+    if (!isOwnProfile) {
+      return;
+    }
+
     if (isEditing) {
       handleSaveProfile();
       return;
     }
 
+    setPortfolioLinks(parsePortfolioLinks(profile?.portfolio));
+    setProfileImage(profile?.avatar || fallbackAvatar(profile?.role));
+    setCoverImage(profile?.coverImage || fallbackCover());
+    setSkillInput('');
+    setUsernameStatus('idle');
+    setUsernameMessage('');
+    setGlobalError('');
     setIsEditing(true);
   };
+
+  if (isLoading) {
+    return (
+      <div className="pt-28 pb-20 px-6 md:pl-[92px]">
+        <div className="container-custom">
+          <div className="card p-8 text-center text-sm text-muted">Loading profile...</div>
+        </div>
+      </div>
+    );
+  }
+
+  if (loadError) {
+    return (
+      <div className="pt-28 pb-20 px-6 md:pl-[92px]">
+        <div className="container-custom">
+          <div className="card p-8 text-center">
+            <h2 className="text-2xl font-black mb-3">Profile unavailable</h2>
+            <p className="text-sm text-muted">{loadError}</p>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  if (!profile) {
+    return (
+      <div className="pt-28 pb-20 px-6 md:pl-[92px]">
+        <div className="container-custom">
+          <div className="card p-8 text-center">
+            <h2 className="text-2xl font-black mb-3">No profile selected</h2>
+            <p className="text-sm text-muted">Connect your wallet to open your profile or use a public profile URL.</p>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="pt-28 pb-20 px-6 md:pl-[92px]">
@@ -381,7 +720,7 @@ export const ProfilePage = ({ userRole }: { userRole: 'client' | 'freelancer' | 
                 className="bg-surface border border-border rounded-[15px] p-6 max-w-2xl w-full shadow-2xl relative"
               >
                 <button 
-                  onClick={() => setIsImageModalOpen(false)}
+                  onClick={closeImageEditor}
                   className="absolute top-4 right-4 text-muted hover:text-ink"
                 >
                   <X size={20} />
@@ -391,32 +730,36 @@ export const ProfilePage = ({ userRole }: { userRole: 'client' | 'freelancer' | 
                 <div className="bg-ink/5 border border-border rounded-[15px] p-8 mb-6 flex flex-col items-center justify-center min-h-[300px] relative overflow-hidden">
                   {/* Simulated Cropper Area */}
                   <img 
-                    src={imageToEdit === 'profile' ? profileImage : coverImage} 
+                    src={toApiAssetUrl(pendingImage || (imageToEdit === 'profile' ? profileImage : coverImage))} 
                     className="absolute inset-0 w-full h-full object-cover opacity-50"
                     alt="Original"
                     referrerPolicy="no-referrer"
                   />
                   <div className={`absolute border-2 border-accent-orange shadow-[0_0_0_9999px_rgba(0,0,0,0.5)] ${imageToEdit === 'profile' ? 'w-48 h-48 rounded-full' : 'w-full h-32'}`}>
                     <img 
-                      src={imageToEdit === 'profile' ? profileImage : coverImage} 
+                      src={toApiAssetUrl(pendingImage || (imageToEdit === 'profile' ? profileImage : coverImage))} 
                       className="w-full h-full object-cover"
+                      style={{ transform: `scale(${imageZoom})` }}
                       alt="Cropped"
                       referrerPolicy="no-referrer"
                     />
                   </div>
                   <div className="absolute bottom-4 left-1/2 -translate-x-1/2 bg-bg/80 backdrop-blur-md px-4 py-2 rounded-[15px] text-xs font-bold flex items-center gap-4">
-                    <button className="hover:text-accent-orange"><ZoomIn size={16} /></button>
-                    <input type="range" className="w-24 accent-accent-orange" />
-                    <button className="hover:text-accent-orange"><ZoomOut size={16} /></button>
+                    <button type="button" onClick={() => setImageZoom((current) => Math.min(2.5, Number((current + 0.1).toFixed(2))))} className="hover:text-accent-orange"><ZoomIn size={16} /></button>
+                    <input type="range" min="1" max="2.5" step="0.1" value={imageZoom} onChange={(e) => setImageZoom(Number(e.target.value))} className="w-24 accent-accent-orange" />
+                    <button type="button" onClick={() => setImageZoom((current) => Math.max(1, Number((current - 0.1).toFixed(2))))} className="hover:text-accent-orange"><ZoomOut size={16} /></button>
                   </div>
                 </div>
 
                 <div className="flex justify-between items-center">
-                  <button className="btn-outline py-2 px-4 text-sm flex items-center gap-2">
+                  <>
+                    <input ref={imageUploadInputRef} type="file" accept="image/*" className="hidden" onChange={handleModalUploadChange} />
+                  </>
+                  <button type="button" onClick={() => imageUploadInputRef.current?.click()} className="btn-outline py-2 px-4 text-sm flex items-center gap-2">
                     <Upload size={16} /> Upload New
                   </button>
                   <div className="flex gap-2">
-                    <button onClick={() => setIsImageModalOpen(false)} className="px-4 py-2 rounded-[15px] text-sm font-bold text-muted hover:text-ink transition-colors">Cancel</button>
+                    <button onClick={closeImageEditor} className="px-4 py-2 rounded-[15px] text-sm font-bold text-muted hover:text-ink transition-colors">Cancel</button>
                     <button onClick={handleImageSave} className="btn-primary py-2 px-6 text-sm">Save Image</button>
                   </div>
                 </div>
@@ -427,15 +770,16 @@ export const ProfilePage = ({ userRole }: { userRole: 'client' | 'freelancer' | 
 
         {/* Profile Header */}
         <section className="mb-10">
+          {globalError && <div className="card mb-6 border border-accent-red/40 text-sm text-accent-red">{globalError}</div>}
           {/* Cover Image */}
           <div className="relative h-48 md:h-64 rounded-[15px] overflow-hidden mb-6 group">
             <img 
-              src={coverImage} 
+              src={toApiAssetUrl(coverImage)} 
               className="w-full h-full object-cover" 
               alt="Banner"
               referrerPolicy="no-referrer"
             />
-            {isEditing && (
+            {isEditing && isOwnProfile && (
               <button 
                 onClick={() => openImageEditor('cover')}
                 className="absolute top-4 right-4 bg-bg/50 backdrop-blur-md p-3 rounded-full text-white hover:bg-accent-orange transition-colors"
@@ -451,13 +795,13 @@ export const ProfilePage = ({ userRole }: { userRole: 'client' | 'freelancer' | 
               {/* Avatar */}
               <div className="relative group/avatar shrink-0">
                 <img 
-                  src={profileImage} 
+                  src={toApiAssetUrl(profileImage)} 
                   className="w-32 h-32 md:w-40 md:h-40 rounded-[10px] object-cover" 
                   alt="Avatar"
                   referrerPolicy="no-referrer"
                 />
                 <div className="absolute bottom-2 right-2 w-6 h-6 bg-accent-cyan border-4 border-bg rounded-full"></div>
-                {isEditing && (
+                {isEditing && isOwnProfile && (
                   <button 
                     onClick={() => openImageEditor('profile')}
                     className="absolute inset-0 m-auto w-10 h-10 bg-bg/50 backdrop-blur-md rounded-full text-white flex items-center justify-center hover:bg-accent-orange transition-colors"
@@ -476,18 +820,19 @@ export const ProfilePage = ({ userRole }: { userRole: 'client' | 'freelancer' | 
                         <div className="flex flex-col gap-2">
                           <input
                             type="text"
-                            value={profileDraft.username}
-                            onChange={(e) => setProfileDraft((current) => ({ ...current, username: e.target.value }))}
+                            value={profileDraft.name}
+                            onChange={(e) => setProfileDraft((current) => ({ ...current, name: e.target.value }))}
                             className="text-3xl md:text-4xl font-black tracking-tighter bg-ink/5 border border-border rounded-[10px] px-3 py-1 outline-none focus:border-accent-orange"
-                            placeholder="Nick Name"
+                            placeholder="Name"
                           />
                           <input
                             type="text"
-                            value={displayHandle}
-                            readOnly
-                            className="text-sm font-bold text-muted bg-ink/5 border border-border rounded-[10px] px-3 py-1 outline-none"
-                            placeholder="@username"
+                            value={profileDraft.username}
+                            onChange={(e) => setProfileDraft((current) => ({ ...current, username: e.target.value }))}
+                            className={`text-lg font-bold bg-ink/5 border rounded-[10px] px-3 py-1 outline-none focus:border-accent-orange ${usernameStatus === 'taken' || usernameStatus === 'invalid' ? 'border-accent-red' : 'border-border'}`}
+                            placeholder="Username"
                           />
+                          {usernameMessage ? <p className={`text-xs font-bold ${usernameStatus === 'taken' || usernameStatus === 'invalid' ? 'text-accent-red' : 'text-muted'}`}>{usernameMessage}</p> : null}
                         </div>
                       ) : (
                         <div className="flex flex-col">
@@ -559,17 +904,18 @@ export const ProfilePage = ({ userRole }: { userRole: 'client' | 'freelancer' | 
 
                   {/* Actions */}
                   <div className="flex gap-2 md:gap-4">
-                    <button onClick={handleEditToggle} className="btn-outline flex items-center gap-2">
-                      <Edit2 size={16} /> {isEditing ? (isSaving ? 'Saving...' : 'Save') : 'Edit Profile'}
-                    </button>
-                    {!isEditing && (
+                    {isOwnProfile ? (
+                      <button onClick={handleEditToggle} disabled={isEditing && !canSaveProfile} className="btn-outline flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed">
+                        <Edit2 size={16} /> {isEditing ? (isSaving ? 'Saving...' : 'Save') : 'Edit Profile'}
+                      </button>
+                    ) : !isEditing ? (
                       <>
-                        <button className="btn-primary hidden md:block">Follow</button>
-                        <button className="p-3 rounded-[15px] border border-border hover:bg-ink/10 transition-colors">
+                        {isSignedIn ? <button onClick={() => handleRequestConnection()} disabled={relationship?.status === 'accepted' || relationship?.status === 'pending'} className="btn-primary hidden md:block disabled:opacity-50 disabled:cursor-not-allowed">{relationship?.status === 'accepted' ? 'Connected' : relationship?.status === 'pending' ? 'Request sent' : 'Connect'}</button> : null}
+                        {isSignedIn ? <button onClick={() => { setRecipientAddress(profile.stxAddress); setIsMessageModalOpen(true); }} className="p-3 rounded-[15px] border border-border hover:bg-ink/10 transition-colors">
                           <MessageSquare size={20} />
-                        </button>
+                        </button> : null}
                       </>
-                    )}
+                    ) : null}
                   </div>
                 </div>
 
@@ -645,27 +991,37 @@ export const ProfilePage = ({ userRole }: { userRole: 'client' | 'freelancer' | 
                   )}
                   
                   {!isClient ? (
-                    <>
-                      <h3 className="text-sm font-bold uppercase tracking-widest text-accent-orange mb-4">Instruments</h3>
-                      <div className="flex flex-wrap gap-3">
-                        {displaySkills.map(tool => (
-                          <span key={tool} className="px-4 py-2 bg-ink/5 rounded-full text-xs font-bold border border-border">{tool}</span>
+                  <>
+                    <h3 className="text-sm font-bold uppercase tracking-widest text-accent-orange mb-4">{isEditing ? 'Add Skills' : 'Skills'}</h3>
+                    <div className="flex flex-wrap gap-3">
+                      {displaySkills.map(tool => (
+                          <span key={tool} className="px-4 py-2 bg-ink/5 rounded-full text-xs font-bold border border-border inline-flex items-center gap-2">
+                            {tool}
+                            {isEditing ? <button type="button" onClick={() => setProfileDraft((current) => ({ ...current, skills: current.skills.filter((entry) => entry !== tool) }))} className="text-muted hover:text-ink"><X size={12} /></button> : null}
+                          </span>
                         ))}
                         {displaySkills.length === 0 && <span className="text-xs text-muted">No skills added yet.</span>}
                       </div>
                       {isEditing && (
-                        <input
-                          type="text"
-                          value={profileDraft.skills.join(', ')}
-                          onChange={(e) =>
-                            setProfileDraft((current) => ({
-                              ...current,
-                              skills: e.target.value.split(',').map((value) => value.trim()).filter(Boolean),
-                            }))
-                          }
-                          className="w-full mt-4 bg-ink/5 border border-border rounded-[15px] px-4 py-3 text-sm outline-none focus:border-accent-orange"
-                          placeholder="Add skills separated by commas"
-                        />
+                        <div className="flex gap-3 mt-4">
+                          <input
+                            ref={skillInputRef}
+                            type="text"
+                            value={skillInput}
+                            onChange={(e) => setSkillInput(e.target.value)}
+                            onKeyDown={(e) => {
+                              if (e.key === 'Enter') {
+                                e.preventDefault();
+                                addSkill();
+                              }
+                            }}
+                            className="w-full bg-ink/5 border border-border rounded-[15px] px-4 py-3 text-sm outline-none focus:border-accent-orange"
+                            placeholder="Add a skill"
+                          />
+                          <button type="button" onClick={addSkill} className="btn-outline py-3 px-4 text-sm flex items-center gap-2 shrink-0">
+                            <Plus size={16} />
+                          </button>
+                        </div>
                       )}
                     </>
                   ) : (
@@ -753,37 +1109,42 @@ export const ProfilePage = ({ userRole }: { userRole: 'client' | 'freelancer' | 
                         {isEditing && <button onClick={handleAddLink} className="text-xs font-bold text-accent-orange hover:underline flex items-center gap-1"><Plus size={14} /> Add Link</button>}
                       </div>
                       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                        {portfolioLinks.map((link, i) => (
-                          <div key={link.id} className="flex items-center gap-3 p-4 border border-border rounded-[15px] bg-ink/5 hover:bg-ink/10 transition-colors relative">
-                            <div className="w-8 h-8 rounded-full bg-surface flex items-center justify-center text-muted shrink-0">
-                              {link.icon}
-                            </div>
-                            <div className="flex-1 overflow-hidden pr-6">
+                        {portfolioLinks.map((link) => {
+                          const linkLabel = linkTypeOptions.find((option) => option.value === link.type)?.label || 'Link';
+                          const normalizedLink = normalizeUrl(link.url);
+                          const isInvalidLink = link.url.trim().length > 0 && !normalizedLink;
+
+                          return (
+                            <div key={link.id} className="flex items-center gap-3 p-4 border border-border rounded-[15px] bg-ink/5 hover:bg-ink/10 transition-colors relative">
+                              <div className="w-8 h-8 rounded-full bg-surface flex items-center justify-center text-muted shrink-0">
+                                <LinkIcon size={16} />
+                              </div>
+                              <div className="flex-1 overflow-hidden pr-6">
+                                {isEditing ? (
+                                  <div className="flex flex-col gap-1">
+                                    <select value={link.type} onChange={(e) => setPortfolioLinks((current) => current.map((entry) => entry.id === link.id ? { ...entry, type: e.target.value as LinkTypeValue } : entry))} className="w-full bg-transparent border-b border-border text-sm font-bold outline-none focus:border-accent-orange">
+                                      {linkTypeOptions.map((option) => (
+                                        <option key={option.value} value={option.value}>{option.label}</option>
+                                      ))}
+                                    </select>
+                                    <input type="text" value={link.url} onChange={(e) => setPortfolioLinks((current) => current.map((entry) => entry.id === link.id ? { ...entry, url: e.target.value } : entry))} className={`w-full bg-transparent border-b text-xs text-muted outline-none focus:border-accent-orange ${isInvalidLink ? 'border-accent-red' : 'border-border'}`} placeholder="https://example.com" />
+                                    {isInvalidLink ? <p className="text-[10px] font-bold text-accent-red">Enter a valid `http` or `https` link.</p> : null}
+                                  </div>
+                                ) : (
+                                  <>
+                                    <h4 className="font-bold text-sm truncate">{linkLabel}</h4>
+                                    <a href={normalizedLink || '#'} target="_blank" rel="noreferrer" className="text-xs text-accent-cyan hover:underline truncate block">{link.url}</a>
+                                  </>
+                                )}
+                              </div>
                               {isEditing ? (
-                                <div className="flex flex-col gap-1">
-                                  <input type="text" defaultValue={link.title} onChange={(e) => {
-                                    const newLinks = [...portfolioLinks];
-                                    newLinks[i].title = e.target.value;
-                                    setPortfolioLinks(newLinks);
-                                  }} className="w-full bg-transparent border-b border-border text-sm font-bold outline-none focus:border-accent-orange" placeholder="Title" />
-                                  <input type="text" defaultValue={link.url} onChange={(e) => {
-                                    const newLinks = [...portfolioLinks];
-                                    newLinks[i].url = e.target.value;
-                                    setPortfolioLinks(newLinks);
-                                  }} className="w-full bg-transparent border-b border-border text-xs text-muted outline-none focus:border-accent-orange" placeholder="URL" />
-                                </div>
-                              ) : (
-                                <>
-                                  <h4 className="font-bold text-sm truncate">{link.title}</h4>
-                                  <a href={link.url.startsWith('http') ? link.url : `https://${link.url}`} target="_blank" rel="noreferrer" className="text-xs text-accent-cyan hover:underline truncate block">{link.url}</a>
-                                </>
+                                <button onClick={() => handleRemoveLink(link.id)} className="absolute top-1/2 -translate-y-1/2 right-4 text-muted hover:text-accent-red shrink-0"><X size={16} /></button>
+                              ) : normalizedLink ? null : (
+                                <span className="absolute top-1/2 -translate-y-1/2 right-4 text-[10px] font-bold text-accent-red">Invalid</span>
                               )}
                             </div>
-                            {isEditing && (
-                              <button onClick={() => handleRemoveLink(link.id)} className="absolute top-1/2 -translate-y-1/2 right-4 text-muted hover:text-accent-red shrink-0"><X size={16} /></button>
-                            )}
-                          </div>
-                        ))}
+                          );
+                        })}
                       </div>
                     </div>
                   </>
@@ -807,6 +1168,54 @@ export const ProfilePage = ({ userRole }: { userRole: 'client' | 'freelancer' | 
                         </div>
                       ))}
                       {recentProjects.length === 0 && <p className="text-sm text-muted">No projects yet.</p>}
+                    </div>
+                  </div>
+                )}
+
+                {isClient && (
+                  <div className="card">
+                    <div className="flex items-center justify-between mb-6">
+                      <h2 className="text-xl font-black">Company Links</h2>
+                      {isEditing && <button onClick={handleAddLink} className="text-xs font-bold text-accent-orange hover:underline flex items-center gap-1"><Plus size={14} /> Add Link</button>}
+                    </div>
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      {portfolioLinks.map((link) => {
+                        const linkLabel = linkTypeOptions.find((option) => option.value === link.type)?.label || 'Link';
+                        const normalizedLink = normalizeUrl(link.url);
+                        const isInvalidLink = link.url.trim().length > 0 && !normalizedLink;
+
+                        return (
+                          <div key={link.id} className="flex items-center gap-3 p-4 border border-border rounded-[15px] bg-ink/5 hover:bg-ink/10 transition-colors relative">
+                            <div className="w-8 h-8 rounded-full bg-surface flex items-center justify-center text-muted shrink-0">
+                              <LinkIcon size={16} />
+                            </div>
+                            <div className="flex-1 overflow-hidden pr-6">
+                              {isEditing ? (
+                                <div className="flex flex-col gap-1">
+                                  <select value={link.type} onChange={(e) => setPortfolioLinks((current) => current.map((entry) => entry.id === link.id ? { ...entry, type: e.target.value as LinkTypeValue } : entry))} className="w-full bg-transparent border-b border-border text-sm font-bold outline-none focus:border-accent-orange">
+                                    {linkTypeOptions.map((option) => (
+                                      <option key={option.value} value={option.value}>{option.label}</option>
+                                    ))}
+                                  </select>
+                                  <input type="text" value={link.url} onChange={(e) => setPortfolioLinks((current) => current.map((entry) => entry.id === link.id ? { ...entry, url: e.target.value } : entry))} className={`w-full bg-transparent border-b text-xs text-muted outline-none focus:border-accent-orange ${isInvalidLink ? 'border-accent-red' : 'border-border'}`} placeholder="https://example.com" />
+                                  {isInvalidLink ? <p className="text-[10px] font-bold text-accent-red">Enter a valid `http` or `https` link.</p> : null}
+                                </div>
+                              ) : (
+                                <>
+                                  <h4 className="font-bold text-sm truncate">{linkLabel}</h4>
+                                  <a href={normalizedLink || '#'} target="_blank" rel="noreferrer" className="text-xs text-accent-cyan hover:underline truncate block">{link.url}</a>
+                                </>
+                              )}
+                            </div>
+                            {isEditing ? (
+                              <button onClick={() => handleRemoveLink(link.id)} className="absolute top-1/2 -translate-y-1/2 right-4 text-muted hover:text-accent-red shrink-0"><X size={16} /></button>
+                            ) : normalizedLink ? null : (
+                              <span className="absolute top-1/2 -translate-y-1/2 right-4 text-[10px] font-bold text-accent-red">Invalid</span>
+                            )}
+                          </div>
+                        );
+                      })}
+                      {portfolioLinks.length === 0 && <p className="text-sm text-muted md:col-span-2">No links added yet.</p>}
                     </div>
                   </div>
                 )}
@@ -841,50 +1250,52 @@ export const ProfilePage = ({ userRole }: { userRole: 'client' | 'freelancer' | 
 
             {activeTab === 'Timeline' && (
               <div className="space-y-6">
-                <div className="card p-4 space-y-4">
-                  <div className="flex gap-4 items-center">
-                    <div className="w-10 h-10 rounded-[10px] bg-ink/10 shrink-0 overflow-hidden">
-                      <img src={profileImage} className="w-full h-full object-cover" alt="Avatar" referrerPolicy="no-referrer" />
+                {isOwnProfile && (
+                  <div className="card p-4 space-y-4">
+                    <div className="flex gap-4 items-center">
+                      <div className="w-10 h-10 rounded-[10px] bg-ink/10 shrink-0 overflow-hidden">
+                        <img src={toApiAssetUrl(profileImage)} className="w-full h-full object-cover" alt="Avatar" referrerPolicy="no-referrer" />
+                      </div>
+                      <input 
+                        type="text" 
+                        value={newPostText}
+                        onChange={(e) => setNewPostText(e.target.value)}
+                        placeholder="What's on your mind?" 
+                        className="w-full bg-transparent border-none focus:ring-0 text-sm outline-none" 
+                        onKeyDown={(e) => e.key === 'Enter' && handlePostTimeline()}
+                      />
+                      <button onClick={handlePostTimeline} disabled={isPostingTimeline || (!newPostText.trim() && !newPostImageDataUrl)} className="btn-primary py-2 px-4 shrink-0 disabled:opacity-60 disabled:cursor-not-allowed"><Send size={16} /></button>
                     </div>
-                    <input 
-                      type="text" 
-                      value={newPostText}
-                      onChange={(e) => setNewPostText(e.target.value)}
-                      placeholder="What's on your mind?" 
-                      className="w-full bg-transparent border-none focus:ring-0 text-sm outline-none" 
-                      onKeyDown={(e) => e.key === 'Enter' && handlePostTimeline()}
-                    />
-                    <button onClick={handlePostTimeline} disabled={isPostingTimeline || (!newPostText.trim() && !newPostImageDataUrl)} className="btn-primary py-2 px-4 shrink-0 disabled:opacity-60 disabled:cursor-not-allowed"><Send size={16} /></button>
-                  </div>
-                  <div className="flex items-center justify-between gap-3">
-                    <input
-                      ref={timelineImageInputRef}
-                      type="file"
-                      accept="image/*"
-                      className="hidden"
-                      onChange={handleTimelineImageChange}
-                    />
-                    <button type="button" onClick={() => timelineImageInputRef.current?.click()} className="btn-outline py-2 px-4 text-xs flex items-center gap-2">
-                      <Upload size={16} /> Attach image
-                    </button>
-                    {newPostImageName && (
-                      <div className="flex items-center gap-2 text-xs text-muted ml-auto">
-                        <span className="truncate max-w-48">{newPostImageName}</span>
-                        <button type="button" onClick={clearTimelineImage} className="text-muted hover:text-ink">
-                          <X size={14} />
+                    <div className="flex items-center justify-between gap-3">
+                      <input
+                        ref={timelineImageInputRef}
+                        type="file"
+                        accept="image/*"
+                        className="hidden"
+                        onChange={handleTimelineImageChange}
+                      />
+                      <button type="button" onClick={() => timelineImageInputRef.current?.click()} className="btn-outline py-2 px-4 text-xs flex items-center gap-2">
+                        <Upload size={16} /> Attach image
+                      </button>
+                      {newPostImageName && (
+                        <div className="flex items-center gap-2 text-xs text-muted ml-auto">
+                          <span className="truncate max-w-48">{newPostImageName}</span>
+                          <button type="button" onClick={clearTimelineImage} className="text-muted hover:text-ink">
+                            <X size={14} />
+                          </button>
+                        </div>
+                      )}
+                    </div>
+                    {newPostImageDataUrl && (
+                      <div className="relative rounded-[15px] overflow-hidden border border-border bg-ink/5">
+                        <img src={newPostImageDataUrl} className="w-full max-h-72 object-cover" alt="New post attachment" />
+                        <button type="button" onClick={clearTimelineImage} className="absolute top-3 right-3 w-8 h-8 rounded-full bg-bg/80 text-ink flex items-center justify-center">
+                          <X size={16} />
                         </button>
                       </div>
                     )}
                   </div>
-                  {newPostImageDataUrl && (
-                    <div className="relative rounded-[15px] overflow-hidden border border-border bg-ink/5">
-                      <img src={newPostImageDataUrl} className="w-full max-h-72 object-cover" alt="New post attachment" />
-                      <button type="button" onClick={clearTimelineImage} className="absolute top-3 right-3 w-8 h-8 rounded-full bg-bg/80 text-ink flex items-center justify-center">
-                        <X size={16} />
-                      </button>
-                    </div>
-                  )}
-                </div>
+                )}
                 
                 {timelinePosts.map((post) => (
                   <div key={post.id} className="card p-6 hover:border-accent-orange transition-colors">
@@ -892,7 +1303,7 @@ export const ProfilePage = ({ userRole }: { userRole: 'client' | 'freelancer' | 
                       <div className="flex items-center gap-3">
                         <img src={toApiAssetUrl(post.authorAvatar) || profileImage} className="w-10 h-10 rounded-[10px] object-cover" alt="Avatar" referrerPolicy="no-referrer" />
                         <div>
-                          <h4 className="font-bold text-sm">{post.authorUsername || displayName}</h4>
+                          <h4 className="font-bold text-sm">{post.authorName?.trim() || post.authorUsername?.trim() || displayName}</h4>
                           <p className="text-xs text-muted">{formatRelativeTime(post.createdAt)}</p>
                         </div>
                       </div>
@@ -943,7 +1354,7 @@ export const ProfilePage = ({ userRole }: { userRole: 'client' | 'freelancer' | 
 
             {activeTab === 'Bounties' && (
               <div className="space-y-6">
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                {isOwnProfile ? <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                   <div className="card p-6">
                     <h3 className="font-bold text-lg mb-4">Posted Bounties</h3>
                     <div className="space-y-4">
@@ -975,19 +1386,20 @@ export const ProfilePage = ({ userRole }: { userRole: 'client' | 'freelancer' | 
                       {(!bountyDashboard || bountyDashboard.participations.length === 0) && <p className="text-sm text-muted">You have not joined any bounties yet.</p>}
                     </div>
                   </div>
-                </div>
+                </div> : <div className="card p-6 text-sm text-muted">Bounty activity is only available on your own profile.</div>}
               </div>
             )}
 
             {activeTab === 'Friends' && (
               <div className="space-y-6">
+                {isOwnProfile ? <>
                 <div className="card p-6">
                   <h3 className="font-bold text-lg mb-4">Connections</h3>
                   <div className="space-y-4">
                     {acceptedConnections.map((connection) => (
                       <div key={connection.id} className="border border-border rounded-[15px] p-4 flex items-center justify-between gap-4">
                         <div>
-                          <p className="font-bold text-sm">{connection.otherUser?.username || connection.otherUser?.stxAddress || 'Connection'}</p>
+                          <p className="font-bold text-sm">{toDisplayName(connection.otherUser) || 'Connection'}</p>
                           <p className="text-[10px] text-muted uppercase tracking-widest">{connection.otherUser?.role || 'User'}</p>
                         </div>
                         <span className="text-xs font-bold text-accent-cyan">Connected</span>
@@ -1003,7 +1415,7 @@ export const ProfilePage = ({ userRole }: { userRole: 'client' | 'freelancer' | 
                     <div className="space-y-4">
                       {incomingConnectionRequests.map((connection) => (
                         <div key={connection.id} className="border border-border rounded-[15px] p-4">
-                          <p className="font-bold text-sm mb-1">{connection.otherUser?.username || connection.otherUser?.stxAddress || 'User'}</p>
+                          <p className="font-bold text-sm mb-1">{toDisplayName(connection.otherUser) || 'User'}</p>
                           <div className="flex gap-2 mt-3">
                             <button onClick={() => handleRespondToConnection(connection.id, 'accept')} className="btn-primary py-2 px-4 text-xs">Accept</button>
                             <button onClick={() => handleRespondToConnection(connection.id, 'decline')} className="btn-outline py-2 px-4 text-xs">Decline</button>
@@ -1019,7 +1431,7 @@ export const ProfilePage = ({ userRole }: { userRole: 'client' | 'freelancer' | 
                       {connectionSuggestions.map((suggestion) => (
                         <div key={suggestion.id} className="border border-border rounded-[15px] p-4 flex items-center justify-between gap-4">
                           <div>
-                            <p className="font-bold text-sm">{suggestion.username || suggestion.stxAddress}</p>
+                            <p className="font-bold text-sm">{toDisplayName(suggestion)}</p>
                             <p className="text-[10px] text-muted uppercase tracking-widest">{suggestion.specialty || suggestion.role}</p>
                           </div>
                           <button onClick={() => handleRequestConnection(suggestion.id)} className="btn-outline py-2 px-4 text-xs">Connect</button>
@@ -1037,7 +1449,7 @@ export const ProfilePage = ({ userRole }: { userRole: 'client' | 'freelancer' | 
                       {outgoingConnectionRequests.map((connection) => (
                         <div key={connection.id} className="border border-border rounded-[15px] p-4 flex items-center justify-between gap-4">
                           <div>
-                            <p className="font-bold text-sm">{connection.otherUser?.username || connection.otherUser?.stxAddress || 'User'}</p>
+                            <p className="font-bold text-sm">{toDisplayName(connection.otherUser) || 'User'}</p>
                             <p className="text-[10px] text-muted uppercase tracking-widest">{connection.otherUser?.role || 'User'}</p>
                           </div>
                           <span className="text-xs font-bold text-muted">Pending</span>
@@ -1046,6 +1458,7 @@ export const ProfilePage = ({ userRole }: { userRole: 'client' | 'freelancer' | 
                     </div>
                   </div>
                 )}
+              </> : <div className="card p-6 text-sm text-muted">Connection management is only available on your own profile.</div>}
               </div>
             )}
           </div>
@@ -1060,7 +1473,7 @@ export const ProfilePage = ({ userRole }: { userRole: 'client' | 'freelancer' | 
               <div className="space-y-4 mb-8">
                 <div className="flex justify-between text-xs font-bold border-b border-bg/10 pb-2">
                   <span className="opacity-60">Location</span>
-                  <span>{city}, {country}</span>
+                  <span>{[city, country].filter(Boolean).join(', ') || 'Not added'}</span>
                 </div>
                 <div className="flex justify-between text-xs font-bold border-b border-bg/10 pb-2">
                   <span className="opacity-60">{isClient ? 'Jobs Posted' : 'Projects'}</span>
@@ -1071,17 +1484,11 @@ export const ProfilePage = ({ userRole }: { userRole: 'client' | 'freelancer' | 
                   <span>{isClient ? joinedDate : averageRating}</span>
                 </div>
               </div>
-              {!isEditing && (
-                isClient ? (
-                  <button className="w-full bg-bg text-white py-4 rounded-[15px] font-bold hover:bg-white hover:text-bg transition-all flex items-center justify-center">
-                    Share Profile
-                  </button>
-                ) : (
-                  <button className="w-full bg-bg text-white py-4 rounded-[15px] font-bold hover:bg-white hover:text-bg transition-all">
-                    Edit Profile
-                  </button>
-                )
-              )}
+              {!isEditing && isOwnProfile ? (
+                <button onClick={handleEditToggle} className="w-full bg-bg text-white py-4 rounded-[15px] font-bold hover:bg-white hover:text-bg transition-all">
+                  Edit Profile
+                </button>
+              ) : null}
             </div>
 
             <div className="card">

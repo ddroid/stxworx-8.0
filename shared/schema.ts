@@ -78,7 +78,8 @@ export const BOUNTY_SUBMISSION_STATUSES = [
 export const users = mysqlTable("users", {
   id: bigint("id", { mode: "number", unsigned: true }).autoincrement().primaryKey(),
   stxAddress: varchar("stx_address", { length: 255 }).unique().notNull(),
-  username: varchar("username", { length: 100 }),
+  username: varchar("username", { length: 100 }).unique(),
+  name: varchar("name", { length: 150 }),
   role: mysqlEnum("role", [...USER_ROLES]).notNull(),
   isActive: boolean("is_active").default(true).notNull(),
   totalEarned: decimal("total_earned", { precision: 18, scale: 8 }).default("0").notNull(),
@@ -90,6 +91,10 @@ export const users = mysqlTable("users", {
   company: varchar("company", { length: 150 }),
   projectInterests: json("project_interests").$type<string[]>(),
   avatar: text("avatar"),
+  coverImage: text("cover_image"),
+  city: varchar("city", { length: 100 }),
+  country: varchar("country", { length: 100 }),
+  language: varchar("language", { length: 100 }),
   createdAt: timestamp("created_at").defaultNow().notNull(),
   updatedAt: timestamp("updated_at").defaultNow().notNull(),
 });

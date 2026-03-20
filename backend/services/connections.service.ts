@@ -7,6 +7,7 @@ async function getOtherUser(userId: number) {
     .select({
       id: users.id,
       stxAddress: users.stxAddress,
+      name: users.name,
       username: users.username,
       role: users.role,
       isActive: users.isActive,
@@ -71,6 +72,7 @@ export const connectionsService = {
       .select({
         id: users.id,
         stxAddress: users.stxAddress,
+        name: users.name,
         username: users.username,
         role: users.role,
         isActive: users.isActive,

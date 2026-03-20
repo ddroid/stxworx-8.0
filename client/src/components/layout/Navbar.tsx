@@ -135,8 +135,8 @@ export const TopHeader = ({ theme, toggleTheme }: { theme: 'dark' | 'light', tog
   }, [walletAddress]);
 
   const displayName = useMemo(() => {
-    if (profile?.username) {
-      return profile.username;
+    if (profile) {
+      return toDisplayName(profile);
     }
 
     if (walletAddress) {
@@ -144,7 +144,7 @@ export const TopHeader = ({ theme, toggleTheme }: { theme: 'dark' | 'light', tog
     }
 
     return 'Guest';
-  }, [profile?.username, walletAddress]);
+  }, [profile, walletAddress]);
 
   const handleConnect = async () => {
     // Just connect wallet without role for login

@@ -459,7 +459,7 @@ export const MessageModal = ({ isOpen, onClose, recipientAddress }: { isOpen: bo
                 <div className="p-4 border-b border-border flex items-center justify-between bg-ink/5">
                   <div className="flex items-center gap-3">
                     <div className="w-8 h-8 rounded-[10px] bg-accent-orange/20 flex items-center justify-center text-accent-orange font-bold">
-                      {recipientProfile?.username?.charAt(0) || recipientAddress.charAt(0) || 'U'}
+                      {toDisplayName(recipientProfile).charAt(0) || recipientAddress.charAt(0) || 'U'}
                     </div>
                     <div>
                       <h3 className="font-bold text-sm">{toDisplayName(recipientProfile) || 'User'}</h3>
@@ -1158,42 +1158,48 @@ export const CustomCursor = () => {
         </>
       );
     };
-export const RequireWallet = ({ children }: { children: React.ReactNode }) => {
-      const { isSignedIn } = useWallet();
-      if (!isSignedIn) {
-        return (
-          <div className="pt-28 pb-20 px-6 md:pl-[92px]">
-            <div className="container-custom flex flex-col items-center justify-center min-h-[60vh]">
-              <Shield size={48} className="mx-auto mb-6 text-accent-orange" />
-              <h2 className="text-3xl font-black mb-4">Connection Required</h2>
-              <p className="text-muted text-center max-w-md">Please connect your Bitcoin wallet to access this page.</p>
-            </div>
-          </div>
-        );
-      }
-      return <>{children}</>;
-    };
-export const ProtectedContent = ({ children }: { children: React.ReactNode }) => {
-      const { isSignedIn } = useWallet();
-      const location = useLocation();
 
-      if (!isSignedIn && location.pathname !== '/') {
-        return (
-          <motion.div
-            key="protected"
-            initial={{ opacity: 0, x: 20 }}
-            animate={{ opacity: 1, x: 0 }}
-            exit={{ opacity: 0, x: -20 }}
-            transition={{ duration: 0.4 }}
-            className="pt-28 pb-20 px-6 md:pl-[92px]"
-          >
-            <div className="container-custom flex flex-col items-center justify-center min-h-[60vh]">
-              <Shield size={48} className="mx-auto mb-6 text-accent-orange" />
-              <h2 className="text-3xl font-black mb-4">Connection Required</h2>
-              <p className="text-muted text-center max-w-md">Please connect your Bitcoin wallet to access this page.</p>
-            </div>
-          </motion.div>
-        );
-      }
-      return <>{children}</>;
-    };
+export const RequireWallet = ({ children }: { children: React.ReactNode }) => {
+  const { isSignedIn } = useWallet();
+
+  if (!isSignedIn) {
+    return (
+      <div className="pt-28 pb-20 px-6 md:pl-[92px]">
+        <div className="container-custom flex flex-col items-center justify-center min-h-[60vh]">
+          <Shield size={48} className="mx-auto mb-6 text-accent-orange" />
+          <h2 className="text-3xl font-black mb-4">Connection Required</h2>
+          <p className="text-muted text-center max-w-md">Please connect your Bitcoin wallet to access this page.</p>
+        </div>
+      </div>
+    );
+  }
+
+  return <>{children}</>;
+};
+
+export const ProtectedContent = ({ children }: { children: React.ReactNode }) => {
+  const { isSignedIn } = useWallet();
+  const location = useLocation();
+  const isPublicProfileRoute = location.pathname === '/profile' || location.pathname.startsWith('/profile/');
+
+  if (!isSignedIn && location.pathname !== '/' && !isPublicProfileRoute) {
+    return (
+      <motion.div
+        key="protected"
+        initial={{ opacity: 0, x: 20 }}
+        animate={{ opacity: 1, x: 0 }}
+        exit={{ opacity: 0, x: -20 }}
+        transition={{ duration: 0.4 }}
+        className="pt-28 pb-20 px-6 md:pl-[92px]"
+      >
+        <div className="container-custom flex flex-col items-center justify-center min-h-[60vh]">
+          <Shield size={48} className="mx-auto mb-6 text-accent-orange" />
+          <h2 className="text-3xl font-black mb-4">Connection Required</h2>
+          <p className="text-muted text-center max-w-md">Please connect your Bitcoin wallet to access this page.</p>
+        </div>
+      </motion.div>
+    );
+  }
+
+  return <>{children}</>;
+};

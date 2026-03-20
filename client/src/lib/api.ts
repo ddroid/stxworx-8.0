@@ -1,6 +1,6 @@
 import type { ApiLeaderboardEntry } from '../types/leaderboard';
 import type { ApiCategory, ApiProject, AppJob, AppJobMilestone } from '../types/job';
-import type { AuthenticatedUserResponse, ApiUserProfile, ApiUserReview, UserRole } from '../types/user';
+import type { AuthenticatedUserResponse, ApiUserProfile, ApiUserReview, ApiUsernameAvailability, UserRole } from '../types/user';
 
 const rawBase = (import.meta.env.VITE_API_BASE_URL || '/api').trim();
 const API_BASE_URL = rawBase.endsWith('/api')
@@ -29,6 +29,7 @@ export interface ApiProposal {
   updatedAt?: string;
   freelancerAddress?: string;
   freelancerUsername?: string | null;
+  freelancerName?: string | null;
 }
 
 export interface ApiMilestoneSubmission {
@@ -109,6 +110,7 @@ export interface CreateReviewInput {
 }
 
 export interface UpdateMyProfileInput {
+  name?: string;
   username?: string;
   specialty?: string;
   hourlyRate?: string;
@@ -118,6 +120,10 @@ export interface UpdateMyProfileInput {
   company?: string;
   projectInterests?: string[];
   avatar?: string;
+  coverImage?: string;
+  city?: string;
+  country?: string;
+  language?: string;
 }
 
 export interface ApiAdmin {
@@ -189,6 +195,7 @@ export interface ApiSocialComment {
   userId: number;
   content: string;
   authorStxAddress?: string | null;
+  authorName?: string | null;
   authorUsername?: string | null;
   authorAvatar?: string | null;
   createdAt?: string;
@@ -200,14 +207,14 @@ export interface ApiConnection {
   addresseeId: number;
   status: 'pending' | 'accepted' | 'declined';
   direction: 'incoming' | 'outgoing';
-  otherUser?: Pick<ApiUserProfile, 'id' | 'stxAddress' | 'username' | 'role' | 'isActive' | 'specialty' | 'avatar'> | null;
+  otherUser?: Pick<ApiUserProfile, 'id' | 'stxAddress' | 'name' | 'username' | 'role' | 'isActive' | 'specialty' | 'avatar'> | null;
   createdAt?: string;
   updatedAt?: string;
 }
 
 export interface ApiConversation {
   id: number;
-  participant?: Pick<ApiUserProfile, 'id' | 'stxAddress' | 'username' | 'role' | 'avatar'> | null;
+  participant?: Pick<ApiUserProfile, 'id' | 'stxAddress' | 'name' | 'username' | 'role' | 'avatar'> | null;
   lastMessage: string;
   lastMessageAt?: string;
   unreadCount: number;
@@ -220,6 +227,7 @@ export interface ApiConversationMessage {
   body: string;
   createdAt?: string;
   senderAddress?: string;
+  senderName?: string | null;
   senderUsername?: string | null;
   senderRole?: UserRole;
 }
@@ -233,6 +241,7 @@ export interface ApiBounty {
   reward: string;
   status: 'open' | 'completed' | 'cancelled';
   creatorAddress?: string;
+  creatorName?: string | null;
   creatorUsername?: string | null;
   submissionCount: number;
   hasParticipated: boolean;
@@ -263,6 +272,7 @@ export interface ApiSocialPost {
   content: string;
   imageUrl?: string | null;
   authorStxAddress?: string | null;
+  authorName?: string | null;
   authorUsername?: string | null;
   authorAvatar?: string | null;
   likesCount: number;
@@ -292,6 +302,12 @@ export interface ApiPlatformConfig {
   createdAt?: string;
   updatedAt?: string;
 }
+
+ type DisplayableIdentity = {
+   name?: string | null;
+   username?: string | null;
+   stxAddress?: string | null;
+ };
 
 function buildUrl(path: string, searchParams?: RequestOptions['searchParams']) {
   const base = `${API_BASE_URL}${path.startsWith('/') ? path : `/${path}`}`;
@@ -362,17 +378,17 @@ export function formatAddress(address?: string | null) {
 }
 
 export function toDisplayName(
-  user?: Pick<ApiUserProfile, 'username' | 'stxAddress'> | Pick<ApiLeaderboardEntry, 'username' | 'stxAddress'> | null,
+  user?: DisplayableIdentity | null,
 ) {
   if (!user) {
     return 'Anonymous User';
   }
 
-  return user.username?.trim() || formatAddress(user.stxAddress) || 'Anonymous User';
+  return user.name?.trim() || user.username?.trim() || formatAddress(user.stxAddress) || 'Anonymous User';
 }
 
 export function toHandle(
-  user?: Pick<ApiUserProfile, 'username' | 'stxAddress'> | Pick<ApiLeaderboardEntry, 'username' | 'stxAddress'> | null,
+  user?: DisplayableIdentity | null,
 ) {
   if (!user) {
     return '@unknown';
@@ -570,6 +586,10 @@ export async function getUserProfile(address: string) {
   return apiRequest<ApiUserProfile>(`/users/${address}`, { method: 'GET' });
 }
 
+export async function getUserProfileByUsername(username: string) {
+  return apiRequest<ApiUserProfile>(`/users/username/${encodeURIComponent(username)}`, { method: 'GET' });
+}
+
 export async function getUserProjects(address: string) {
   return apiRequest<ApiProject[]>(`/users/${address}/projects`, { method: 'GET' });
 }
@@ -591,6 +611,13 @@ export async function createReview(input: CreateReviewInput) {
 
 export async function getCurrentUser() {
   return apiRequest<AuthenticatedUserResponse>('/auth/me', { method: 'GET' });
+}
+
+export async function checkUsernameAvailability(username: string) {
+  return apiRequest<ApiUsernameAvailability>('/users/username-availability', {
+    method: 'GET',
+    searchParams: { username },
+  });
 }
 
 export async function updateMyProfile(input: UpdateMyProfileInput) {
@@ -685,7 +712,7 @@ export async function getConnections() {
 }
 
 export async function getConnectionSuggestions() {
-  return apiRequest<Array<Pick<ApiUserProfile, 'id' | 'stxAddress' | 'username' | 'role' | 'isActive' | 'specialty' | 'avatar'>>>('/connections/suggestions', { method: 'GET' });
+  return apiRequest<Array<Pick<ApiUserProfile, 'id' | 'stxAddress' | 'name' | 'username' | 'role' | 'isActive' | 'specialty' | 'avatar'>>>('/connections/suggestions', { method: 'GET' });
 }
 
 export async function requestConnection(userId: number) {

@@ -509,6 +509,26 @@ export default function App() {
                       <ProfilePage userRole={userRole} />
                     </motion.div>
                   } />
+                  <Route path="/profile/w/:walletAddressParam" element={
+                    <motion.div
+                      initial={{ opacity: 0, x: 20 }}
+                      animate={{ opacity: 1, x: 0 }}
+                      exit={{ opacity: 0, x: -20 }}
+                      transition={{ duration: 0.4 }}
+                    >
+                      <ProfilePage userRole={userRole} />
+                    </motion.div>
+                  } />
+                  <Route path="/profile/:profileIdentifier" element={
+                    <motion.div
+                      initial={{ opacity: 0, x: 20 }}
+                      animate={{ opacity: 1, x: 0 }}
+                      exit={{ opacity: 0, x: -20 }}
+                      transition={{ duration: 0.4 }}
+                    >
+                      <ProfilePage userRole={userRole} />
+                    </motion.div>
+                  } />
                   <Route path="/messages" element={
                     <motion.div
                       initial={{ opacity: 0, x: 20 }}
