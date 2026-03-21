@@ -4,9 +4,8 @@ services:
     container_name: stxworx-app
     restart: unless-stopped
     ports:
-      # Exposes the app on host port 80 for production standard, mapped to 5000 inside the container.
-      # You can change '80:5000' to '5000:5000' if you use a reverse proxy like Nginx.
-      - "80:5000"
+      # Exposes the app on host port 5000 for Nginx to proxy traffic to.
+      - "5000:5000"
     environment:
       # This overrides any DATABASE_URL to use the internal docker network hostname 'mysql'
       - DATABASE_URL=mysql://root:root@mysql:3306/stx_freelance
