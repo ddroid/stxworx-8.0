@@ -5,11 +5,13 @@ RUN apk add --no-cache python3 make g++
 
 WORKDIR /app
 
-# Copy package definition
+# Copy package definitions
 COPY package.json ./
+COPY client/package.json ./client/
 
-# Install all dependencies (we need dev deps for building and Drizzle migrations)
+# Install root and client dependencies
 RUN npm install
+RUN cd client && npm install
 
 # Copy application source
 COPY . .
