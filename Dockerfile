@@ -22,5 +22,5 @@ RUN npm run build
 # Expose the API and Web port
 EXPOSE 5000
 
-# Start script: run Drizzle schema push and start server
-CMD ["sh", "-c", "npm run db:push && npm start"]
+# Start script: run Drizzle schema push, seed database, and start server
+CMD ["sh", "-c", "npm run db:setup && npm start"]
