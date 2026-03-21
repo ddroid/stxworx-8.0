@@ -1,0 +1,43 @@
+services:
+  app:
+    build: .
+    container_name: stxworx-app
+    restart: unless-stopped
+    ports:
+      # Exposes the app on host port 80 for production standard, mapped to 5000 inside the container.
+      # You can change '80:5000' to '5000:5000' if you use a reverse proxy like Nginx.
+      - "80:5000"
+    environment:
+      # This overrides any DATABASE_URL to use the internal docker network hostname 'mysql'
+      - DATABASE_URL=mysql://root:root@mysql:3306/stx_freelance
+      - NODE_ENV=production
+      - PORT=5000
+    env_file:
+      - .env.production
+    volumes:
+      # Persist user uploads
+      - ./uploads:/app/uploads
+    depends_on:
+      mysql:
+        condition: service_healthy
+
+  mysql:
+    image: mysql:8
+    container_name: stxworx-mysql
+    restart: unless-stopped
+    environment:
+      MYSQL_ROOT_PASSWORD: root
+      MYSQL_DATABASE: stx_freelance
+    ports:
+      # Optional: Disable this if you don't want external access to DB on the VPS. 
+      # You can remove ports section completely for security.
+      - "3306:3306"
+    volumes:
+      - stx_mysql_data_prod:/var/lib/mysql
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost"]
+      timeout: 20s
+      retries: 10
+
+volumes:
+  stx_mysql_data_prod:
