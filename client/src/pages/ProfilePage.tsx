@@ -930,24 +930,33 @@ export const ProfilePage = ({ userRole }: { userRole: UserRole | null }) => {
                       </div>
                     </div>
                   </div>
-                  <div className="flex gap-2 pb-2">
-                    {[
-                      { tier: 'Verified', letter: 'V', color: 'bg-green-500', earned: true },
-                      { tier: 'Bronze', letter: 'B', color: 'bg-[#cd7f32]', earned: true },
-                      { tier: 'Silver', letter: 'S', color: 'bg-[#C0C0C0]', earned: true },
-                      { tier: 'Gold', letter: 'G', color: 'bg-[#FFD700]', earned: false },
-                      { tier: 'Platinum', letter: 'P', color: 'bg-[#E5E4E2]', earned: false },
-                    ].map((nft, i) => (
-                      <div 
-                        key={i} 
-                        className={`w-6 h-6 flex items-center justify-center rounded-sm font-bold text-[10px] text-white shadow-[inset_0_1px_2px_rgba(255,255,255,0.5),inset_0_-1px_2px_rgba(0,0,0,0.3),0_2px_4px_rgba(0,0,0,0.4)] relative group cursor-pointer ${nft.earned ? nft.color : 'bg-ink/10 text-muted shadow-none'}`}
-                      >
-                        {nft.letter}
-                        <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 px-2 py-1 bg-ink text-bg text-[10px] rounded-[15px] opacity-0 group-hover:opacity-100 pointer-events-none transition-opacity z-10 whitespace-nowrap">
-                          {nft.tier} Status {nft.earned ? '' : '(Not Earned)'}
+                  <div className="flex flex-wrap gap-2 pb-2">
+                    {nfts.map((nft) => {
+                      const colorMap: Record<string, string> = {
+                        'milestone_streak': 'bg-accent-blue',
+                        'top_freelancer': 'bg-accent-orange',
+                        'top_client': 'bg-accent-pink',
+                        'loyalty': 'bg-accent-cyan',
+                        'custom': 'bg-accent-red'
+                      };
+                      const color = colorMap[nft.nftType] || 'bg-ink/20';
+                      const letter = nft.name.slice(0, 1).toUpperCase();
+                      
+                      return (
+                        <div 
+                          key={nft.id} 
+                          className={`w-6 h-6 flex items-center justify-center rounded-sm font-bold text-[10px] text-white shadow-[inset_0_1px_2px_rgba(255,255,255,0.5),inset_0_-1px_2px_rgba(0,0,0,0.3),0_2px_4px_rgba(0,0,0,0.4)] relative group cursor-pointer ${color}`}
+                        >
+                          {letter}
+                          <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 px-2 py-1 bg-ink text-bg text-[10px] rounded-[15px] opacity-0 group-hover:opacity-100 pointer-events-none transition-opacity z-10 whitespace-nowrap">
+                            {nft.name} {nft.minted ? '(Minted)' : '(Pending)'}
+                          </div>
                         </div>
-                      </div>
-                    ))}
+                      );
+                    })}
+                    {nfts.length === 0 && (
+                      <p className="text-[10px] text-muted font-bold italic">No reputation NFTs earned yet.</p>
+                    )}
                   </div>
                 </div>
               </div>
