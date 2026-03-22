@@ -151,7 +151,7 @@ export const ReviewProposalsPage = () => {
         <Link to="/dashboard" className="inline-flex items-center gap-2 text-xs font-bold text-muted hover:text-ink mb-8 transition-colors">
           <ChevronRight size={14} className="rotate-180" /> Back to Dashboard
         </Link>
-        <h1 className="text-5xl font-black tracking-tighter mb-2">Review Proposals</h1>
+        <h1 className="text-3xl sm:text-5xl font-black tracking-tighter mb-2">Review Proposals</h1>
         <p className="text-muted mb-6">
           {project ? `Review and accept proposals for "${project.title}"` : 'Review incoming proposals for your posted jobs.'}
         </p>
@@ -191,8 +191,8 @@ export const ReviewProposalsPage = () => {
 
               return (
                 <div key={proposal.id} className="card p-6">
-                  <div className="flex justify-between items-start mb-6">
-                    <div className="flex items-center gap-4">
+                  <div className="flex flex-col sm:flex-row sm:justify-between sm:items-start gap-4 mb-6">
+                    <div className="flex items-center gap-4 min-w-0">
                       <div className="w-12 h-12 rounded-[10px] bg-ink/10 overflow-hidden flex items-center justify-center font-black">
                         {displayName.slice(0, 1).toUpperCase()}
                       </div>
@@ -203,7 +203,7 @@ export const ReviewProposalsPage = () => {
                         </p>
                       </div>
                     </div>
-                    <div className="text-right">
+                    <div className="sm:text-right">
                       <p className="font-black text-xl text-accent-cyan capitalize">{proposal.status}</p>
                       <p className="text-[10px] font-bold text-muted uppercase tracking-widest">{formatRelativeTime(proposal.createdAt)}</p>
                     </div>
@@ -211,7 +211,7 @@ export const ReviewProposalsPage = () => {
                   <div className="bg-ink/5 rounded-[15px] p-4 mb-6">
                     <p className="text-sm text-muted leading-relaxed">{proposal.coverLetter}</p>
                   </div>
-                  <div className="flex gap-4">
+                  <div className="flex flex-col sm:flex-row gap-3 sm:gap-4">
                     <button
                       onClick={() => handleAcceptProposal(proposal)}
                       disabled={!canAcceptProposal || processingProposalId === proposal.id || Boolean(acceptedProposal && acceptedProposal.id !== proposal.id && project?.status !== 'active')}

@@ -19,11 +19,11 @@ export const ProPlanPage = () => (
       <div className="flex items-center justify-between mb-12">
         <div>
           <h1 className="text-5xl font-black tracking-tighter mb-2">Pro Plan</h1>
-          <p className="text-muted">Unlock premium AI tools and platform visibility.</p>
+          <p className="text-muted">Unlock premium AI tools and platform visibility. Coming soon.</p>
         </div>
       </div>
       <div className="card p-8 text-center text-muted">
-        <p>Pro Plan subscription details and benefits will be populated here.</p>
+        <p>Pro Plan is coming soon.</p>
       </div>
     </div>
   </div>

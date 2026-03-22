@@ -96,12 +96,12 @@ export const Logo = ({ className = "" }: { className?: string }) => (
     );
 export const StatCard = ({ value, label, color }: StatProps) => (
       <div className={`p-6 rounded-[15px] flex flex-col justify-between h-40 ${color} text-bg`}>
-        <p className="text-4xl font-black tracking-tighter">{value}</p>
+        <p className="text-3xl sm:text-4xl font-black tracking-tighter">{value}</p>
         <p className="text-sm font-bold opacity-80 leading-tight">{label}</p>
       </div>
     );
 export const GroupCard = ({ title, members, image, color }: GroupProps) => (
-      <div className="min-w-[280px] group cursor-pointer">
+      <div className="min-w-[230px] sm:min-w-[280px] group cursor-pointer">
         <div className={`aspect-[4/3] rounded-[15px] overflow-hidden mb-4 relative ${color}`}>
           <img 
             src={image} 
@@ -117,7 +117,7 @@ export const GroupCard = ({ title, members, image, color }: GroupProps) => (
       </div>
     );
 export const CourseCard = ({ title, author, price, rating, image }: CourseProps) => (
-      <div className="min-w-[300px] card group">
+      <div className="min-w-[240px] sm:min-w-[300px] card group">
         <div className="aspect-video rounded-[15px] overflow-hidden mb-4 relative">
           <img 
             src={image} 

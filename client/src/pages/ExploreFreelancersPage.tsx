@@ -111,9 +111,9 @@ export const FreelancersPage = () => {
           recipientAddress={selectedRecipientAddress}
         />
         <div className="mb-12">
-          <h1 className="text-8xl font-black tracking-tighter mb-12">Freelancers</h1>
+          <h1 className="text-5xl md:text-8xl font-black tracking-tighter mb-8 md:mb-12">Freelancers</h1>
 
-          <div className="flex flex-col md:flex-row items-center justify-between gap-6 mb-12">
+          <div className="flex flex-col md:flex-row items-stretch md:items-center justify-between gap-4 md:gap-6 mb-12">
             <div className="flex flex-wrap gap-2">
               {filters.map((filter) => (
                 <button
@@ -125,8 +125,8 @@ export const FreelancersPage = () => {
                 </button>
               ))}
             </div>
-            <div className="flex items-center gap-4">
-              <div className="bg-surface border border-border rounded-[15px] px-3 py-2 flex items-center gap-2 min-w-[220px]">
+            <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3 sm:gap-4 w-full md:w-auto">
+              <div className="bg-surface border border-border rounded-[15px] px-3 py-2 flex items-center gap-2 w-full sm:min-w-[220px]">
                 <Search size={14} className="text-muted" />
                 <input
                   value={searchQuery}
@@ -135,7 +135,7 @@ export const FreelancersPage = () => {
                   className="bg-transparent text-sm text-ink placeholder:text-muted outline-none w-full"
                 />
               </div>
-              <div className="bg-surface border border-border rounded-[15px] px-4 py-2 text-[10px] font-bold flex items-center gap-4 cursor-pointer">
+              <div className="bg-surface border border-border rounded-[15px] px-4 py-2 text-[10px] font-bold flex items-center justify-between sm:justify-start gap-4 cursor-pointer w-full sm:w-auto">
                 {selectedFilter}
                 <ChevronRight size={14} className="rotate-90" />
               </div>
@@ -144,7 +144,7 @@ export const FreelancersPage = () => {
 
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8 mb-16">
             {visibleFreelancers.map((freelancer) => (
-              <div key={freelancer.id} className="bg-surface rounded-[15px] p-8 border border-border group hover:border-accent-orange transition-all relative">
+              <div key={freelancer.id} className="bg-surface rounded-[15px] p-6 md:p-8 border border-border group hover:border-accent-orange transition-all relative">
                 <button className="absolute top-8 right-8 text-muted hover:text-ink">
                   <MoreHorizontal size={20} />
                 </button>
@@ -158,7 +158,7 @@ export const FreelancersPage = () => {
                   <p className="text-[10px] text-muted font-medium">{freelancer.stxAddress}</p>
                 </div>
 
-                <div className="flex items-center gap-6 mb-8">
+                <div className="flex flex-col sm:flex-row sm:items-center gap-4 sm:gap-6 mb-8">
                   <div className="relative">
                     <div className="w-24 h-24 rounded-[10px] bg-accent-pink/20 overflow-hidden border-4 border-bg flex items-center justify-center text-2xl font-black uppercase">
                       {toDisplayName(freelancer).slice(0, 2)}
@@ -189,7 +189,7 @@ export const FreelancersPage = () => {
             )}
           </div>
 
-          <div className="flex items-center justify-between">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
             <p className="text-[10px] text-muted font-bold">Viewing {visibleFreelancers.length} of {freelancers.length} active members</p>
             <div className="flex gap-2">
               <button className="w-8 h-8 rounded-[15px] bg-white text-bg flex items-center justify-center text-[10px] font-bold">1</button>

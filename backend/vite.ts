@@ -92,16 +92,20 @@ export async function setupVite(app: Express, server: Server) {
 }
 
 export function serveStatic(app: Express) {
-  // In production, the client is built to dist/public relative to the project root
-  // Since we're running from backend/source, we need to go up to project root, then to dist/public
-  const distPath = path.resolve(_currentDir, "..", "dist", "public");
-  console.log("Looking for public directory at:", distPath);
+  const candidatePaths = [
+    path.resolve(_currentDir, "..", "dist", "public"),
+    path.resolve(_currentDir, "..", "public"),
+    path.resolve(process.cwd(), "dist", "public"),
+  ];
+  const distPath = candidatePaths.find((candidate) => fs.existsSync(candidate));
 
-  if (!fs.existsSync(distPath)) {
+  if (!distPath) {
     throw new Error(
-      `Could not find the build directory: ${distPath}, make sure to build the client first`,
+      `Could not find the build directory. Tried: ${candidatePaths.join(", ")}`,
     );
   }
+
+  console.log("Serving static files from:", distPath);
 
   app.use(express.static(distPath));
 

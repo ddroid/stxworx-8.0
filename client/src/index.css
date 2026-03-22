@@ -72,6 +72,10 @@
 }
 
 @layer base {
+  html, body {
+    overflow-x: hidden;
+  }
+
   body {
     @apply bg-bg text-ink font-sans antialiased selection:bg-accent-orange selection:text-bg;
   }
@@ -145,6 +149,27 @@
 
   .glass {
     @apply bg-ink/5 backdrop-blur-xl border border-ink/10;
+  }
+}
+
+@media (max-width: 768px) {
+  .container-custom {
+    padding-left: 1rem;
+    padding-right: 1rem;
+  }
+
+  .card {
+    padding: 1rem;
+  }
+
+  .text-8xl {
+    font-size: 3rem !important;
+    line-height: 1.05 !important;
+  }
+
+  .text-5xl {
+    font-size: 2rem !important;
+    line-height: 1.1 !important;
   }
 }
 

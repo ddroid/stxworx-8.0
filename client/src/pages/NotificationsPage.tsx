@@ -95,14 +95,14 @@ export const NotificationsPage = () => {
   return (
     <div className="pt-28 pb-20 px-6 md:pl-[92px]">
       <div className="container-custom max-w-4xl">
-        <div className="flex items-center justify-between mb-8">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-8">
           <div className="flex items-center gap-4">
             <Link to="/" className="w-10 h-10 bg-surface border border-border rounded-full flex items-center justify-center text-muted hover:text-ink hover:border-ink transition-colors">
               <ChevronLeft size={20} />
             </Link>
-            <h1 className="text-5xl font-black tracking-tighter">Notifications</h1>
+            <h1 className="text-3xl sm:text-5xl font-black tracking-tighter">Notifications</h1>
           </div>
-          <div className="flex items-center gap-4">
+          <div className="flex items-center gap-4 flex-wrap">
             <button onClick={handleMarkAllRead} className="text-xs font-bold text-accent-orange hover:underline">Mark all as read</button>
             <button onClick={handleClearAll} className="text-xs font-bold text-muted hover:text-ink">Clear all</button>
           </div>
@@ -122,13 +122,13 @@ export const NotificationsPage = () => {
                 <button
                   key={notification.id}
                   onClick={() => handleOpenNotification(notification)}
-                  className={`w-full text-left p-6 flex items-start gap-6 border-b border-border/50 last:border-0 transition-colors hover:bg-ink/5 ${notification.isRead ? '' : 'bg-ink/5'}`}
+                  className={`w-full text-left p-4 sm:p-6 flex items-start gap-4 sm:gap-6 border-b border-border/50 last:border-0 transition-colors hover:bg-ink/5 ${notification.isRead ? '' : 'bg-ink/5'}`}
                 >
                   <div className={`w-12 h-12 rounded-[15px] ${meta.color} flex items-center justify-center text-bg shrink-0`}>
                     <Icon size={20} className={meta.color === 'bg-ink/20' ? 'text-ink' : ''} />
                   </div>
-                  <div className="flex-1">
-                    <div className="flex justify-between items-start mb-1">
+                  <div className="flex-1 min-w-0">
+                    <div className="flex flex-col sm:flex-row sm:justify-between sm:items-start gap-1 mb-1">
                       <h3 className={`text-base ${notification.isRead ? 'font-bold' : 'font-black'}`}>{notification.title}</h3>
                       <span className="text-[10px] text-muted font-bold whitespace-nowrap">{formatRelativeTime(notification.createdAt)}</span>
                     </div>

@@ -4,7 +4,7 @@ import { motion, AnimatePresence } from 'motion/react';
 import { 
   Search, Bell, Globe, LayoutGrid, Users, BookOpen, Briefcase, Calendar, ShoppingBag, Newspaper,
   ChevronRight, Star, Plus, Heart, MessageSquare, Share2, MapPin, Link as LinkIcon, Twitter, Instagram,
-  Facebook, MoreHorizontal, ArrowRight, Filter, CheckCircle2, Trophy, ChevronLeft, ChevronsRight, ChevronDown,
+  Facebook, MoreHorizontal, ArrowRight, Filter, Trophy, ChevronLeft, ChevronsRight, ChevronDown,
   Wallet, Send, X, Settings, ShieldCheck, LogOut, Mail, Phone, MessageCircle, Sun, Moon, Maximize2, Minimize2,
   HelpCircle, AlertTriangle, Folder, GraduationCap, Home, PenTool, Camera, Edit2, Share, Shield, Upload, FileText,
   Download, Sparkles, Bot, ZoomIn, ZoomOut
@@ -840,11 +840,6 @@ export const ProfilePage = ({ userRole }: { userRole: UserRole | null }) => {
                             <h1 className="text-3xl md:text-4xl font-black tracking-tighter">
                               {displayName}
                             </h1>
-                            {/* X Verified Badge */}
-                            <div className="flex items-center justify-center w-5 h-5 bg-black text-white rounded-full" title="X Verified">
-                              <Twitter size={10} fill="currentColor" />
-                            </div>
-                            <CheckCircle2 size={24} className="text-accent-blue fill-accent-blue/20" />
                           </div>
                           <p className="text-sm font-bold text-muted mt-1">{displayHandle}</p>
                           <p className="text-xs text-muted mt-1">{displaySpecialty}</p>
@@ -930,24 +925,19 @@ export const ProfilePage = ({ userRole }: { userRole: UserRole | null }) => {
                       </div>
                     </div>
                   </div>
-                  <div className="flex gap-2 pb-2">
-                    {[
-                      { tier: 'Verified', letter: 'V', color: 'bg-green-500', earned: true },
-                      { tier: 'Bronze', letter: 'B', color: 'bg-[#cd7f32]', earned: true },
-                      { tier: 'Silver', letter: 'S', color: 'bg-[#C0C0C0]', earned: true },
-                      { tier: 'Gold', letter: 'G', color: 'bg-[#FFD700]', earned: false },
-                      { tier: 'Platinum', letter: 'P', color: 'bg-[#E5E4E2]', earned: false },
-                    ].map((nft, i) => (
-                      <div 
-                        key={i} 
-                        className={`w-6 h-6 flex items-center justify-center rounded-sm font-bold text-[10px] text-white shadow-[inset_0_1px_2px_rgba(255,255,255,0.5),inset_0_-1px_2px_rgba(0,0,0,0.3),0_2px_4px_rgba(0,0,0,0.4)] relative group cursor-pointer ${nft.earned ? nft.color : 'bg-ink/10 text-muted shadow-none'}`}
+                  <div className="flex gap-2 pb-2 flex-wrap">
+                    {nfts.map((nft) => (
+                      <div
+                        key={nft.id}
+                        className="w-6 h-6 flex items-center justify-center rounded-sm font-bold text-[10px] text-white shadow-[inset_0_1px_2px_rgba(255,255,255,0.5),inset_0_-1px_2px_rgba(0,0,0,0.3),0_2px_4px_rgba(0,0,0,0.4)] relative group cursor-pointer bg-accent-orange"
                       >
-                        {nft.letter}
+                        {nft.name.slice(0, 1).toUpperCase()}
                         <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 px-2 py-1 bg-ink text-bg text-[10px] rounded-[15px] opacity-0 group-hover:opacity-100 pointer-events-none transition-opacity z-10 whitespace-nowrap">
-                          {nft.tier} Status {nft.earned ? '' : '(Not Earned)'}
+                          {nft.name}
                         </div>
                       </div>
                     ))}
+                    {nfts.length === 0 ? <p className="text-[10px] text-muted">No reputation NFTs yet.</p> : null}
                   </div>
                 </div>
               </div>

@@ -172,16 +172,16 @@ export const MessagesPage = () => {
   };
 
   return (
-    <div className="pt-28 pb-20 px-6 md:pl-[92px] h-screen flex flex-col">
+    <div className="pt-28 pb-20 px-6 md:pl-[92px] min-h-screen flex flex-col">
       <div className="container-custom flex-1 flex flex-col h-full">
-        <div className="flex items-center gap-4 mb-8">
+        <div className="flex items-center gap-4 mb-6 md:mb-8">
           <Link to="/" className="w-10 h-10 bg-surface border border-border rounded-full flex items-center justify-center text-muted hover:text-ink hover:border-ink transition-colors">
             <ChevronLeft size={20} />
           </Link>
-          <h1 className="text-5xl font-black tracking-tighter">Messages</h1>
+          <h1 className="text-3xl sm:text-5xl font-black tracking-tighter">Messages</h1>
         </div>
         
-        <div className="flex-1 bg-surface border border-border rounded-[15px] overflow-hidden flex flex-col md:flex-row min-h-[500px]">
+        <div className="flex-1 bg-surface border border-border rounded-[15px] overflow-hidden flex flex-col md:flex-row min-h-[420px] md:min-h-[500px]">
           <div className={`w-full md:w-80 border-r border-border flex flex-col ${selectedChat ? 'hidden md:flex' : 'flex'}`}>
             <div className="p-4 border-b border-border">
               <div className="bg-ink/5 rounded-[15px] px-4 py-2 flex items-center gap-2">
@@ -236,8 +236,8 @@ export const MessagesPage = () => {
           <div className={`flex-1 flex flex-col ${!selectedChat ? 'hidden md:flex' : 'flex'}`}>
             {currentChat ? (
               <>
-                <div className="p-6 border-b border-border flex items-center justify-between bg-ink/5">
-                  <div className="flex items-center gap-4">
+                <div className="p-4 md:p-6 border-b border-border flex items-center justify-between bg-ink/5">
+                  <div className="flex items-center gap-3 md:gap-4 min-w-0">
                     <button className="md:hidden text-muted hover:text-ink" onClick={handleBackToList}>
                       <ChevronLeft size={24} />
                     </button>
@@ -245,20 +245,20 @@ export const MessagesPage = () => {
                       {toDisplayName(currentChat.participant || null).slice(0, 1).toUpperCase()}
                     </div>
                     <div>
-                      <h3 className="font-bold text-lg">{toDisplayName(currentChat.participant || null)}</h3>
+                      <h3 className="font-bold text-base md:text-lg truncate">{toDisplayName(currentChat.participant || null)}</h3>
                       <p className="text-[10px] text-muted font-bold uppercase tracking-widest">{currentChat.participant?.role || 'User'}</p>
                     </div>
                   </div>
                   <button className="text-muted hover:text-ink"><MoreHorizontal size={20} /></button>
                 </div>
                 
-                <div className="flex-1 p-6 overflow-y-auto no-scrollbar space-y-6">
+                <div className="flex-1 p-4 md:p-6 overflow-y-auto no-scrollbar space-y-6">
                   <div className="text-center text-[10px] text-muted font-bold uppercase tracking-widest my-4">Today</div>
                   {messages.map((entry) => {
                     const isMine = entry.senderId === currentUserId;
                     return (
                       <div key={entry.id} className={`flex ${isMine ? 'justify-end' : 'justify-start'}`}>
-                        <div className={`max-w-[70%] p-4 rounded-[15px] text-sm ${isMine ? 'bg-ink text-bg rounded-tr-none' : 'bg-ink/5 text-ink rounded-tl-none border border-border'}`}>
+                        <div className={`max-w-[85%] md:max-w-[70%] p-4 rounded-[15px] text-sm ${isMine ? 'bg-ink text-bg rounded-tr-none' : 'bg-ink/5 text-ink rounded-tl-none border border-border'}`}>
                           <p>{entry.body}</p>
                           <p className={`text-[10px] mt-2 ${isMine ? 'text-bg/70' : 'text-muted'}`}>{formatRelativeTime(entry.createdAt)}</p>
                         </div>

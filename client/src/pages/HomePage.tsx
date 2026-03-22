@@ -412,23 +412,21 @@ export const HomePage = () => {
         <section className="mb-20">
           <div className="relative rounded-[15px] overflow-hidden bg-accent-blue p-12 md:p-20 flex flex-col md:flex-row items-center justify-between gap-10">
             <div className="relative z-10 max-w-xl">
-              <span className="bg-white/20 backdrop-blur-md px-4 py-1 rounded-[15px] text-xs font-bold mb-6 inline-block">Upcoming Event</span>
+              <span className="bg-white/20 backdrop-blur-md px-4 py-1 rounded-[15px] text-xs font-bold mb-6 inline-block">Live now</span>
               <h2 className="text-4xl md:text-6xl font-black text-white tracking-tighter leading-none mb-8">
-                BIG GLOBAL E-COMMERCE CONFERENCE
+                BUILD THE FUTURE OF DECENTRALIZED TECH
               </h2>
-              <button className="bg-white text-bg px-8 py-4 rounded-[15px] font-bold hover:bg-accent-orange transition-all">
-                Buy a Ticket
-              </button>
-            </div>
-            <div className="relative z-10 grid grid-cols-2 gap-4">
-              <div className="text-center bg-white/10 backdrop-blur-md p-6 rounded-[15px] border border-white/10">
-                <p className="text-4xl font-black text-white">12</p>
-                <p className="text-xs font-bold text-white/60">OCTOBER</p>
-              </div>
-              <div className="text-center bg-white/10 backdrop-blur-md p-6 rounded-[15px] border border-white/10">
-                <p className="text-4xl font-black text-white">2025</p>
-                <p className="text-xs font-bold text-white/60">YEAR</p>
-              </div>
+              <p className="text-white/90 text-sm md:text-base font-bold uppercase tracking-widest mb-8">
+                STXWORX LIVE ON DORA HACKS
+              </p>
+              <a
+                href="https://dorahacks.io/buidl/41161"
+                target="_blank"
+                rel="noreferrer"
+                className="inline-flex bg-white text-bg px-8 py-4 rounded-[15px] font-bold hover:bg-accent-orange transition-all"
+              >
+                Vote now
+              </a>
             </div>
             {/* Abstract shapes */}
             <div className="absolute top-0 right-0 w-96 h-96 bg-accent-red/30 rounded-full blur-[100px] -mr-48 -mt-48"></div>

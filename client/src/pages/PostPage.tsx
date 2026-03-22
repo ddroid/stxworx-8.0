@@ -186,7 +186,7 @@ export const PostPage = () => {
           {imageUrl && (
             <img src={imageUrl} className="w-full rounded-[15px] mb-6 object-cover max-h-96" alt="Post content" referrerPolicy="no-referrer" />
           )}
-          <div className="flex items-center gap-8 text-muted border-t border-border pt-4">
+          <div className="flex flex-wrap items-center gap-4 sm:gap-8 text-muted border-t border-border pt-4">
             <button
               onClick={handleToggleLike}
               disabled={!canInteract || togglingLike}
@@ -204,7 +204,7 @@ export const PostPage = () => {
           <h3 className="font-black text-lg mb-6">Comments ({post.commentsCount})</h3>
 
           {canInteract ? (
-            <div className="flex gap-4 items-start mb-8">
+            <div className="flex gap-3 sm:gap-4 items-start mb-8">
               <div className="w-10 h-10 rounded-[10px] bg-surface border border-border flex items-center justify-center text-[10px] font-black uppercase shrink-0">
                 {(walletAddress || 'YO').slice(0, 2)}
               </div>
@@ -216,7 +216,7 @@ export const PostPage = () => {
                   className="w-full bg-ink/5 border border-border rounded-[15px] p-4 text-sm focus:ring-1 focus:ring-accent-orange outline-none resize-none h-24 mb-3"
                 />
                 <div className="flex justify-end">
-                  <button onClick={handlePostComment} disabled={submittingComment || !newComment.trim()} className="btn-primary py-2 px-6 disabled:opacity-60">
+                  <button onClick={handlePostComment} disabled={submittingComment || !newComment.trim()} className="btn-primary py-2 px-6 w-full sm:w-auto justify-center disabled:opacity-60">
                     {submittingComment ? 'Posting...' : 'Post Comment'}
                   </button>
                 </div>
@@ -232,7 +232,7 @@ export const PostPage = () => {
               const commentAvatarUrl = toApiAssetUrl(comment.authorAvatar);
 
               return (
-                <div key={comment.id} className="flex gap-4">
+                <div key={comment.id} className="flex gap-3 sm:gap-4">
                   {commentAvatarUrl ? (
                     <img src={commentAvatarUrl} className="w-10 h-10 rounded-[10px] object-cover shrink-0" alt={commentAuthorName} referrerPolicy="no-referrer" />
                   ) : (
@@ -240,8 +240,8 @@ export const PostPage = () => {
                       {commentAuthorName.slice(0, 2)}
                     </div>
                   )}
-                  <div className="flex-1 bg-ink/5 rounded-[15px] p-4">
-                    <div className="flex justify-between items-start mb-2 gap-4">
+                  <div className="flex-1 bg-ink/5 rounded-[15px] p-4 min-w-0">
+                    <div className="flex flex-col sm:flex-row sm:justify-between sm:items-start mb-2 gap-1 sm:gap-4">
                       <h4 className="font-bold text-sm">{commentAuthorName}</h4>
                       <span className="text-xs text-muted shrink-0">{formatRelativeTime(comment.createdAt)}</span>
                     </div>

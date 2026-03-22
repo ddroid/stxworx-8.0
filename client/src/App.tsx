@@ -213,7 +213,7 @@ const PrivacyPolicyPage = () => (
   <div className="pt-28 pb-20 px-6 md:pl-[92px]">
     <div className="container-custom">
       <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.5 }}>
-        <h1 className="text-5xl font-black tracking-tighter mb-8">Privacy Policy</h1>
+        <h1 className="text-3xl sm:text-5xl font-black tracking-tighter mb-8">Privacy Policy</h1>
         <div className="card max-w-4xl prose prose-invert">
           <p className="text-muted leading-relaxed mb-6">Last updated: March 2026</p>
           <h2 className="text-xl font-bold mb-4">1. Information We Collect</h2>
@@ -230,7 +230,7 @@ const TermsPage = () => (
   <div className="pt-28 pb-20 px-6 md:pl-[92px]">
     <div className="container-custom">
       <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.5 }}>
-        <h1 className="text-5xl font-black tracking-tighter mb-8">Terms of Service</h1>
+        <h1 className="text-3xl sm:text-5xl font-black tracking-tighter mb-8">Terms of Service</h1>
         <div className="card max-w-4xl prose prose-invert">
           <p className="text-muted leading-relaxed mb-6">Last updated: March 2026</p>
           <h2 className="text-xl font-bold mb-4">1. Acceptance of Terms</h2>
@@ -247,7 +247,7 @@ const ContactPage = () => (
   <div className="pt-28 pb-20 px-6 md:pl-[92px]">
     <div className="container-custom">
       <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.5 }}>
-        <h1 className="text-5xl font-black tracking-tighter mb-8">Contact Us</h1>
+        <h1 className="text-3xl sm:text-5xl font-black tracking-tighter mb-8">Contact Us</h1>
         <div className="card max-w-2xl">
           <form className="space-y-6">
             <div>
@@ -330,7 +330,7 @@ export default function App() {
     >
       <Router>
         <Shared.CustomCursor />
-        <div className="min-h-screen bg-bg text-ink selection:bg-accent-orange selection:text-bg">
+        <div className="min-h-screen bg-bg text-ink selection:bg-accent-orange selection:text-bg overflow-x-hidden pb-16 md:pb-0">
           <TopHeader theme={theme} toggleTheme={() => setTheme(theme === 'dark' ? 'light' : 'dark')} />
           
           <div className="transition-all duration-500">
@@ -557,9 +557,9 @@ export default function App() {
                         animate={{ scale: 1, opacity: 1 }}
                         transition={{ duration: 0.5 }}
                       >
-                        <h1 className="text-[15rem] font-black tracking-tighter mb-0 leading-none text-white/5 absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 select-none pointer-events-none">404</h1>
-                        <h2 className="text-8xl font-black tracking-tighter mb-8 relative z-10">LOST IN <br /><span className="text-accent-orange">SPACE.</span></h2>
-                        <p className="text-xl mb-12 text-muted relative z-10 max-w-md mx-auto">The page you're looking for has drifted into another dimension. Let's get you back home.</p>
+                        <h1 className="text-[7rem] sm:text-[10rem] md:text-[15rem] font-black tracking-tighter mb-0 leading-none text-white/5 absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 select-none pointer-events-none">404</h1>
+                        <h2 className="text-4xl sm:text-6xl md:text-8xl font-black tracking-tighter mb-8 relative z-10">LOST IN <br /><span className="text-accent-orange">SPACE.</span></h2>
+                        <p className="text-base sm:text-xl mb-12 text-muted relative z-10 max-w-md mx-auto">The page you're looking for has drifted into another dimension. Let's get you back home.</p>
                         <Link to="/" className="btn-primary inline-flex relative z-10">Back to Earth</Link>
                       </motion.div>
                     </div>
@@ -577,7 +577,7 @@ export default function App() {
                   <Shared.Logo className="text-sm" />
                   <p className="text-[8px] tracking-widest uppercase">POWERED BY STX - SBTC - USDCX</p>
                 </div>
-                <div className="flex gap-8">
+                <div className="flex flex-wrap justify-center md:justify-end gap-4 sm:gap-6 md:gap-8">
                   <Link to="/admin" className="hover:text-ink transition-colors">Admin</Link>
                   <Link to="/privacy" className="hover:text-ink transition-colors">Privacy Policy</Link>
                   <Link to="/terms" className="hover:text-ink transition-colors">Terms of Service</Link>

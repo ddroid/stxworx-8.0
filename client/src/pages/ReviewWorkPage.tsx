@@ -119,7 +119,7 @@ export const ReviewWorkPage = () => {
         <Link to="/dashboard" className="inline-flex items-center gap-2 text-xs font-bold text-muted hover:text-ink mb-8 transition-colors">
           <ChevronRight size={14} className="rotate-180" /> Back to Dashboard
         </Link>
-        <h1 className="text-5xl font-black tracking-tighter mb-2">Review Work</h1>
+        <h1 className="text-3xl sm:text-5xl font-black tracking-tighter mb-2">Review Work</h1>
         <p className="text-muted mb-12">
           {project ? `Review submitted work for "${project.title}"` : 'Review submitted milestone work.'}
         </p>
@@ -129,13 +129,13 @@ export const ReviewWorkPage = () => {
         ) : !project || !selectedSubmission ? (
           <div className="card p-8 text-sm text-muted">No milestone submissions are ready for review yet.</div>
         ) : (
-          <div className="card p-8">
-            <div className="flex justify-between items-start mb-8 pb-8 border-b border-border">
+          <div className="card p-6 sm:p-8">
+            <div className="flex flex-col sm:flex-row sm:justify-between sm:items-start gap-4 mb-8 pb-8 border-b border-border">
               <div>
                 <h3 className="font-bold text-2xl mb-2">Milestone {selectedSubmission.milestoneNum}: {milestoneTitle}</h3>
                 <p className="text-sm text-muted">Submitted by {formatAddress(project.freelancerAddress || '')} • {formatRelativeTime(selectedSubmission.submittedAt)}</p>
               </div>
-              <div className="text-right">
+              <div className="sm:text-right">
                 <p className="font-black text-2xl text-accent-cyan">{milestoneAmount}</p>
                 <p className="text-[10px] font-bold text-muted uppercase tracking-widest">Escrow Amount</p>
               </div>
@@ -167,7 +167,7 @@ export const ReviewWorkPage = () => {
               </a>
             </div>
 
-            <div className="flex gap-4">
+            <div className="flex flex-col sm:flex-row gap-4">
               <button
                 onClick={handleApprove}
                 disabled={selectedSubmission.status !== 'submitted' || !project.onChainId || isApproving}

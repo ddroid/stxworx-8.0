@@ -26,12 +26,12 @@ export const LeaderboardPage = () => {
     <div className="pt-28 pb-20 px-6 md:pl-[92px]">
       <div className="container-custom">
         <div className="mb-12">
-          <h1 className="text-8xl font-black tracking-tighter mb-12">Leaderboard</h1>
+          <h1 className="text-5xl md:text-8xl font-black tracking-tighter mb-8 md:mb-12">Leaderboard</h1>
           
           <div className="grid grid-cols-1 gap-4">
             {leaders.map((leader, i) => (
-              <div key={leader.id} className="bg-surface rounded-[15px] p-6 border border-border flex items-center justify-between group hover:border-accent-orange transition-all">
-                <div className="flex items-center gap-8">
+              <div key={leader.id} className="bg-surface rounded-[15px] p-6 border border-border flex flex-col md:flex-row md:items-center justify-between gap-4 group hover:border-accent-orange transition-all">
+                <div className="flex items-center gap-4 sm:gap-8 min-w-0">
                   <div className="text-4xl font-black text-muted/20 w-12 text-center group-hover:text-accent-orange transition-colors">
                     {leader.rank}
                   </div>
@@ -49,7 +49,7 @@ export const LeaderboardPage = () => {
                   </div>
                 </div>
                 
-                <div className="flex items-center gap-12">
+                <div className="flex flex-wrap items-center gap-4 sm:gap-8 md:gap-12 w-full md:w-auto md:justify-end">
                   <div className="text-right">
                     <p className="text-2xl font-black leading-none">{leader.jobsCompleted}</p>
                     <p className="text-[10px] text-muted font-bold uppercase tracking-widest">Jobs Completed</p>
@@ -58,7 +58,7 @@ export const LeaderboardPage = () => {
                     <p className="text-2xl font-black leading-none">{leader.avgRating.toFixed(1)}</p>
                     <p className="text-[10px] text-muted font-bold uppercase tracking-widest">Rating</p>
                   </div>
-                  <button onClick={() => navigate('/profile')} className="btn-outline py-3 px-6 rounded-[15px] text-[10px] font-bold uppercase tracking-widest hover:bg-white hover:text-bg transition-all">
+                  <button onClick={() => navigate('/profile')} className="btn-outline py-3 px-6 rounded-[15px] text-[10px] font-bold uppercase tracking-widest hover:bg-white hover:text-bg transition-all w-full sm:w-auto justify-center">
                     View Profile
                   </button>
                 </div>

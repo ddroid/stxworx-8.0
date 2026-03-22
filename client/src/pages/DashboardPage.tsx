@@ -239,9 +239,9 @@ export const DashboardPage = () => {
           onClose={() => setIsPostJobModalOpen(false)}
           onCreated={loadDashboardData}
         />
-        <div className="flex items-center justify-between mb-12">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-12">
           <div>
-            <h1 className="text-5xl font-black tracking-tighter mb-2">{userRole === 'client' ? 'Client Dashboard' : 'Freelancer Dashboard'}</h1>
+            <h1 className="text-3xl sm:text-5xl font-black tracking-tighter mb-2">{userRole === 'client' ? 'Client Dashboard' : 'Freelancer Dashboard'}</h1>
             <p className="text-muted">
               {userRole === 'client' ? 'Manage your job postings, active contracts, and escrow.' : 'Manage your active contracts, earnings, and reputation.'}
             </p>
@@ -272,7 +272,7 @@ export const DashboardPage = () => {
 
                   return (
                     <div key={project.id} className="border border-border rounded-[15px] p-6">
-                      <div className="flex justify-between items-start mb-4">
+                      <div className="flex flex-col sm:flex-row sm:justify-between sm:items-start gap-3 mb-4">
                         <div>
                           <h4 className="font-bold text-lg mb-1">{project.title}</h4>
                           <p className="text-xs text-muted">Freelancer: {formatAddress(project.freelancerAddress || '')}</p>
@@ -285,17 +285,17 @@ export const DashboardPage = () => {
                           <div className="bg-accent-orange h-full" style={{ width: progressWidth }}></div>
                         </div>
                       </div>
-                      <div className="flex items-center justify-between border-t border-border pt-4">
+                      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 border-t border-border pt-4">
                         <div>
                           <p className="text-[10px] text-muted uppercase tracking-widest font-bold mb-1">Escrow Status</p>
                           <p className="font-bold text-accent-cyan flex items-center gap-1"><ShieldCheck size={14} /> Locked ({formatTokenAmount(project.budget)} {project.tokenType})</p>
                         </div>
-                        <div className="flex gap-2">
-                          <button onClick={() => handleOpenMessage(project.freelancerAddress || 'Freelancer')} className="btn-outline py-2 px-4 text-xs flex items-center justify-center">Message</button>
+                        <div className="flex flex-col sm:flex-row gap-2 w-full sm:w-auto">
+                          <button onClick={() => handleOpenMessage(project.freelancerAddress || 'Freelancer')} className="btn-outline py-2 px-4 text-xs flex items-center justify-center w-full sm:w-auto">Message</button>
                           {pendingReview ? (
-                            <Link to="/review-work" state={{ projectId: project.id, submissionId: pendingReview.id }} className="btn-primary py-2 px-4 text-xs flex items-center justify-center">Review Work</Link>
+                            <Link to="/review-work" state={{ projectId: project.id, submissionId: pendingReview.id }} className="btn-primary py-2 px-4 text-xs flex items-center justify-center w-full sm:w-auto">Review Work</Link>
                           ) : (
-                            <button disabled className="btn-primary py-2 px-4 text-xs flex items-center justify-center opacity-50 cursor-not-allowed">No Submission Yet</button>
+                            <button disabled className="btn-primary py-2 px-4 text-xs flex items-center justify-center w-full sm:w-auto opacity-50 cursor-not-allowed">No Submission Yet</button>
                           )}
                         </div>
                       </div>
@@ -307,16 +307,16 @@ export const DashboardPage = () => {
             </div>
 
             <div className="card mb-8">
-              <div className="flex items-center justify-between mb-6">
+              <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 mb-6">
                 <h3 className="font-bold text-xl">Active Job Postings</h3>
-                <button onClick={() => setIsPostJobModalOpen(true)} className="btn-primary py-2 px-4 text-xs">Post New Job</button>
+                <button onClick={() => setIsPostJobModalOpen(true)} className="btn-primary py-2 px-4 text-xs w-full sm:w-auto justify-center">Post New Job</button>
               </div>
               <div className="space-y-6">
                 {postedProjects.filter(p => p.status === 'open').map((project) => {
                   const milestones = buildMilestones(project, milestonesByProject[project.id] || []);
                   return (
                     <div key={project.id} className="border border-border rounded-[15px] p-6 bg-ink/5">
-                      <div className="flex justify-between items-start mb-4">
+                      <div className="flex flex-col sm:flex-row sm:justify-between sm:items-start gap-3 mb-4">
                         <div>
                           <h4 className="font-bold text-lg mb-1">{project.title}</h4>
                           <p className="text-xs text-muted">Posted {formatRelativeTime(project.createdAt)}</p>
@@ -331,7 +331,7 @@ export const DashboardPage = () => {
                           ))}
                         </ul>
                       </div>
-                      <div className="flex gap-4 border-t border-border pt-4">
+                      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 border-t border-border pt-4">
                         <div className="flex-1">
                           <p className="text-[10px] text-muted uppercase tracking-widest font-bold mb-1">Budget</p>
                           <p className="font-bold">{formatTokenAmount(project.budget)} {project.tokenType}</p>
@@ -340,7 +340,7 @@ export const DashboardPage = () => {
                           <p className="text-[10px] text-muted uppercase tracking-widest font-bold mb-1">Proposals</p>
                           <p className="font-bold">{proposalCounts[project.id] ?? 0}</p>
                         </div>
-                        <div className="flex-1 text-right">
+                        <div className="flex-1 sm:text-right">
                           <Link to="/review-proposals" state={{ projectId: project.id }} className="text-accent-orange text-xs font-bold hover:underline">View Proposals</Link>
                         </div>
                       </div>
@@ -360,7 +360,7 @@ export const DashboardPage = () => {
                     const submittedReview = reviewsByProjectId[project.id];
                     return (
                       <div key={project.id} className="border border-border rounded-[15px] p-6 bg-ink/5">
-                        <div className="flex justify-between items-start mb-4">
+                        <div className="flex flex-col sm:flex-row sm:justify-between sm:items-start gap-3 mb-4">
                           <div>
                             <h4 className="font-bold text-lg mb-1">{project.title}</h4>
                             <p className="text-xs text-muted">Posted {formatRelativeTime(project.createdAt)}{project.freelancerAddress ? ` • Freelancer: ${formatAddress(project.freelancerAddress)}` : ''}</p>
@@ -375,7 +375,7 @@ export const DashboardPage = () => {
                             ))}
                           </ul>
                         </div>
-                        <div className="flex gap-4 border-t border-border pt-4">
+                        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 border-t border-border pt-4">
                           <div className="flex-1">
                             <p className="text-[10px] text-muted uppercase tracking-widest font-bold mb-1">Budget</p>
                             <p className="font-bold">{formatTokenAmount(project.budget)} {project.tokenType}</p>
@@ -384,7 +384,7 @@ export const DashboardPage = () => {
                             <p className="text-[10px] text-muted uppercase tracking-widest font-bold mb-1">Freelancer</p>
                             <p className="font-bold">{project.freelancerAddress ? formatAddress(project.freelancerAddress) : 'Unassigned'}</p>
                           </div>
-                          <div className="flex-1 text-right">
+                          <div className="flex-1 sm:text-right">
                             {submittedReview ? (
                               <div className="inline-flex items-center gap-1 text-sm font-bold">
                                 <Star size={14} className="text-accent-orange fill-accent-orange" />
@@ -477,7 +477,7 @@ export const DashboardPage = () => {
 
                   return (
                     <div key={project.id} className="border border-border rounded-[15px] p-6">
-                      <div className="flex justify-between items-start mb-4">
+                      <div className="flex flex-col sm:flex-row sm:justify-between sm:items-start gap-3 mb-4">
                         <div>
                           <h4 className="font-bold text-lg mb-1">{project.title}</h4>
                           <p className="text-xs text-muted">Client: {formatAddress(project.clientAddress || '')}</p>
@@ -519,12 +519,12 @@ export const DashboardPage = () => {
                         </div>
                       </div>
 
-                      <div className="flex items-center justify-between border-t border-border pt-4">
+                      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 border-t border-border pt-4">
                         <div>
                           <p className="text-[10px] text-muted uppercase tracking-widest font-bold mb-1">Escrow Status</p>
                           <p className="font-bold text-accent-cyan flex items-center gap-1"><ShieldCheck size={14} /> Funded ({formatTokenAmount(project.budget)} {project.tokenType})</p>
                         </div>
-                        <button onClick={() => handleOpenMessage(project.clientAddress || 'Client')} className="btn-outline py-2 px-4 text-xs flex items-center justify-center">Message Client</button>
+                        <button onClick={() => handleOpenMessage(project.clientAddress || 'Client')} className="btn-outline py-2 px-4 text-xs flex items-center justify-center w-full sm:w-auto">Message Client</button>
                       </div>
                     </div>
                   );
@@ -543,7 +543,7 @@ export const DashboardPage = () => {
 
                     return (
                       <div key={project.id} className="border border-border rounded-[15px] p-6">
-                        <div className="flex justify-between items-start mb-4">
+                        <div className="flex flex-col sm:flex-row sm:justify-between sm:items-start gap-3 mb-4">
                           <div>
                             <h4 className="font-bold text-lg mb-1">{project.title}</h4>
                             <p className="text-xs text-muted">Client: {formatAddress(project.clientAddress || '')}</p>
@@ -573,12 +573,12 @@ export const DashboardPage = () => {
                           </div>
                         </div>
 
-                        <div className="flex items-center justify-between border-t border-border pt-4">
+                        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 border-t border-border pt-4">
                           <div>
                             <p className="text-[10px] text-muted uppercase tracking-widest font-bold mb-1">Total Earned</p>
                             <p className="font-bold text-accent-green">{formatTokenAmount(project.budget)} {project.tokenType}</p>
                           </div>
-                          <div className="text-right">
+                          <div className="sm:text-right">
                             {submittedReview ? (
                               <div>
                                 <div className="flex items-center gap-1 mb-1">

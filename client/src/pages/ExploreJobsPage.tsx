@@ -76,9 +76,9 @@ export const ExploreJobsPage = () => {
     <div className="pt-28 pb-20 px-6 md:pl-[92px]">
       <div className="container-custom">
         <div className="mb-12">
-          <h1 className="text-8xl font-black tracking-tighter mb-12">Explore Jobs</h1>
+          <h1 className="text-5xl md:text-8xl font-black tracking-tighter mb-8 md:mb-12">Explore Jobs</h1>
           
-          <div className="flex flex-col md:flex-row items-center justify-between gap-6 mb-12">
+          <div className="flex flex-col md:flex-row items-stretch md:items-center justify-between gap-4 md:gap-6 mb-12">
             <div className="flex flex-wrap gap-2">
               {categoryOptions.map((cat) => (
                 <button 
@@ -90,7 +90,7 @@ export const ExploreJobsPage = () => {
                 </button>
               ))}
             </div>
-            <div className="flex items-center gap-4">
+            <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3 sm:gap-4 w-full md:w-auto">
               <div className="relative">
                 <select 
                   value={selectedCurrency}
@@ -105,7 +105,7 @@ export const ExploreJobsPage = () => {
                 </select>
                 <ChevronDown size={14} className="absolute right-4 top-1/2 -translate-y-1/2 text-muted pointer-events-none" />
               </div>
-              <div className="bg-surface border border-border rounded-[15px] px-3 py-2 flex items-center gap-2 min-w-[220px]">
+              <div className="bg-surface border border-border rounded-[15px] px-3 py-2 flex items-center gap-2 w-full sm:min-w-[220px]">
                 <Search size={14} className="text-muted" />
                 <input
                   value={searchQuery}
@@ -114,7 +114,7 @@ export const ExploreJobsPage = () => {
                   className="bg-transparent text-sm text-ink placeholder:text-muted outline-none w-full"
                 />
               </div>
-              <button className="btn-outline"><Filter size={18} /> Filter</button>
+              <button className="btn-outline justify-center"><Filter size={18} /> Filter</button>
             </div>
           </div>
         </div>
@@ -130,13 +130,13 @@ export const ExploreJobsPage = () => {
                   <span className="text-xs text-muted">{job.subCategory}</span>
                 </div>
                 <p className="text-sm text-muted mb-4">{job.description}</p>
-                <div className="flex gap-2">
+                <div className="flex flex-wrap gap-2">
                   {job.tags.map((tag, i) => (
                     <span key={i} className="px-3 py-1 bg-ink/5 rounded-[15px] text-[10px] font-bold">{tag}</span>
                   ))}
                 </div>
               </div>
-              <div className="text-right shrink-0">
+              <div className="text-left md:text-right shrink-0 w-full md:w-auto">
                 <p className={`text-2xl font-black ${job.color}`}>{job.budget} {job.currency}</p>
                 <p className="text-[10px] font-bold text-muted uppercase mb-4">Budget</p>
                 {userRole !== 'client' && (

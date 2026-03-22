@@ -109,6 +109,7 @@ export const TopHeader = ({ theme, toggleTheme }: { theme: 'dark' | 'light', tog
   const [showRoleModal, setShowRoleModal] = useState(false);
   const [showLogoutConfirm, setShowLogoutConfirm] = useState(false);
   const [selectedProvider, setSelectedProvider] = useState<string | null>(null);
+  const [showMobileSearch, setShowMobileSearch] = useState(false);
   const [showMessages, setShowMessages] = useState(false);
   const [showNotifications, setShowNotifications] = useState(false);
   const [menuQuery, setMenuQuery] = useState('');
@@ -307,6 +308,7 @@ export const TopHeader = ({ theme, toggleTheme }: { theme: 'dark' | 'light', tog
 
   const handleMenuSelection = (item: PlatformMenuItem) => {
     setMenuQuery('');
+    setShowMobileSearch(false);
     navigate(item.path);
   };
 
@@ -323,16 +325,24 @@ export const TopHeader = ({ theme, toggleTheme }: { theme: 'dark' | 'light', tog
 
   return (
     <>
-      <header className="fixed top-0 left-0 md:left-[120px] right-0 h-20 bg-bg/80 backdrop-blur-xl border-b border-border z-40 px-4 md:px-10 flex items-center justify-between">
-      <div className="flex items-center gap-4 md:gap-8">
+      <header className="fixed top-0 left-0 md:left-[120px] right-0 h-20 bg-bg/80 backdrop-blur-xl border-b border-border z-40 px-3 sm:px-4 md:px-10 flex items-center justify-between overflow-x-clip">
+      <div className="flex items-center gap-2 sm:gap-4 md:gap-8 min-w-0">
         <Link to="/" className="flex items-center md:hidden">
           <div className="w-8 h-8 bg-accent-orange rounded-[10px] flex items-center justify-center text-white font-black">S</div>
         </Link>
         <Link to="/" className="hidden md:flex items-center">
           <Shared.Logo className="text-3xl" />
         </Link>
-        <div className="relative w-40 md:w-64 xl:w-96">
-          <div className="flex items-center gap-4 bg-surface px-4 py-2 rounded-[15px] border border-border">
+        <button
+          type="button"
+          onClick={() => setShowMobileSearch(true)}
+          className="md:hidden p-2 rounded-[15px] bg-surface border border-border text-muted hover:text-ink hover:bg-ink/5 transition-colors"
+          aria-label="Search"
+        >
+          <Search size={18} />
+        </button>
+        <div className="relative hidden md:block w-28 sm:w-40 md:w-64 xl:w-96">
+          <div className="flex items-center gap-2 sm:gap-4 bg-surface px-3 sm:px-4 py-2 rounded-[15px] border border-border">
             <Search size={18} className="text-muted" />
             <input
               type="text"
@@ -381,7 +391,7 @@ export const TopHeader = ({ theme, toggleTheme }: { theme: 'dark' | 'light', tog
         </div>
       </div>
 
-      <div className="flex items-center gap-6">
+      <div className="flex items-center gap-2 sm:gap-4 md:gap-6 shrink-0">
         <button
           onClick={toggleTheme}
           className="p-2 rounded-[15px] hover:bg-ink/5 text-muted hover:text-ink transition-all"
@@ -392,15 +402,11 @@ export const TopHeader = ({ theme, toggleTheme }: { theme: 'dark' | 'light', tog
 
         <button
           onClick={() => (isSignedIn ? setShowLogoutConfirm(true) : handleConnect())}
-          className={`flex items-center gap-2 px-4 py-2 rounded-[15px] text-xs font-bold transition-all ${isSignedIn ? 'bg-accent-cyan/10 text-accent-cyan border border-accent-cyan/20' : 'bg-ink text-bg hover:bg-accent-orange'} ${isBlocked ? 'opacity-70 cursor-not-allowed' : ''}`}
+          className={`flex items-center justify-center sm:justify-start gap-2 min-w-10 h-10 px-2 sm:px-4 rounded-[15px] text-xs font-bold transition-all ${isSignedIn ? 'bg-accent-cyan/10 text-accent-cyan border border-accent-cyan/20' : 'bg-ink text-bg hover:bg-accent-orange'} ${isBlocked ? 'opacity-70 cursor-not-allowed' : ''}`}
           disabled={isBlocked}
         >
-          {isSignedIn ? (
-            <Wallet size={16} />
-          ) : (
-            <div className="w-2 h-2 rounded-full bg-[#FF5E00] shadow-[0_0_8px_#FF5E00]" />
-          )}
-          {isSignedIn ? displayWalletAddress : 'Connect Wallet'}
+          <Wallet size={16} />
+          <span className="hidden sm:inline">{isSignedIn ? displayWalletAddress : 'Connect Wallet'}</span>
         </button>
 
         <div className="relative">
@@ -537,8 +543,8 @@ export const TopHeader = ({ theme, toggleTheme }: { theme: 'dark' | 'light', tog
           </AnimatePresence>
         </div>
 
-        <div className="h-8 w-[1px] bg-border"></div>
-        <Link to="/profile" className="flex items-center gap-3 group">
+        <div className="hidden sm:block h-8 w-[1px] bg-border"></div>
+        <Link to="/profile" className="flex items-center gap-2 sm:gap-3 group">
           <div className="text-right hidden sm:block">
             <p className="text-sm font-bold group-hover:text-accent-orange transition-colors">{displayName}</p>
             <p className="text-[10px] text-muted">{userRole ? `${userRole[0].toUpperCase()}${userRole.slice(1)}` : 'Member'}</p>
@@ -558,6 +564,83 @@ export const TopHeader = ({ theme, toggleTheme }: { theme: 'dark' | 'light', tog
         </Link>
       </div>
     </header>
+
+    <AnimatePresence>
+      {showMobileSearch && (
+        <>
+          <motion.button
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            transition={{ duration: 0.2 }}
+            onClick={() => {
+              setShowMobileSearch(false);
+              setMenuQuery('');
+            }}
+            className="fixed inset-0 bg-bg/80 backdrop-blur-sm z-[95] md:hidden"
+            aria-label="Close search"
+          />
+          <motion.div
+            initial={{ opacity: 0, y: -10, scale: 0.98 }}
+            animate={{ opacity: 1, y: 0, scale: 1 }}
+            exit={{ opacity: 0, y: -10, scale: 0.98 }}
+            transition={{ type: 'spring', stiffness: 320, damping: 28 }}
+            className="fixed top-24 left-3 right-3 bg-surface border border-border rounded-[15px] shadow-2xl overflow-hidden z-[96] md:hidden"
+          >
+            <div className="flex items-center gap-2 px-3 py-3 border-b border-border">
+              <Search size={18} className="text-muted" />
+              <input
+                type="text"
+                value={menuQuery}
+                onChange={(event) => setMenuQuery(event.target.value)}
+                onKeyDown={handleSearchKeyDown}
+                placeholder="Search platform menus..."
+                autoFocus
+                className="bg-transparent border-none focus:ring-0 text-sm w-full placeholder:text-muted outline-none"
+              />
+              <button
+                type="button"
+                onClick={() => {
+                  setShowMobileSearch(false);
+                  setMenuQuery('');
+                }}
+                className="text-muted hover:text-ink"
+                aria-label="Close search"
+              >
+                <X size={16} />
+              </button>
+            </div>
+            <div className="max-h-80 overflow-y-auto no-scrollbar">
+              {menuQuery.trim().length === 0 ? (
+                <div className="px-4 py-3 text-[10px] text-muted">Start typing to search menus.</div>
+              ) : searchResults.length > 0 ? (
+                searchResults.map((item) => {
+                  const Icon = menuIconMap[item.iconKey];
+
+                  return (
+                    <button
+                      key={`mobile-search-${item.id}`}
+                      onClick={() => handleMenuSelection(item)}
+                      className="w-full px-4 py-3 text-left flex items-center gap-3 hover:bg-ink/5 transition-colors border-b border-border/50 last:border-b-0"
+                    >
+                      <div className="w-8 h-8 rounded-[12px] bg-ink/5 border border-border flex items-center justify-center shrink-0">
+                        <Icon size={16} className="text-muted" />
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <p className="text-sm font-bold truncate">{item.label}</p>
+                        <p className="text-[10px] text-muted truncate">{item.path}</p>
+                      </div>
+                    </button>
+                  );
+                })
+              ) : (
+                <div className="px-4 py-3 text-[10px] text-muted">No matching menu items.</div>
+              )}
+            </div>
+          </motion.div>
+        </>
+      )}
+    </AnimatePresence>
 
     <AnimatePresence>
       {showRoleModal && (
