@@ -420,16 +420,7 @@ export const HomePage = () => {
                 vote now
               </button>
             </div>
-            <div className="relative z-10 grid grid-cols-2 gap-4">
-              <div className="text-center bg-white/10 backdrop-blur-md p-6 rounded-[15px] border border-white/10">
-                <p className="text-4xl font-black text-white">12</p>
-                <p className="text-xs font-bold text-white/60">OCTOBER</p>
-              </div>
-              <div className="text-center bg-white/10 backdrop-blur-md p-6 rounded-[15px] border border-white/10">
-                <p className="text-4xl font-black text-white">2025</p>
-                <p className="text-xs font-bold text-white/60">YEAR</p>
-              </div>
-            </div>
+            {/* Removed date/year grid per user request */}
             {/* Abstract shapes */}
             <div className="absolute top-0 right-0 w-96 h-96 bg-accent-red/30 rounded-full blur-[100px] -mr-48 -mt-48"></div>
             <div className="absolute bottom-0 left-0 w-64 h-64 bg-accent-orange/30 rounded-full blur-[80px] -ml-32 -mb-32"></div>
