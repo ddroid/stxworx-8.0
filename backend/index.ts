@@ -24,6 +24,12 @@ import { bountyRoutes } from "./routes/bounty.routes";
 import { socialRoutes } from "./routes/social.routes";
 import { nftRoutes } from "./routes/nft.routes";
 
+// Fixed static imports for bundled production support
+import { db } from "./db";
+import { projects } from "../shared/schema";
+import { eq } from "drizzle-orm";
+import { serveStatic, setupVite } from "./vite";
+
 const app = express();
 
 // Middleware
@@ -121,9 +127,6 @@ app.use((err: any, _req: Request, res: Response, _next: NextFunction) => {
 
   // One-time cleanup: disputes are per-milestone now, project status should never be "disputed"
   try {
-    const { db } = await import("./db");
-    const { projects } = await import("../shared/schema");
-    const { eq } = await import("drizzle-orm");
     const fixed = await db.update(projects).set({ status: "active" }).where(eq(projects.status, "disputed"));
     if (fixed[0]?.affectedRows) {
       console.log(`[startup] Restored ${fixed[0].affectedRows} legacy "disputed" projects to "active"`);
@@ -132,12 +135,11 @@ app.use((err: any, _req: Request, res: Response, _next: NextFunction) => {
     console.error("[startup] Failed to clean up disputed projects:", e);
   }
 
-  // Setup Vite in development for frontend serving
+  // Setup Vite/Static serving
   if (app.get("env") === "development") {
-    const { setupVite } = await import("./vite");
     await setupVite(app, server);
   } else {
-    const { serveStatic } = await import("./vite");
+    console.log("[startup] Production detected, serving static files...");
     serveStatic(app);
   }
 
