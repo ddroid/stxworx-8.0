@@ -20,7 +20,7 @@
 (define-constant ABANDON-TIMEOUT u1008)         ;; ~7 days
 
 ;; Fee cap
-(define-constant MAX-FEE-RATE u2000)            ;; 20% max (2000 basis points)
+(define-constant MAX-FEE-RATE u1000)            ;; 10% max (1000 basis points)
 (define-constant MAX-MILESTONES u4)
 
 ;; Token types
@@ -62,10 +62,10 @@
 ;; ======================== DATA VARIABLES ========================
 
 (define-data-var project-counter uint u0)
-(define-data-var treasury principal 'STTCT2FCG2AE0T2Q70KBA1GDM4VN14FRW5A1NBR0)
+(define-data-var treasury principal 'ST4RX4SP7XYEC9BSA6XJFA74Y45M3TQFH13NT2M9)
 (define-data-var contract-owner principal tx-sender)
 (define-data-var proposed-owner (optional principal) none)
-(define-data-var fee-rate uint u2000)              ;; 20% default (2000 basis points)
+(define-data-var fee-rate uint u1000)              ;; 10% default (1000 basis points)
 (define-data-var contract-paused bool false)
 (define-data-var total-committed-sbtc uint u0)
 (define-data-var total-committed-usdcx uint u0)

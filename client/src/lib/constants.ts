@@ -1,5 +1,5 @@
 export const CONTRACT_ADDRESS = import.meta.env.VITE_CONTRACT_ADDRESS || 'STTCT2FCG2AE0T2Q70KBA1GDM4VN14FRW5A1NBR0';
-export const CONTRACT_NAME = import.meta.env.VITE_ESCROW_CONTRACT_NAME || 'stxworks-escrow-v7';
+export const CONTRACT_NAME = import.meta.env.VITE_ESCROW_CONTRACT_NAME || 'escrow-multi-token-v7';
 export const VERIFY_SOULBOUND_CONTRACT_NAME = import.meta.env.VITE_VERIFY_SOULBOUND_CONTRACT_NAME || 'stxworx-verify-sip009';
 export const REPUTATION_CONTRACT_NAME = import.meta.env.VITE_REPUTATION_CONTRACT_NAME || 'stxworx-rep-sip013';
 
