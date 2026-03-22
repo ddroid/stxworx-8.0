@@ -433,6 +433,44 @@ export const HomePage = () => {
             <div className="absolute bottom-0 left-0 w-64 h-64 bg-accent-orange/30 rounded-full blur-[80px] -ml-32 -mb-32"></div>
           </div>
         </section>
+
+        {/* Stacks Africa Banner */}
+        <section className="mb-20">
+          <div className="relative rounded-[20px] overflow-hidden bg-gradient-to-br from-[#FF6B35] via-[#F7931E] to-[#FF8C42] p-8 md:p-12 shadow-2xl transform hover:scale-[1.02] transition-all duration-300">
+            {/* Animated background elements */}
+            <div className="absolute inset-0">
+              <div className="absolute top-0 right-0 w-72 h-72 bg-yellow-300/20 rounded-full blur-[60px] animate-pulse"></div>
+              <div className="absolute bottom-0 left-0 w-56 h-56 bg-orange-400/20 rounded-full blur-[50px] animate-pulse delay-75"></div>
+            </div>
+            
+            <div className="relative flex items-center justify-between gap-6 md:gap-8">
+              <div className="flex items-center gap-4 md:gap-6">
+                {/* Stacks Africa Logo */}
+                <div className="relative group">
+                  <div className="absolute -inset-1 bg-white/30 rounded-full blur-md group-hover:bg-white/40 transition-all duration-300"></div>
+                  <img 
+                    src="/stacksafrica1.png" 
+                    alt="Stacks Africa" 
+                    className="relative w-20 h-20 md:w-28 md:h-28 object-contain filter drop-shadow-lg transform group-hover:scale-110 transition-transform duration-300"
+                  />
+                </div>
+                <div className="flex-1">
+                  <p className="text-white text-base md:text-xl lg:text-2xl font-bold leading-tight drop-shadow-sm">
+                    1% Royalty to Stacks Africa
+                  </p>
+                  <p className="text-white/90 text-sm md:text-base lg:text-lg font-medium mt-1 drop-shadow-sm">
+                    Empowering Youth Education & Hackathons with Every Job Completed
+                  </p>
+                </div>
+              </div>
+              
+              {/* Decorative element */}
+              <div className="hidden md:block">
+                <div className="w-2 h-20 bg-white/20 rounded-full"></div>
+              </div>
+            </div>
+          </div>
+        </section>
       </div>
     </div>
   );

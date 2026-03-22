@@ -158,73 +158,76 @@ const LiveChat = () => {
   };
 
   return (
-    <div className="fixed bottom-20 md:bottom-8 right-4 md:right-8 z-[100]">
+    <>
+      {/* Chat Button */}
+      <div className="fixed bottom-56 md:bottom-56 right-4 md:right-8 z-[100]">
+        <button 
+          onClick={() => setIsOpen(!isOpen)}
+          className="w-10 h-24 bg-bg text-accent-orange border-2 border-accent-orange rounded-full shadow-2xl flex flex-col items-center justify-center hover:scale-105 transition-all group"
+        >
+          {isOpen ? <X size={20} /> : (
+            <span className="text-[12px] font-bold rotate-90 origin-center">CHAT</span>
+          )}
+        </button>
+      </div>
+
+      {/* Chat Modal */}
       <AnimatePresence>
         {isOpen && (
-          <motion.div
-            initial={{ opacity: 0, y: 20, scale: 0.9 }}
-            animate={{ opacity: 1, y: 0, scale: 1 }}
-            exit={{ opacity: 0, y: 20, scale: 0.9 }}
-            className="absolute bottom-16 md:bottom-20 right-0 w-[calc(100vw-32px)] md:w-80 h-[400px] md:h-[450px] bg-surface border border-border rounded-[15px] shadow-2xl flex flex-col overflow-hidden"
-          >
-            <div className="p-4 md:p-6 bg-accent-orange text-bg flex items-center justify-between">
-              <div>
-                <h3 className="font-black tracking-tighter">STXWORX Support</h3>
-                <p className="text-[10px] font-bold opacity-60">Online • Usually replies in 5m</p>
-              </div>
-              <button onClick={() => setIsOpen(false)}><X size={20} /></button>
-            </div>
-            
-            <div className="flex-1 p-4 md:p-6 overflow-y-auto no-scrollbar space-y-4">
-              {chat.map((m, i) => (
-                <div key={i} className={`flex ${m.type === 'user' ? 'justify-end' : 'justify-start'}`}>
-                  <div className={`max-w-[80%] p-3 rounded-[15px] text-xs font-medium ${m.type === 'user' ? 'bg-accent-orange text-bg rounded-tr-none' : 'bg-ink/5 text-ink rounded-tl-none border border-border'}`}>
-                    {m.text}
-                  </div>
+          <div className="fixed inset-0 bg-bg/80 backdrop-blur-sm z-[150] flex items-center justify-center p-4">
+            <motion.div
+              initial={{ opacity: 0, y: 20, scale: 0.9 }}
+              animate={{ opacity: 1, y: 0, scale: 1 }}
+              exit={{ opacity: 0, y: 20, scale: 0.9 }}
+              className="w-full max-w-md h-[400px] md:h-[450px] bg-surface border border-border rounded-[15px] shadow-2xl flex flex-col overflow-hidden"
+            >
+              <div className="p-4 md:p-6 bg-accent-orange text-bg flex items-center justify-between">
+                <div>
+                  <h3 className="font-black tracking-tighter">STXWORX Support</h3>
+                  <p className="text-[10px] font-bold opacity-60">Online • Usually replies in 5m</p>
                 </div>
-              ))}
-              {isLoading && (
-                <div className="flex justify-start">
-                  <div className="max-w-[80%] p-3 rounded-[15px] text-xs font-medium bg-ink/5 text-ink rounded-tl-none border border-border">
-                    <div className="flex gap-1">
-                      <span className="w-2 h-2 bg-muted rounded-full animate-bounce"></span>
-                      <span className="w-2 h-2 bg-muted rounded-full animate-bounce" style={{ animationDelay: '0.2s' }}></span>
-                      <span className="w-2 h-2 bg-muted rounded-full animate-bounce" style={{ animationDelay: '0.4s' }}></span>
+                <button onClick={() => setIsOpen(false)}><X size={20} /></button>
+              </div>
+              
+              <div className="flex-1 p-4 md:p-6 overflow-y-auto no-scrollbar space-y-4">
+                {chat.map((m, i) => (
+                  <div key={i} className={`flex ${m.type === 'user' ? 'justify-end' : 'justify-start'}`}>
+                    <div className={`max-w-[80%] p-3 rounded-[15px] text-xs font-medium ${m.type === 'user' ? 'bg-accent-orange text-bg rounded-tr-none' : 'bg-ink/5 text-ink rounded-tl-none border border-border'}`}>
+                      {m.text}
                     </div>
                   </div>
-                </div>
-              )}
-            </div>
+                ))}
+                {isLoading && (
+                  <div className="flex justify-start">
+                    <div className="max-w-[80%] p-3 rounded-[15px] text-xs font-medium bg-ink/5 text-ink rounded-tl-none border border-border">
+                      <div className="flex gap-1">
+                        <span className="w-2 h-2 bg-muted rounded-full animate-bounce"></span>
+                        <span className="w-2 h-2 bg-muted rounded-full animate-bounce" style={{ animationDelay: '0.2s' }}></span>
+                        <span className="w-2 h-2 bg-muted rounded-full animate-bounce" style={{ animationDelay: '0.4s' }}></span>
+                      </div>
+                    </div>
+                  </div>
+                )}
+              </div>
 
-            <form onSubmit={handleSend} className="p-4 border-t border-border flex gap-2">
-              <input 
-                type="text" 
-                value={message}
-                onChange={(e) => setMessage(e.target.value)}
-                placeholder="Type a message..."
-                disabled={isLoading}
-                className="flex-1 bg-ink/5 border border-border rounded-[15px] px-4 py-2 text-xs focus:ring-1 focus:ring-accent-orange disabled:opacity-50"
-              />
-              <button type="submit" disabled={isLoading} className="w-10 h-10 bg-accent-orange text-bg rounded-[15px] flex items-center justify-center hover:scale-105 transition-transform disabled:opacity-50 disabled:hover:scale-100">
-                <Send size={16} />
-              </button>
-            </form>
-          </motion.div>
+              <form onSubmit={handleSend} className="p-4 border-t border-border flex gap-2">
+                <input 
+                  type="text" 
+                  value={message}
+                  onChange={(e) => setMessage(e.target.value)}
+                  placeholder="Type a message..."
+                  disabled={isLoading}
+                  className="flex-1 bg-ink/5 border border-border rounded-[15px] px-4 py-2 text-xs focus:ring-1 focus:ring-accent-orange disabled:opacity-50"
+                />
+                <button type="submit" disabled={isLoading} className="w-10 h-10 bg-accent-orange text-bg rounded-[15px] flex items-center justify-center hover:scale-105 transition-transform disabled:opacity-50 disabled:hover:scale-100">
+                  <Send size={16} />
+                </button>
+              </form>
+            </motion.div>
+          </div>
         )}
       </AnimatePresence>
-
-      <button 
-        onClick={() => setIsOpen(!isOpen)}
-        className="w-10 h-24 bg-accent-orange text-bg rounded-full shadow-2xl flex flex-col items-center justify-center gap-2 hover:scale-105 transition-all group"
-      >
-        {isOpen ? <X size={20} /> : (
-          <>
-            <MessageCircle size={20} />
-            <span className="text-[10px] font-bold rotate-90 origin-center translate-y-2">CHAT</span>
-          </>
-        )}
-      </button>
-    </div>
+    </>
   );
 };
 // --- Pages ---
@@ -602,6 +605,19 @@ export default function App() {
                   <Link to="/terms" className="hover:text-ink transition-colors">Terms of Service</Link>
                   <Link to="/contact" className="hover:text-ink transition-colors">Contact</Link>
                 </div>
+              </div>
+              <div className="container-custom mt-6 text-center md:text-left">
+                <p className="text-[10px] font-bold uppercase tracking-widest text-muted">
+                  © 2026 All rights reserved by{' '}
+                  <a 
+                    href="https://gowhite.xyz/" 
+                    target="_blank" 
+                    rel="noopener noreferrer"
+                    className="text-white drop-shadow-[0_0_8px_rgba(255,255,255,0.8)] hover:text-ink transition-all duration-300 relative"
+                  >
+                    White Fintech
+                  </a>
+                </p>
               </div>
             </footer>
           </div>
