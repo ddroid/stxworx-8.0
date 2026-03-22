@@ -131,7 +131,7 @@ export const SettingsPage = () => {
 
                 <div className="space-y-2">
                   <label className="block text-xs font-bold uppercase tracking-widest text-muted">Email Binding</label>
-                  <div className="flex gap-2">
+                  <div className="flex flex-col sm:flex-row gap-2">
                     <input 
                       type="email" 
                       value={email}
@@ -139,7 +139,7 @@ export const SettingsPage = () => {
                       placeholder="Enter email for notifications"
                       className="flex-1 bg-ink/5 border border-border rounded-[15px] px-4 py-3 text-sm focus:ring-1 focus:ring-accent-orange outline-none"
                     />
-                    <button className="btn-primary px-6">Bind</button>
+                    <button className="btn-primary w-full sm:w-auto px-6 py-3 shrink-0">Bind</button>
                   </div>
                   <p className="text-xs text-muted">Used for important account notifications and updates.</p>
                 </div>

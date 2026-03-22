@@ -94,6 +94,19 @@ import { MessagesPage } from "./pages/MessagesPage";
 import { NotificationsPage } from "./pages/NotificationsPage";
 import { AIProposalGenerator } from "./components/proposals/AIProposalGenerator";
 
+const getInitialTheme = (): 'dark' | 'light' => {
+  if (typeof window === 'undefined') {
+    return 'dark';
+  }
+
+  const saved = window.localStorage.getItem('theme');
+  if (saved === 'dark' || saved === 'light') {
+    return saved;
+  }
+
+  return window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
+};
+
 // --- Context ---
 // --- Types ---
 // --- Components ---
@@ -280,7 +293,7 @@ const ContactPage = () => (
 
 export default function App() {
   const [loading, setLoading] = useState(true);
-  const [theme, setTheme] = useState<'dark' | 'light'>('dark');
+  const [theme, setTheme] = useState<'dark' | 'light'>(getInitialTheme);
   const [userRole, setUserRole] = useState<'client' | 'freelancer' | null>(null);
   const [walletAddress, setWalletAddress] = useState<string | null>(null);
   const [blockedWallets, setBlockedWallets] = useState<string[]>([]);
@@ -291,6 +304,7 @@ export default function App() {
 
   useEffect(() => {
     document.documentElement.setAttribute('data-theme', theme);
+    window.localStorage.setItem('theme', theme);
   }, [theme]);
 
   useEffect(() => {

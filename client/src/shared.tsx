@@ -664,10 +664,10 @@ export const PostJobModal = ({ isOpen, onClose, onCreated }: { isOpen: boolean, 
                       <select
                         value={selectedCategory}
                         onChange={(e) => setSelectedCategory(e.target.value)}
-                        className="w-full bg-ink/5 border border-border rounded-[15px] px-4 py-3 text-sm outline-none"
+                        className="w-full bg-surface text-ink border border-border rounded-[15px] px-4 py-3 text-sm outline-none"
                       >
                         {categories.map((category) => (
-                          <option key={category.id} value={category.name}>
+                          <option key={category.id} value={category.name} className="bg-surface text-ink">
                             {category.name}
                           </option>
                         ))}
@@ -678,10 +678,10 @@ export const PostJobModal = ({ isOpen, onClose, onCreated }: { isOpen: boolean, 
                       <select
                         value={selectedSubcategory}
                         onChange={(e) => setSelectedSubcategory(e.target.value)}
-                        className="w-full bg-ink/5 border border-border rounded-[15px] px-4 py-3 text-sm outline-none"
+                        className="w-full bg-surface text-ink border border-border rounded-[15px] px-4 py-3 text-sm outline-none"
                       >
                         {(categories.find((category) => category.name === selectedCategory)?.subcategories || []).map((subcategory) => (
-                          <option key={subcategory} value={subcategory}>
+                          <option key={subcategory} value={subcategory} className="bg-surface text-ink">
                             {subcategory}
                           </option>
                         ))}

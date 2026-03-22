@@ -237,7 +237,10 @@ export function ProfileViewPage({ userRole }: { userRole: UserRole | null }) {
   const pageTitle = isClient ? 'About Company' : 'About Freelancer';
   const displayName = toDisplayName(profile) || 'Profile';
   const displayHandle = profile?.username ? `@${profile.username}` : profile?.stxAddress ? `@${formatAddress(profile.stxAddress).replace(/\.\.\./g, '_').toLowerCase()}` : '@profile';
-  const locationLine = [profile?.city, profile?.country].filter(Boolean).join(', ');
+  const locationLine = [draft.city.trim(), draft.country.trim()].filter(Boolean).join(', ');
+  const displayLanguage = draft.language.trim() || profile?.language?.trim() || '';
+  const websiteLink = portfolioLinks[0]?.url || profile?.portfolio?.[0] || '';
+  const normalizedWebsite = normalizeUrl(websiteLink);
   const hasInvalidLinks = portfolioLinks.some((link) => link.url.trim().length > 0 && !normalizeUrl(link.url));
   const canSaveProfile = !isSaving && !hasInvalidLinks && usernameStatus !== 'checking' && usernameStatus !== 'taken' && usernameStatus !== 'invalid';
   const averageRating = useMemo(() => {
@@ -444,6 +447,20 @@ export function ProfileViewPage({ userRole }: { userRole: UserRole | null }) {
     window.requestAnimationFrame(() => interestInputRef.current?.focus());
   }, [interestInput]);
 
+  const handleWebsiteChange = useCallback((value: string) => {
+    setPortfolioLinks((current) => {
+      if (current.length === 0) {
+        return [{ id: Date.now(), type: 'website', url: value }];
+      }
+
+      return current.map((entry, index) =>
+        index === 0
+          ? { ...entry, type: 'website', url: value }
+          : entry,
+      );
+    });
+  }, []);
+
   const handleSaveProfile = useCallback(async () => {
     if (!isOwnProfile || !profile || !canSaveProfile) {
       return;
@@ -575,7 +592,7 @@ export function ProfileViewPage({ userRole }: { userRole: UserRole | null }) {
 
   if (isLoading) {
     return (
-      <div className="pt-28 pb-20 px-6 md:pl-[92px]">
+      <div className="pt-28 pb-20 px-4 sm:px-6 md:pl-[92px]">
         <div className="container-custom flex min-h-[60vh] items-center justify-center">
           <div className="flex items-center gap-3 rounded-[20px] border border-border bg-surface px-5 py-4 text-sm font-bold text-muted">
             <Loader2 size={18} className="animate-spin text-accent-orange" />
@@ -588,7 +605,7 @@ export function ProfileViewPage({ userRole }: { userRole: UserRole | null }) {
 
   if (loadError) {
     return (
-      <div className="pt-28 pb-20 px-6 md:pl-[92px]">
+      <div className="pt-28 pb-20 px-4 sm:px-6 md:pl-[92px]">
         <div className="container-custom max-w-3xl">
           <div className="rounded-[24px] border border-border bg-surface p-8 text-center">
             <ShieldAlert size={42} className="mx-auto text-accent-orange" />
@@ -602,7 +619,7 @@ export function ProfileViewPage({ userRole }: { userRole: UserRole | null }) {
 
   if (!profile) {
     return (
-      <div className="pt-28 pb-20 px-6 md:pl-[92px]">
+      <div className="pt-28 pb-20 px-4 sm:px-6 md:pl-[92px]">
         <div className="container-custom max-w-3xl">
           <div className="rounded-[24px] border border-border bg-surface p-8 text-center">
             <h1 className="text-3xl font-black tracking-tight">No profile selected</h1>
@@ -614,7 +631,7 @@ export function ProfileViewPage({ userRole }: { userRole: UserRole | null }) {
   }
 
   return (
-    <div className="pt-28 pb-20 px-6 md:pl-[92px]">
+    <div className="pt-28 pb-20 px-4 sm:px-6 md:pl-[92px]">
       <div className="container-custom space-y-8">
         <Shared.MessageModal
           isOpen={isMessageModalOpen}
@@ -641,7 +658,7 @@ export function ProfileViewPage({ userRole }: { userRole: UserRole | null }) {
             <input ref={coverInputRef} type="file" accept="image/*" className="hidden" onChange={(event) => handleImagePick(event, 'cover')} />
           </div>
 
-          <div className="relative px-6 pb-6 md:px-8">
+          <div className="relative px-4 pb-6 sm:px-6 md:px-8">
             <div className="-mt-16 flex flex-col gap-6 md:flex-row md:items-end md:justify-between">
               <div className="flex flex-col gap-5 md:flex-row md:items-end">
                 <div className="relative h-28 w-28 overflow-hidden rounded-[28px] border-4 border-bg bg-ink/10 shadow-xl">
@@ -671,28 +688,28 @@ export function ProfileViewPage({ userRole }: { userRole: UserRole | null }) {
                   <p className="text-sm font-bold text-muted">{displayHandle}</p>
                   <div className="flex flex-wrap gap-4 text-sm text-muted">
                     {profile.specialty ? <span>{profile.specialty}</span> : null}
-                    {locationLine ? <span>{locationLine}</span> : null}
-                    {profile.language ? <span>{profile.language}</span> : null}
+                    <span>{locationLine || 'Location not added'}</span>
+                    <span>{displayLanguage || 'Language not added'}</span>
                     <span>{formatAddress(profile.stxAddress)}</span>
                   </div>
                 </div>
               </div>
 
-              <div className="flex flex-wrap items-center gap-3">
+              <div className="flex w-full md:w-auto flex-wrap items-center gap-3">
                 {isOwnProfile ? (
                   isEditing ? (
                     <>
-                      <button type="button" onClick={handleCancelEditing} className="btn-outline inline-flex items-center gap-2 px-4 py-3 text-sm">
+                      <button type="button" onClick={handleCancelEditing} className="btn-outline inline-flex w-full justify-center sm:w-auto items-center gap-2 px-4 py-3 text-sm">
                         <X size={16} />
                         Cancel
                       </button>
-                      <button type="button" onClick={handleSaveProfile} disabled={!canSaveProfile} className="btn-primary inline-flex items-center gap-2 px-5 py-3 text-sm disabled:cursor-not-allowed disabled:opacity-50">
+                      <button type="button" onClick={handleSaveProfile} disabled={!canSaveProfile} className="btn-primary inline-flex w-full justify-center sm:w-auto items-center gap-2 px-5 py-3 text-sm disabled:cursor-not-allowed disabled:opacity-50">
                         {isSaving ? <Loader2 size={16} className="animate-spin" /> : <Save size={16} />}
                         Save profile
                       </button>
                     </>
                   ) : (
-                    <button type="button" onClick={() => setIsEditing(true)} className="btn-primary inline-flex items-center gap-2 px-5 py-3 text-sm">
+                    <button type="button" onClick={() => setIsEditing(true)} className="btn-primary inline-flex w-full justify-center sm:w-auto items-center gap-2 px-5 py-3 text-sm">
                       <Pencil size={16} />
                       Edit profile
                     </button>
@@ -700,13 +717,13 @@ export function ProfileViewPage({ userRole }: { userRole: UserRole | null }) {
                 ) : (
                   <>
                     {isSignedIn ? (
-                      <button type="button" onClick={handleRequestConnection} disabled={relationship?.status === 'accepted' || relationship?.status === 'pending'} className="btn-primary inline-flex items-center gap-2 px-5 py-3 text-sm disabled:cursor-not-allowed disabled:opacity-50">
+                      <button type="button" onClick={handleRequestConnection} disabled={relationship?.status === 'accepted' || relationship?.status === 'pending'} className="btn-primary inline-flex w-full justify-center sm:w-auto items-center gap-2 px-5 py-3 text-sm disabled:cursor-not-allowed disabled:opacity-50">
                         <UserPlus size={16} />
                         {relationship?.status === 'accepted' ? 'Connected' : relationship?.status === 'pending' ? 'Request sent' : 'Connect'}
                       </button>
                     ) : null}
                     {isSignedIn ? (
-                      <button type="button" onClick={() => setIsMessageModalOpen(true)} className="btn-outline inline-flex items-center gap-2 px-4 py-3 text-sm">
+                      <button type="button" onClick={() => setIsMessageModalOpen(true)} className="btn-outline inline-flex w-full justify-center sm:w-auto items-center gap-2 px-4 py-3 text-sm">
                         <MessageSquare size={16} />
                         Message
                       </button>
@@ -716,22 +733,22 @@ export function ProfileViewPage({ userRole }: { userRole: UserRole | null }) {
               </div>
             </div>
 
-            <div className="mt-6 grid gap-4 md:grid-cols-4">
+            <div className="mt-6 grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
               <StatCard label="Projects" value={String(projects.length)} />
               <StatCard label="Reviews" value={String(reviews.length)} />
               <StatCard label="Rating" value={averageRating} />
-              <StatCard label="Total volume" value={totalBudget} />
+              <StatCard label={isClient ? 'Total spend' : 'Total volume'} value={totalBudget} />
             </div>
           </div>
         </div>
 
-        <div className="flex flex-wrap gap-3">
+        <div className="flex gap-3 overflow-x-auto no-scrollbar pb-1">
           {tabs.map((tab) => (
             <button
               key={tab}
               type="button"
               onClick={() => setActiveTab(tab)}
-              className={`rounded-full px-5 py-3 text-sm font-bold transition ${activeTab === tab ? 'bg-accent-orange text-white' : 'border border-border bg-surface text-muted hover:text-ink'}`}
+              className={`shrink-0 rounded-full px-5 py-3 text-sm font-bold transition ${activeTab === tab ? 'bg-accent-orange text-white' : 'border border-border bg-surface text-muted hover:text-ink'}`}
             >
               {tab}
             </button>
@@ -769,27 +786,59 @@ export function ProfileViewPage({ userRole }: { userRole: UserRole | null }) {
                     ) : null}
                   </div>
 
-                  <div>
-                    <label className="mb-2 block text-sm font-bold text-ink">{isClient ? 'Company name' : 'Specialty'}</label>
-                    <input
-                      value={isClient ? draft.company : draft.specialty}
-                      onChange={(event) => setDraft((current) => isClient ? { ...current, company: event.target.value } : { ...current, specialty: event.target.value })}
-                      disabled={!isEditing || !isOwnProfile}
-                      className="w-full rounded-[18px] border border-border bg-bg px-4 py-3 text-sm text-ink outline-none transition disabled:cursor-not-allowed disabled:opacity-80"
-                      placeholder={isClient ? 'STXWORX Studio' : 'Product designer'}
-                    />
-                  </div>
+                  {isClient ? (
+                    <>
+                      <div>
+                        <label className="mb-2 block text-sm font-bold text-ink">Industry</label>
+                        <input
+                          value={draft.specialty}
+                          onChange={(event) => setDraft((current) => ({ ...current, specialty: event.target.value }))}
+                          disabled={!isEditing || !isOwnProfile}
+                          className="w-full rounded-[18px] border border-border bg-bg px-4 py-3 text-sm text-ink outline-none transition disabled:cursor-not-allowed disabled:opacity-80"
+                          placeholder="Fintech"
+                        />
+                      </div>
+                      <div>
+                        <label className="mb-2 block text-sm font-bold text-ink">Company name</label>
+                        <input
+                          value={draft.company}
+                          onChange={(event) => setDraft((current) => ({ ...current, company: event.target.value }))}
+                          disabled={!isEditing || !isOwnProfile}
+                          className="w-full rounded-[18px] border border-border bg-bg px-4 py-3 text-sm text-ink outline-none transition disabled:cursor-not-allowed disabled:opacity-80"
+                          placeholder="STXWORX Studio"
+                        />
+                      </div>
+                    </>
+                  ) : (
+                    <div>
+                      <label className="mb-2 block text-sm font-bold text-ink">Specialty</label>
+                      <input
+                        value={draft.specialty}
+                        onChange={(event) => setDraft((current) => ({ ...current, specialty: event.target.value }))}
+                        disabled={!isEditing || !isOwnProfile}
+                        className="w-full rounded-[18px] border border-border bg-bg px-4 py-3 text-sm text-ink outline-none transition disabled:cursor-not-allowed disabled:opacity-80"
+                        placeholder="Product designer"
+                      />
+                    </div>
+                  )}
 
-                  <div>
-                    <label className="mb-2 block text-sm font-bold text-ink">Hourly rate</label>
-                    <input
-                      value={draft.hourlyRate}
-                      onChange={(event) => setDraft((current) => ({ ...current, hourlyRate: event.target.value }))}
-                      disabled={!isEditing || !isOwnProfile}
-                      className="w-full rounded-[18px] border border-border bg-bg px-4 py-3 text-sm text-ink outline-none transition disabled:cursor-not-allowed disabled:opacity-80"
-                      placeholder="125"
-                    />
-                  </div>
+                  {isClient ? (
+                    <div>
+                      <label className="mb-2 block text-sm font-bold text-ink">Total spend</label>
+                      <p className="w-full rounded-[18px] border border-border bg-bg px-4 py-3 text-sm font-bold text-ink">{totalBudget}</p>
+                    </div>
+                  ) : (
+                    <div>
+                      <label className="mb-2 block text-sm font-bold text-ink">Hourly rate</label>
+                      <input
+                        value={draft.hourlyRate}
+                        onChange={(event) => setDraft((current) => ({ ...current, hourlyRate: event.target.value }))}
+                        disabled={!isEditing || !isOwnProfile}
+                        className="w-full rounded-[18px] border border-border bg-bg px-4 py-3 text-sm text-ink outline-none transition disabled:cursor-not-allowed disabled:opacity-80"
+                        placeholder="125"
+                      />
+                    </div>
+                  )}
 
                   <div>
                     <label className="mb-2 block text-sm font-bold text-ink">City</label>
@@ -822,6 +871,22 @@ export function ProfileViewPage({ userRole }: { userRole: UserRole | null }) {
                       className="w-full rounded-[18px] border border-border bg-bg px-4 py-3 text-sm text-ink outline-none transition disabled:cursor-not-allowed disabled:opacity-80"
                       placeholder="English"
                     />
+                  </div>
+
+                  <div className="md:col-span-2">
+                    <label className="mb-2 block text-sm font-bold text-ink">Website</label>
+                    <input
+                      value={websiteLink}
+                      onChange={(event) => handleWebsiteChange(event.target.value)}
+                      disabled={!isEditing || !isOwnProfile}
+                      className="w-full rounded-[18px] border border-border bg-bg px-4 py-3 text-sm text-ink outline-none transition disabled:cursor-not-allowed disabled:opacity-80"
+                      placeholder="https://example.com"
+                    />
+                    {!isEditing && normalizedWebsite ? (
+                      <a href={normalizedWebsite} target="_blank" rel="noreferrer" className="mt-2 inline-flex text-xs font-bold text-accent-orange hover:underline">
+                        Open website
+                      </a>
+                    ) : null}
                   </div>
                 </div>
               </SectionCard>
@@ -936,7 +1001,7 @@ export function ProfileViewPage({ userRole }: { userRole: UserRole | null }) {
                             className="rounded-[16px] border border-border bg-surface px-3 py-3 text-sm font-bold text-ink outline-none disabled:cursor-not-allowed disabled:opacity-80"
                           >
                             {linkTypeOptions.map((option) => (
-                              <option key={option.value} value={option.value}>{option.label}</option>
+                              <option key={option.value} value={option.value} className="bg-surface text-ink">{option.label}</option>
                             ))}
                           </select>
                           <div className="flex-1">
@@ -977,9 +1042,9 @@ export function ProfileViewPage({ userRole }: { userRole: UserRole | null }) {
 
               <SectionCard title="Quick info">
                 <div className="space-y-4 text-sm text-muted">
-                  <div className="flex items-center gap-3"><Globe size={16} className="text-accent-orange" /> <span>{profile.stxAddress}</span></div>
-                  {locationLine ? <div className="flex items-center gap-3"><LinkIcon size={16} className="text-accent-orange" /> <span>{locationLine}</span></div> : null}
-                  {profile.language ? <div className="flex items-center gap-3"><Check size={16} className="text-accent-orange" /> <span>{profile.language}</span></div> : null}
+                  <div className="flex items-center gap-3"><Globe size={16} className="text-accent-orange" /> <span className="break-all">{profile.stxAddress}</span></div>
+                  <div className="flex items-center gap-3"><LinkIcon size={16} className="text-accent-orange" /> <span>{locationLine || 'Not added'}</span></div>
+                  <div className="flex items-center gap-3"><Check size={16} className="text-accent-orange" /> <span>{displayLanguage || 'Not added'}</span></div>
                   <div className="flex items-center gap-3"><Check size={16} className="text-accent-orange" /> <span>Joined {formatRelativeTime(profile.createdAt)}</span></div>
                 </div>
               </SectionCard>

@@ -62,13 +62,13 @@
   --muted: rgba(0, 0, 0, 0.5);
   --border: rgba(0, 0, 0, 0.08);
   --shadow-3d: rgba(0, 0, 0, 0.15);
-  --color-accent-cyan: #000000;
-  --color-accent-lightblue: #000000;
-  --color-accent-blue: #000000;
-  --color-accent-yellow: #000000;
-  --color-accent-pink: #000000;
-  --color-accent-purple: #000000;
-  --color-accent-green: #000000;
+  --color-accent-cyan: #007f8c;
+  --color-accent-lightblue: #0f6ddf;
+  --color-accent-blue: #1a44ff;
+  --color-accent-yellow: #b88300;
+  --color-accent-pink: #d7265d;
+  --color-accent-purple: #5b4bd6;
+  --color-accent-green: #0f9d8a;
 }
 
 @layer base {

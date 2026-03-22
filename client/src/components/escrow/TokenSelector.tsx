@@ -11,10 +11,10 @@ export const TokenSelector = ({ value = 'STX', onChange, options = ['STX', 'sBTC
     <select
       value={value}
       onChange={(event) => onChange?.(event.target.value)}
-      className="w-full rounded-[15px] border border-border bg-ink/5 px-4 py-3 text-sm outline-none"
+      className="w-full rounded-[15px] border border-border bg-surface text-ink px-4 py-3 text-sm outline-none"
     >
       {options.map((option) => (
-        <option key={option} value={option}>
+        <option key={option} value={option} className="bg-surface text-ink">
           {option}
         </option>
       ))}

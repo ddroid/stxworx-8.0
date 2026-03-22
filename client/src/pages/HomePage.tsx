@@ -423,7 +423,7 @@ export const HomePage = () => {
                 href="https://dorahacks.io/buidl/41161"
                 target="_blank"
                 rel="noreferrer"
-                className="inline-flex bg-white text-bg px-8 py-4 rounded-[15px] font-bold hover:bg-accent-orange transition-all"
+                className="inline-flex bg-white text-[#0A0A0A] px-8 py-4 rounded-[15px] font-bold hover:bg-accent-orange hover:text-white transition-all"
               >
                 Vote now
               </a>

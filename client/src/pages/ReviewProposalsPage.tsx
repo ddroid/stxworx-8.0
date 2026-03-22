@@ -162,10 +162,10 @@ export const ReviewProposalsPage = () => {
             <select
               value={project?.id || ''}
               onChange={(event) => loadProposals(Number(event.target.value))}
-              className="w-full bg-ink/5 border border-border rounded-[15px] px-4 py-3 text-sm outline-none"
+              className="w-full bg-surface text-ink border border-border rounded-[15px] px-4 py-3 text-sm outline-none"
             >
               {projects.filter(p => p.status !== 'completed').map((entry) => (
-                <option key={entry.id} value={entry.id}>
+                <option key={entry.id} value={entry.id} className="bg-surface text-ink">
                   {entry.title}
                 </option>
               ))}

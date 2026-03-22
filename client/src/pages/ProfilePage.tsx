@@ -343,6 +343,20 @@ export const ProfilePage = ({ userRole }: { userRole: UserRole | null }) => {
     setPortfolioLinks(portfolioLinks.filter(link => link.id !== id));
   };
 
+  const handleWebsiteChange = (value: string) => {
+    setPortfolioLinks((current) => {
+      if (current.length === 0) {
+        return [{ id: Date.now(), type: 'website', url: value }];
+      }
+
+      return current.map((entry, index) =>
+        index === 0
+          ? { ...entry, type: 'website', url: value }
+          : entry,
+      );
+    });
+  };
+
   const handleTimelineImageChange = async (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
     event.target.value = '';
@@ -583,6 +597,7 @@ export const ProfilePage = ({ userRole }: { userRole: UserRole | null }) => {
     : 'N/A';
   const displaySkills = profileDraft.skills.length ? profileDraft.skills : profile?.skills || [];
   const displaySpecialty = profileDraft.specialty || profile?.specialty || (isClient ? 'Decentralized Finance' : 'Freelancer');
+  const locationDisplay = [city.trim(), country.trim()].filter(Boolean).join(', ');
   const websiteHref = normalizedWebsite || '#';
   const hasInvalidLinks = portfolioLinks.some((link) => link.url.trim().length > 0 && !normalizeUrl(link.url));
   const canSaveProfile = isOwnProfile && !isSaving && !hasInvalidLinks && usernameStatus !== 'checking' && usernameStatus !== 'taken' && usernameStatus !== 'invalid';
@@ -701,7 +716,7 @@ export const ProfilePage = ({ userRole }: { userRole: UserRole | null }) => {
   }
 
   return (
-    <div className="pt-28 pb-20 px-6 md:pl-[92px]">
+    <div className="pt-28 pb-20 px-4 sm:px-6 md:pl-[92px]">
       <div className="container-custom">
         <Shared.MessageModal 
           isOpen={isMessageModalOpen} 
@@ -812,24 +827,24 @@ export const ProfilePage = ({ userRole }: { userRole: UserRole | null }) => {
               </div>
 
               {/* Details */}
-              <div className="flex-1 w-full">
+              <div className="flex-1 min-w-0 w-full">
                 <div className="flex flex-col md:flex-row md:items-start justify-between gap-4 mb-4">
-                  <div>
+                  <div className="min-w-0 w-full">
                     <div className="flex items-center gap-3 mb-2">
                       {isEditing ? (
-                        <div className="flex flex-col gap-2">
+                        <div className="flex w-full min-w-0 flex-col gap-2">
                           <input
                             type="text"
                             value={profileDraft.name}
                             onChange={(e) => setProfileDraft((current) => ({ ...current, name: e.target.value }))}
-                            className="text-3xl md:text-4xl font-black tracking-tighter bg-ink/5 border border-border rounded-[10px] px-3 py-1 outline-none focus:border-accent-orange"
+                            className="w-full min-w-0 text-2xl sm:text-3xl md:text-4xl font-black tracking-tighter bg-ink/5 border border-border rounded-[10px] px-3 py-1 outline-none focus:border-accent-orange"
                             placeholder="Name"
                           />
                           <input
                             type="text"
                             value={profileDraft.username}
                             onChange={(e) => setProfileDraft((current) => ({ ...current, username: e.target.value }))}
-                            className={`text-lg font-bold bg-ink/5 border rounded-[10px] px-3 py-1 outline-none focus:border-accent-orange ${usernameStatus === 'taken' || usernameStatus === 'invalid' ? 'border-accent-red' : 'border-border'}`}
+                            className={`w-full min-w-0 text-lg font-bold bg-ink/5 border rounded-[10px] px-3 py-1 outline-none focus:border-accent-orange ${usernameStatus === 'taken' || usernameStatus === 'invalid' ? 'border-accent-red' : 'border-border'}`}
                             placeholder="Username"
                           />
                           {usernameMessage ? <p className={`text-xs font-bold ${usernameStatus === 'taken' || usernameStatus === 'invalid' ? 'text-accent-red' : 'text-muted'}`}>{usernameMessage}</p> : null}
@@ -880,13 +895,19 @@ export const ProfilePage = ({ userRole }: { userRole: UserRole | null }) => {
                           </div>
                           <div className="flex items-center gap-2">
                             <LinkIcon size={14} className="shrink-0" />
-                            <input type="text" value={websiteLink} readOnly className="w-full bg-ink/5 border border-border rounded-[5px] px-2 py-1 text-xs outline-none" placeholder="Website" />
+                            <input
+                              type="text"
+                              value={websiteLink}
+                              onChange={(e) => handleWebsiteChange(e.target.value)}
+                              className="w-full bg-ink/5 border border-border rounded-[5px] px-2 py-1 text-xs outline-none focus:border-accent-orange"
+                              placeholder="Website"
+                            />
                           </div>
                         </div>
                       ) : (
                         <>
-                          <span className="flex items-center gap-1"><MapPin size={14} /> {city}, {country}</span>
-                          <span className="flex items-center gap-1"><Globe size={14} /> {language}</span>
+                          <span className="flex items-center gap-1"><MapPin size={14} /> {locationDisplay || 'Location not added'}</span>
+                          <span className="flex items-center gap-1"><Globe size={14} /> {language || 'Language not added'}</span>
                           <span className="flex items-center gap-1"><LinkIcon size={14} /> {websiteLink || 'No website yet'}</span>
                           <div className="flex gap-3 ml-2">
                             <Twitter size={14} className="hover:text-accent-orange cursor-pointer" />
@@ -898,9 +919,9 @@ export const ProfilePage = ({ userRole }: { userRole: UserRole | null }) => {
                   </div>
 
                   {/* Actions */}
-                  <div className="flex gap-2 md:gap-4">
+                  <div className="flex w-full md:w-auto gap-2 md:gap-4">
                     {isOwnProfile ? (
-                      <button onClick={handleEditToggle} disabled={isEditing && !canSaveProfile} className="btn-outline flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed">
+                      <button onClick={handleEditToggle} disabled={isEditing && !canSaveProfile} className="btn-outline flex-1 md:flex-none justify-center flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed">
                         <Edit2 size={16} /> {isEditing ? (isSaving ? 'Saving...' : 'Save') : 'Edit Profile'}
                       </button>
                     ) : !isEditing ? (
@@ -961,7 +982,7 @@ export const ProfilePage = ({ userRole }: { userRole: UserRole | null }) => {
           </div>
         </section>
 
-        <div className="grid grid-cols-1 lg:grid-cols-12 gap-10">
+        <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 md:gap-10">
           {/* Main Content */}
           <div className="lg:col-span-8 space-y-10">
             {activeTab === 'Profile' && (
@@ -1017,22 +1038,50 @@ export const ProfilePage = ({ userRole }: { userRole: UserRole | null }) => {
                   ) : (
                     <>
                       <h3 className="text-sm font-bold uppercase tracking-widest text-accent-blue mb-4">Company Details</h3>
-                      <div className="grid grid-cols-2 gap-6">
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
                         <div>
                           <p className="text-xs text-muted mb-1">Industry</p>
-                          <p className="font-bold text-sm">{displaySpecialty}</p>
+                          {isEditing ? (
+                            <input
+                              type="text"
+                              value={profileDraft.specialty}
+                              onChange={(e) => setProfileDraft((current) => ({ ...current, specialty: e.target.value }))}
+                              className="w-full bg-ink/5 border border-border rounded-[10px] px-3 py-2 text-sm outline-none focus:border-accent-orange"
+                              placeholder="Industry"
+                            />
+                          ) : (
+                            <p className="font-bold text-sm">{displaySpecialty}</p>
+                          )}
                         </div>
                         <div>
-                          <p className="text-xs text-muted mb-1">Company Size</p>
-                          <p className="font-bold text-sm">{projects.length} active listings</p>
+                          <p className="text-xs text-muted mb-1">Total Spend</p>
+                          <p className="font-bold text-sm">{formatTokenAmount(totalBudget)}</p>
                         </div>
                         <div>
                           <p className="text-xs text-muted mb-1">Founded</p>
                           <p className="font-bold text-sm">{joinedDate}</p>
                         </div>
                         <div>
+                          <p className="text-xs text-muted mb-1">Company</p>
+                          {isEditing ? (
+                            <input
+                              type="text"
+                              value={profileDraft.company}
+                              onChange={(e) => setProfileDraft((current) => ({ ...current, company: e.target.value }))}
+                              className="w-full bg-ink/5 border border-border rounded-[10px] px-3 py-2 text-sm outline-none focus:border-accent-orange"
+                              placeholder="Company name"
+                            />
+                          ) : (
+                            <p className="font-bold text-sm">{profile?.company || 'Not added yet'}</p>
+                          )}
+                        </div>
+                        <div>
                           <p className="text-xs text-muted mb-1">Website</p>
                           <a href={websiteHref} className="font-bold text-sm text-accent-cyan hover:underline">{websiteLink || 'Not added yet'}</a>
+                        </div>
+                        <div>
+                          <p className="text-xs text-muted mb-1">Location</p>
+                          <p className="font-bold text-sm">{locationDisplay || 'Not added'}</p>
                         </div>
                       </div>
                     </>
@@ -1112,9 +1161,9 @@ export const ProfilePage = ({ userRole }: { userRole: UserRole | null }) => {
                               <div className="flex-1 overflow-hidden pr-6">
                                 {isEditing ? (
                                   <div className="flex flex-col gap-1">
-                                    <select value={link.type} onChange={(e) => setPortfolioLinks((current) => current.map((entry) => entry.id === link.id ? { ...entry, type: e.target.value as LinkTypeValue } : entry))} className="w-full bg-transparent border-b border-border text-sm font-bold outline-none focus:border-accent-orange">
+                                    <select value={link.type} onChange={(e) => setPortfolioLinks((current) => current.map((entry) => entry.id === link.id ? { ...entry, type: e.target.value as LinkTypeValue } : entry))} className="w-full bg-surface text-ink border-b border-border text-sm font-bold outline-none focus:border-accent-orange">
                                       {linkTypeOptions.map((option) => (
-                                        <option key={option.value} value={option.value}>{option.label}</option>
+                                        <option key={option.value} value={option.value} className="bg-surface text-ink">{option.label}</option>
                                       ))}
                                     </select>
                                     <input type="text" value={link.url} onChange={(e) => setPortfolioLinks((current) => current.map((entry) => entry.id === link.id ? { ...entry, url: e.target.value } : entry))} className={`w-full bg-transparent border-b text-xs text-muted outline-none focus:border-accent-orange ${isInvalidLink ? 'border-accent-red' : 'border-border'}`} placeholder="https://example.com" />
@@ -1146,12 +1195,12 @@ export const ProfilePage = ({ userRole }: { userRole: UserRole | null }) => {
                     </div>
                     <div className="space-y-4">
                       {recentProjects.slice(0, 4).map((project) => (
-                        <div key={project.id} className="p-4 border border-border rounded-[15px] flex items-center justify-between hover:bg-ink/5 transition-colors cursor-pointer">
+                        <div key={project.id} className="p-4 border border-border rounded-[15px] flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 hover:bg-ink/5 transition-colors cursor-pointer">
                           <div>
                             <h4 className="font-bold text-sm mb-1">{project.title}</h4>
                             <span className={`text-[10px] font-bold uppercase tracking-widest ${project.status === 'open' ? 'text-accent-cyan' : 'text-accent-orange'}`}>{project.status}</span>
                           </div>
-                          <div className="text-right">
+                          <div className="text-left sm:text-right">
                             <p className="font-black text-sm">{formatTokenAmount(project.budget)} {project.tokenType}</p>
                             <p className="text-xs text-muted">Budget</p>
                           </div>
@@ -1182,9 +1231,9 @@ export const ProfilePage = ({ userRole }: { userRole: UserRole | null }) => {
                             <div className="flex-1 overflow-hidden pr-6">
                               {isEditing ? (
                                 <div className="flex flex-col gap-1">
-                                  <select value={link.type} onChange={(e) => setPortfolioLinks((current) => current.map((entry) => entry.id === link.id ? { ...entry, type: e.target.value as LinkTypeValue } : entry))} className="w-full bg-transparent border-b border-border text-sm font-bold outline-none focus:border-accent-orange">
+                                  <select value={link.type} onChange={(e) => setPortfolioLinks((current) => current.map((entry) => entry.id === link.id ? { ...entry, type: e.target.value as LinkTypeValue } : entry))} className="w-full bg-surface text-ink border-b border-border text-sm font-bold outline-none focus:border-accent-orange">
                                     {linkTypeOptions.map((option) => (
-                                      <option key={option.value} value={option.value}>{option.label}</option>
+                                      <option key={option.value} value={option.value} className="bg-surface text-ink">{option.label}</option>
                                     ))}
                                   </select>
                                   <input type="text" value={link.url} onChange={(e) => setPortfolioLinks((current) => current.map((entry) => entry.id === link.id ? { ...entry, url: e.target.value } : entry))} className={`w-full bg-transparent border-b text-xs text-muted outline-none focus:border-accent-orange ${isInvalidLink ? 'border-accent-red' : 'border-border'}`} placeholder="https://example.com" />
@@ -1221,12 +1270,12 @@ export const ProfilePage = ({ userRole }: { userRole: UserRole | null }) => {
                   </div>
                   <div className="space-y-4">
                     {recentProjects.slice(0, 4).map((project) => (
-                      <div key={project.id} className="p-4 border border-border rounded-[15px] flex justify-between items-center">
+                      <div key={project.id} className="p-4 border border-border rounded-[15px] flex flex-col sm:flex-row sm:justify-between sm:items-center gap-3">
                         <div>
                           <h4 className="font-bold text-sm mb-1">{project.title}</h4>
                           <p className="text-xs text-muted">{formatRelativeTime(project.createdAt)} • {project.status}</p>
                         </div>
-                        <div className="text-right">
+                        <div className="text-left sm:text-right">
                           <p className="font-black text-sm">{formatTokenAmount(project.budget)} {project.tokenType}</p>
                           <p className="text-xs text-muted">Budget</p>
                         </div>
@@ -1456,20 +1505,20 @@ export const ProfilePage = ({ userRole }: { userRole: UserRole | null }) => {
           {/* Sidebar Info */}
           <div className="lg:col-span-4 space-y-6">
             <div className={`card ${isClient ? 'bg-accent-blue' : 'bg-accent-orange'} text-bg`}>
-              <div className="flex items-center justify-between mb-6">
-                <p className="text-2xl font-black">{isClient ? `${formatTokenAmount(totalBudget)}` : profile?.hourlyRate ? `${profile.hourlyRate}` : `${formatTokenAmount(profile?.totalEarned)}`}</p>
-                <p className="text-xs font-bold opacity-60">{isClient ? 'Total Budget' : profile?.hourlyRate ? 'per hour' : 'Total Earned'}</p>
+              <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-1 mb-6">
+                <p className="text-2xl font-black break-words">{isClient ? `${formatTokenAmount(totalBudget)}` : profile?.hourlyRate ? `${profile.hourlyRate}` : `${formatTokenAmount(profile?.totalEarned)}`}</p>
+                <p className="text-xs font-bold opacity-60">{isClient ? 'Total Spend' : profile?.hourlyRate ? 'per hour' : 'Total Earned'}</p>
               </div>
               <div className="space-y-4 mb-8">
-                <div className="flex justify-between text-xs font-bold border-b border-bg/10 pb-2">
+                <div className="flex items-start justify-between gap-3 text-xs font-bold border-b border-bg/10 pb-2">
                   <span className="opacity-60">Location</span>
-                  <span>{[city, country].filter(Boolean).join(', ') || 'Not added'}</span>
+                  <span className="text-right">{locationDisplay || 'Not added'}</span>
                 </div>
-                <div className="flex justify-between text-xs font-bold border-b border-bg/10 pb-2">
+                <div className="flex items-start justify-between gap-3 text-xs font-bold border-b border-bg/10 pb-2">
                   <span className="opacity-60">{isClient ? 'Jobs Posted' : 'Projects'}</span>
                   <span>{projects.length}</span>
                 </div>
-                <div className="flex justify-between text-xs font-bold border-b border-bg/10 pb-2">
+                <div className="flex items-start justify-between gap-3 text-xs font-bold border-b border-bg/10 pb-2">
                   <span className="opacity-60">{isClient ? 'Member Since' : 'Rating'}</span>
                   <span>{isClient ? joinedDate : averageRating}</span>
                 </div>

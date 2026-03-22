@@ -95,10 +95,10 @@ export const ExploreJobsPage = () => {
                 <select 
                   value={selectedCurrency}
                   onChange={(e) => setSelectedCurrency(e.target.value)}
-                  className="appearance-none bg-surface border border-border rounded-[15px] pl-4 pr-10 py-2 text-sm font-bold focus:ring-1 focus:ring-accent-orange outline-none cursor-pointer text-muted hover:text-ink transition-colors"
+                  className="appearance-none bg-surface text-ink border border-border rounded-[15px] pl-4 pr-10 py-2 text-sm font-bold focus:ring-1 focus:ring-accent-orange outline-none cursor-pointer"
                 >
                   {currencyOptions.map((currency) => (
-                    <option key={currency} value={currency}>
+                    <option key={currency} value={currency} className="bg-surface text-ink">
                       {currency === 'All' ? 'All Currencies' : currency}
                     </option>
                   ))}
