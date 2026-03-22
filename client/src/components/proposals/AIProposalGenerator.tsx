@@ -61,7 +61,7 @@ export const AIProposalGenerator = () => {
 
   return (
     <div className="pl-6 md:pl-[92px] pr-6 pt-24 pb-12 min-h-screen">
-      <div className="container-custom max-w-4xl">
+      <div className="mx-auto w-full max-w-[1240px]">
         <div className="mb-8">
           <h1 className="text-4xl font-black tracking-tighter mb-4 flex items-center gap-3">
             <Sparkles className="text-accent-orange" size={36} />
@@ -72,7 +72,7 @@ export const AIProposalGenerator = () => {
           </p>
         </div>
 
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+        <div className="grid grid-cols-1 xl:grid-cols-[minmax(0,1fr)_minmax(0,1.1fr)] gap-6 xl:gap-8 items-start">
           {/* Input Section */}
           <div className="space-y-6">
             <div className="card p-6">
@@ -160,7 +160,7 @@ export const AIProposalGenerator = () => {
           </div>
 
           {/* Output Section */}
-          <div className="card p-6 flex flex-col h-full min-h-[500px]">
+          <div className="card p-6 flex flex-col min-h-[420px]">
             <div className="flex items-center justify-between mb-4">
               <h2 className="text-xl font-bold">Generated Result</h2>
               {generatedText && (

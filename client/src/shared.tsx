@@ -176,13 +176,15 @@ export const MilestoneSubmitModal = ({ isOpen, onClose, milestone, onSubmitted }
       const [description, setDescription] = useState('');
       const [deliverableUrl, setDeliverableUrl] = useState('');
       const [isSubmitting, setIsSubmitting] = useState(false);
-      const { setIsWorkSubmitted } = useWallet();
+      const [submitError, setSubmitError] = useState<string | null>(null);
+      const { setIsWorkSubmitted, walletAddress } = useWallet();
 
       useEffect(() => {
         if (isOpen) {
           setDescription('');
           setDeliverableUrl('');
           setIsSubmitting(false);
+          setSubmitError(null);
         }
       }, [isOpen]);
 
@@ -195,7 +197,13 @@ export const MilestoneSubmitModal = ({ isOpen, onClose, milestone, onSubmitted }
           return;
         }
 
+        if (milestone?.freelancerAddress && walletAddress && milestone.freelancerAddress !== walletAddress) {
+          setSubmitError('Only the assigned freelancer wallet can complete this milestone on-chain.');
+          return;
+        }
+
         setIsSubmitting(true);
+        setSubmitError(null);
         try {
           const completionTxId = await completeEscrowMilestone(milestone.projectOnChainId, milestone.milestoneNum);
           await submitMilestone({
@@ -210,6 +218,12 @@ export const MilestoneSubmitModal = ({ isOpen, onClose, milestone, onSubmitted }
           onClose();
         } catch (error) {
           console.error('Failed to submit milestone:', error);
+          const message = error instanceof Error ? error.message : String(error ?? '');
+          if (message.includes('u101') || message.includes('ERR-NOT-FREELANCER')) {
+            setSubmitError('Milestone completion failed: only the assigned freelancer can complete this milestone.');
+          } else {
+            setSubmitError('Failed to submit milestone. Please try again.');
+          }
         } finally {
           setIsSubmitting(false);
         }
@@ -255,6 +269,12 @@ export const MilestoneSubmitModal = ({ isOpen, onClose, milestone, onSubmitted }
                 )}
                 
                 <div className="space-y-6">
+                  {submitError && (
+                    <div className="p-4 bg-red-500/10 border border-red-500/30 rounded-[15px]">
+                      <p className="text-sm text-red-300">{submitError}</p>
+                    </div>
+                  )}
+
                   {/* Description */}
                   <div>
                     <label className="block text-sm font-bold mb-2">Submission Description</label>
