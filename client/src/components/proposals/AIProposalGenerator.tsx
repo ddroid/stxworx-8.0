@@ -31,9 +31,9 @@ export const AIProposalGenerator = () => {
     setError('');
     
     try {
-      const apiKey = process.env.GEMINI_API_KEY;
+      const apiKey = import.meta.env.VITE_GEMINI_API_KEY || process.env.GEMINI_API_KEY;
       if (!apiKey) {
-        throw new Error('Gemini API Key is missing. Please set it in your environment.');
+        throw new Error('Gemini API Key is missing. Please set VITE_GEMINI_API_KEY or GEMINI_API_KEY in your environment.');
       }
       
       const ai = new GoogleGenAI({ apiKey });
@@ -52,7 +52,7 @@ export const AIProposalGenerator = () => {
       }
 
       const response = await ai.models.generateContent({
-        model: 'gemini-3.1-flash-lite-preview',
+        model: 'gemini-3-flash-preview',
         contents: prompt,
         config: {
           systemInstruction,
