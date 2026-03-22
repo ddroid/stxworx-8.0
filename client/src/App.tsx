@@ -578,7 +578,6 @@ export default function App() {
                   <p className="text-[8px] tracking-widest uppercase">POWERED BY STX - SBTC - USDCX</p>
                 </div>
                 <div className="flex flex-wrap justify-center md:justify-end gap-4 sm:gap-6 md:gap-8">
-                  <Link to="/admin" className="hover:text-ink transition-colors">Admin</Link>
                   <Link to="/privacy" className="hover:text-ink transition-colors">Privacy Policy</Link>
                   <Link to="/terms" className="hover:text-ink transition-colors">Terms of Service</Link>
                   <Link to="/contact" className="hover:text-ink transition-colors">Contact</Link>

@@ -328,7 +328,7 @@ export const TopHeader = ({ theme, toggleTheme }: { theme: 'dark' | 'light', tog
       <header className="fixed top-0 left-0 md:left-[120px] right-0 h-20 bg-bg/80 backdrop-blur-xl border-b border-border z-40 px-3 sm:px-4 md:px-10 flex items-center justify-between overflow-x-clip">
       <div className="flex items-center gap-2 sm:gap-4 md:gap-8 min-w-0">
         <Link to="/" className="flex items-center md:hidden">
-          <div className="w-8 h-8 bg-accent-orange rounded-[10px] flex items-center justify-center text-white font-black">S</div>
+          <img src="/favicon.png" alt="STXWORX" className="w-10 h-10 rounded-[12px] object-cover border border-white/20 shadow-[0_0_12px_rgba(255,94,0,0.35)]" />
         </Link>
         <Link to="/" className="hidden md:flex items-center">
           <Shared.Logo className="text-3xl" />
