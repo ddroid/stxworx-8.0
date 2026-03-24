@@ -358,7 +358,7 @@ export default function App() {
     >
       <Router>
         <Shared.CustomCursor />
-        <div className="min-h-screen bg-bg text-ink selection:bg-accent-orange selection:text-bg overflow-x-hidden pb-16 md:pb-0">
+        <div className="min-h-screen pt-12 bg-bg text-ink selection:bg-accent-orange selection:text-bg overflow-x-hidden pb-16 md:pb-0">
           <TopHeader theme={theme} toggleTheme={() => setTheme(theme === 'dark' ? 'light' : 'dark')} />
           
           <div className="transition-all duration-500">

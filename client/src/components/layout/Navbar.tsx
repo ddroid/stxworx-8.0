@@ -3,11 +3,13 @@ import { Link, useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'motion/react';
 import {
   AlertTriangle,
+  ArrowRight,
   Bell,
   Briefcase,
   CheckCircle2,
   Home,
   LayoutGrid,
+  Mail,
   MessageCircle,
   Moon,
   PenTool,
@@ -102,6 +104,88 @@ function scoreMenuItem(item: PlatformMenuItem, terms: string[]) {
 
   return score;
 }
+
+const announcementSlides = [
+  {
+    text: (
+      <>
+        We're currently in <span className="font-black text-accent-orange">Beta!</span> Official launch planned for{' '}
+        <span className="font-black">April 2nd.</span> Currently addressing{' '}
+        <span className="font-black text-accent-orange">X402</span> &{' '}
+        <span className="font-black text-accent-blue">AI integration</span> QA/QC.
+      </>
+    ),
+  },
+  {
+    text: (
+      <>
+        For <span className="font-black">collaborations</span>, <span className="font-black">ambassador roles</span>, or{' '}
+        <span className="font-black">media partnerships</span> —{' '}
+        <span className="inline-flex items-center gap-1.5 bg-accent-orange text-bg px-3 py-1 rounded-[25px] text-[11px] font-black uppercase tracking-widest" style={{ backgroundImage: 'linear-gradient(135deg, rgba(255,255,255,0.15) 0%, rgba(0,0,0,0.1) 100%)', boxShadow: '0 2px 0 var(--btn-shadow-color, #CC5500)' }}>
+          <Mail size={12} /> Contact now
+        </span>
+      </>
+    ),
+  },
+];
+
+const AnnouncementBar = ({ navigate }: { navigate: (path: string) => void }) => {
+  const [current, setCurrent] = useState(0);
+
+  useEffect(() => {
+    const timer = window.setInterval(() => {
+      setCurrent((prev) => (prev + 1) % announcementSlides.length);
+    }, 5000);
+    return () => window.clearInterval(timer);
+  }, []);
+
+  const handleContactClick = () => {
+    navigate('/contact');
+  };
+
+  return (
+    <div className={`fixed top-0 left-0 right-0 h-12 z-50 border-b border-border flex items-center justify-center overflow-hidden ${
+      current === 0 
+        ? 'bg-gradient-to-r from-accent-orange via-accent-yellow to-accent-orange/80' 
+        : 'bg-gradient-to-r from-accent-blue via-accent-lightblue to-accent-blue/80'
+    }`}>
+      <div className="absolute left-3 md:left-24 flex items-center gap-2">
+        <span className="h-2 w-2 rounded-full bg-bg animate-pulse" />
+        <span className="text-[9px] font-black uppercase tracking-[0.2em] text-bg md:hidden bg-accent-orange/20 px-1.5 py-0.5 rounded-[8px]">Testnet</span>
+        <span className="text-xs font-black uppercase tracking-widest text-bg hidden md:inline bg-accent-orange/20 px-2 py-0.5 rounded-[10px]">Testnet</span>
+      </div>
+      <AnimatePresence mode="wait">
+        <motion.p
+          key={current}
+          initial={{ opacity: 0, y: 8 }}
+          animate={{ opacity: 1, y: 0 }}
+          exit={{ opacity: 0, y: -8 }}
+          transition={{ duration: 0.3 }}
+          className="text-[10px] sm:text-xs lg:text-sm font-black uppercase tracking-widest text-bg text-center px-10 sm:px-12 lg:px-14"
+        >
+          {current === 1 ? (
+            <>
+              <span className="sm:hidden cursor-pointer hover:opacity-80 transition-opacity flex items-center justify-center gap-2" onClick={handleContactClick}>
+                FOR COLLAB OR MEDIA PARTNERSHIPS — CONTACT NOW
+                <ArrowRight size={12} className="flex-shrink-0" />
+              </span>
+              <span className="hidden sm:inline">FOR COLLABORATIONS, AMBASSADOR ROLES, OR MEDIA PARTNERSHIPS —{' '}
+              <span onClick={handleContactClick} className="inline-flex items-center gap-1.5 bg-accent-orange text-bg px-3 py-1 rounded-[25px] text-[11px] font-black uppercase tracking-widest cursor-pointer hover:bg-ink transition-all duration-300" style={{ backgroundImage: 'linear-gradient(135deg, rgba(255,255,255,0.15) 0%, rgba(0,0,0,0.1) 100%)', boxShadow: '0 2px 0 var(--btn-shadow-color, #CC5500)' }}>
+                <Mail size={12} /> CONTACT NOW
+              </span></span>
+            </>
+          ) : (
+            <>
+              <span className="sm:hidden">WE'RE CURRENTLY IN BETA! OFFICIAL LAUNCH PLANNED FOR APRIL 2ND</span>
+              <span className="hidden sm:inline">WE'RE CURRENTLY IN BETA! OFFICIAL LAUNCH PLANNED FOR APRIL 2ND. STAY TUNED FOR EXCITING UPDATES.
+              CURRENTLY ADDRESSING X402 & AI INTEGRATION QA/QC.</span>
+            </>
+          )}
+        </motion.p>
+      </AnimatePresence>
+    </div>
+  );
+};
 
 export const TopHeader = ({ theme, toggleTheme }: { theme: 'dark' | 'light', toggleTheme: () => void }) => {
   const navigate = useNavigate();
@@ -325,7 +409,8 @@ export const TopHeader = ({ theme, toggleTheme }: { theme: 'dark' | 'light', tog
 
   return (
     <>
-      <header className="fixed top-0 left-0 md:left-[120px] right-0 h-20 bg-bg/80 backdrop-blur-xl border-b border-border z-40 px-3 sm:px-4 md:px-10 flex items-center justify-between overflow-x-clip">
+      <AnnouncementBar navigate={navigate} />
+      <header className="fixed top-12 left-0 md:left-[120px] right-0 h-20 bg-bg/80 backdrop-blur-xl border-b border-border z-40 px-3 sm:px-4 md:px-10 flex items-center justify-between overflow-x-clip">
       <div className="flex items-center gap-2 sm:gap-4 md:gap-8 min-w-0">
         <Link to="/" className="flex items-center md:hidden">
           <img src="/favicon.png" alt="STXWORX" className="w-11 h-11 rounded-[12px] object-cover border border-white/20 shadow-[0_0_12px_rgba(255,94,0,0.35)]" />
@@ -428,7 +513,7 @@ export const TopHeader = ({ theme, toggleTheme }: { theme: 'dark' | 'light', tog
                 initial={{ opacity: 0, y: 10, scale: 0.95 }}
                 animate={{ opacity: 1, y: 0, scale: 1 }}
                 exit={{ opacity: 0, y: 10, scale: 0.95 }}
-                className="fixed top-24 left-2 right-2 mt-0 w-auto bg-surface border border-border rounded-[15px] shadow-2xl overflow-hidden z-50 md:absolute md:top-full md:left-auto md:right-0 md:mt-4 md:w-80"
+                className="fixed top-36 left-2 right-2 mt-0 w-auto bg-surface border border-border rounded-[15px] shadow-2xl overflow-hidden z-50 md:absolute md:top-full md:left-auto md:right-0 md:mt-4 md:w-80"
               >
                 <div className="p-4 border-b border-border flex items-center justify-between">
                   <h3 className="font-bold text-sm">Recent Messages</h3>
@@ -497,7 +582,7 @@ export const TopHeader = ({ theme, toggleTheme }: { theme: 'dark' | 'light', tog
                 initial={{ opacity: 0, y: 10, scale: 0.95 }}
                 animate={{ opacity: 1, y: 0, scale: 1 }}
                 exit={{ opacity: 0, y: 10, scale: 0.95 }}
-                className="fixed top-24 left-2 right-2 mt-0 w-auto bg-surface border border-border rounded-[15px] shadow-2xl overflow-hidden z-50 md:absolute md:top-full md:left-auto md:right-0 md:mt-4 md:w-80"
+                className="fixed top-36 left-2 right-2 mt-0 w-auto bg-surface border border-border rounded-[15px] shadow-2xl overflow-hidden z-50 md:absolute md:top-full md:left-auto md:right-0 md:mt-4 md:w-80"
               >
                 <div className="p-4 border-b border-border flex items-center justify-between">
                   <h3 className="font-bold text-sm">Recent Notifications</h3>
@@ -585,7 +670,7 @@ export const TopHeader = ({ theme, toggleTheme }: { theme: 'dark' | 'light', tog
             animate={{ opacity: 1, y: 0, scale: 1 }}
             exit={{ opacity: 0, y: -10, scale: 0.98 }}
             transition={{ type: 'spring', stiffness: 320, damping: 28 }}
-            className="fixed top-24 left-3 right-3 bg-surface border border-border rounded-[15px] shadow-2xl overflow-hidden z-[96] md:hidden"
+            className="fixed top-36 left-3 right-3 bg-surface border border-border rounded-[15px] shadow-2xl overflow-hidden z-[96] md:hidden"
           >
             <div className="flex items-center gap-2 px-3 py-3 border-b border-border">
               <Search size={18} className="text-muted" />
