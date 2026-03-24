@@ -149,10 +149,13 @@ const AnnouncementBar = ({ navigate }: { navigate: (path: string) => void }) => 
         ? 'bg-gradient-to-r from-accent-orange via-accent-yellow to-accent-orange/80' 
         : 'bg-gradient-to-r from-accent-blue via-accent-lightblue to-accent-blue/80'
     }`}>
-      <div className="absolute left-3 md:left-24 flex items-center gap-2">
-        <span className="h-2 w-2 rounded-full bg-bg animate-pulse" />
-        <span className="text-[9px] font-black uppercase tracking-[0.2em] text-bg md:hidden bg-accent-orange/20 px-1.5 py-0.5 rounded-[8px]">Testnet</span>
-        <span className="text-xs font-black uppercase tracking-widest text-bg hidden md:inline bg-accent-orange/20 px-2 py-0.5 rounded-[10px]">Testnet</span>
+      <div className="absolute left-2 items-center gap-2 hidden md:flex">
+        <span className="h-2.5 w-2.5 rounded-full bg-bg animate-pulse shadow-[0_0_8px_rgba(255,255,255,0.8)]" />
+        <span className="text-[9px] md:text-[10px] lg:text-[11px] font-black uppercase tracking-[0.14em] text-bg bg-accent-orange/45 border border-white/35 px-2.5 py-1 rounded-[11px] shadow-[0_2px_10px_rgba(0,0,0,0.28)]">Testnet</span>
+      </div>
+      <div className="absolute left-2 bottom-1 flex items-center gap-1.5 md:hidden">
+        <span className="h-2 w-2 rounded-full bg-bg animate-pulse shadow-[0_0_8px_rgba(255,255,255,0.8)]" />
+        <span className="text-[9px] font-black uppercase tracking-[0.16em] text-bg bg-accent-orange/45 border border-white/35 px-2 py-0.5 rounded-[10px] shadow-[0_2px_8px_rgba(0,0,0,0.25)]">Testnet</span>
       </div>
       <AnimatePresence mode="wait">
         <motion.p
@@ -161,7 +164,7 @@ const AnnouncementBar = ({ navigate }: { navigate: (path: string) => void }) => 
           animate={{ opacity: 1, y: 0 }}
           exit={{ opacity: 0, y: -8 }}
           transition={{ duration: 0.3 }}
-          className="text-[10px] sm:text-xs lg:text-sm font-black uppercase tracking-widest text-bg text-center px-10 sm:px-12 lg:px-14"
+          className="text-[9px] sm:text-[10px] md:text-xs lg:text-sm font-black uppercase tracking-[0.12em] sm:tracking-[0.14em] lg:tracking-widest text-bg text-center px-8 sm:px-12 lg:px-14"
         >
           {current === 1 ? (
             <>

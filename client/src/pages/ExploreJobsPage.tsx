@@ -6,6 +6,7 @@ import type { ApiCategory, AppJob } from '../types/job';
 
 export const ExploreJobsPage = () => {
   const { userRole } = Shared.useWallet();
+  const DESCRIPTION_PREVIEW_LIMIT = 120;
   const [isApplyModalOpen, setIsApplyModalOpen] = useState(false);
   const [selectedJob, setSelectedJob] = useState<AppJob | null>(null);
   const [selectedCurrency, setSelectedCurrency] = useState('All');
@@ -13,6 +14,7 @@ export const ExploreJobsPage = () => {
   const [searchQuery, setSearchQuery] = useState('');
   const [jobs, setJobs] = useState<AppJob[]>([]);
   const [categories, setCategories] = useState<ApiCategory[]>([]);
+  const [expandedJobDescriptions, setExpandedJobDescriptions] = useState<Record<number, boolean>>({});
 
   useEffect(() => {
     const loadJobsData = async () => {
@@ -121,15 +123,34 @@ export const ExploreJobsPage = () => {
 
         <div className="grid grid-cols-1 gap-6">
           {visibleJobs.map((job) => (
-            <div key={job.id} className="card p-6 flex flex-col md:flex-row justify-between items-start md:items-center gap-6 group hover:border-accent-orange transition-all cursor-pointer">
-              <div>
-                <h3 className="text-xl font-black mb-2 group-hover:text-accent-orange transition-colors">{job.title}</h3>
-                <div className="flex items-center gap-2 mb-2">
+            <div key={job.id} className="card p-4 sm:p-6 flex flex-col md:flex-row justify-between items-start md:items-center gap-4 sm:gap-6 group hover:border-accent-orange transition-all cursor-pointer">
+              <div className="w-full min-w-0">
+                <h3 className="text-base sm:text-xl font-black mb-2 group-hover:text-accent-orange transition-colors">{job.title}</h3>
+                <div className="flex flex-wrap items-center gap-2 mb-2">
                   <span className="text-xs font-bold text-muted">{job.category}</span>
                   <span className="text-muted text-xs">•</span>
                   <span className="text-xs text-muted">{job.subCategory}</span>
                 </div>
-                <p className="text-sm text-muted mb-4">{job.description}</p>
+                <p className="text-xs sm:text-sm text-muted mb-2">
+                  {expandedJobDescriptions[job.id] || job.description.length <= DESCRIPTION_PREVIEW_LIMIT
+                    ? job.description
+                    : `${job.description.slice(0, DESCRIPTION_PREVIEW_LIMIT).trimEnd()}...`}
+                </p>
+                {job.description.length > DESCRIPTION_PREVIEW_LIMIT && (
+                  <button
+                    type="button"
+                    onClick={(event) => {
+                      event.stopPropagation();
+                      setExpandedJobDescriptions((current) => ({
+                        ...current,
+                        [job.id]: !current[job.id],
+                      }));
+                    }}
+                    className="text-[10px] font-bold uppercase tracking-widest text-accent-orange hover:underline mb-4"
+                  >
+                    {expandedJobDescriptions[job.id] ? 'View less' : 'View more'}
+                  </button>
+                )}
                 <div className="flex flex-wrap gap-2">
                   {job.tags.map((tag, i) => (
                     <span key={i} className="px-3 py-1 bg-ink/5 rounded-[15px] text-[10px] font-bold">{tag}</span>
@@ -137,10 +158,10 @@ export const ExploreJobsPage = () => {
                 </div>
               </div>
               <div className="text-left md:text-right shrink-0 w-full md:w-auto">
-                <p className={`text-2xl font-black ${job.color}`}>{job.budget} {job.currency}</p>
+                <p className={`text-xl sm:text-2xl font-black ${job.color}`}>{job.budget} {job.currency}</p>
                 <p className="text-[10px] font-bold text-muted uppercase mb-4">Budget</p>
                 {userRole !== 'client' && (
-                  <button onClick={() => handleApply(job)} className="btn-outline py-2 px-6 text-xs">Apply Now</button>
+                  <button onClick={() => handleApply(job)} className="btn-outline py-2 px-4 sm:px-6 text-xs w-full sm:w-auto justify-center">Apply Now</button>
                 )}
               </div>
             </div>

@@ -1191,13 +1191,14 @@ export const ProfilePage = ({ userRole }: { userRole: UserRole | null }) => {
                   <div className="card">
                     <div className="flex items-center justify-between mb-6">
                       <h2 className="text-xl font-black">Active Projects</h2>
-                      <button className="text-accent-blue text-xs font-bold hover:underline">View All</button>
+                      <Link to="/dashboard" className="text-accent-orange text-xs font-bold hover:underline">View All</Link>
                     </div>
                     <div className="space-y-4">
                       {recentProjects.slice(0, 4).map((project) => (
                         <div key={project.id} className="p-4 border border-border rounded-[15px] flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 hover:bg-ink/5 transition-colors cursor-pointer">
                           <div>
                             <h4 className="font-bold text-sm mb-1">{project.title}</h4>
+                            <p className="text-xs text-muted mb-1">{formatRelativeTime(project.createdAt)}</p>
                             <span className={`text-[10px] font-bold uppercase tracking-widest ${project.status === 'open' ? 'text-accent-cyan' : 'text-accent-orange'}`}>{project.status}</span>
                           </div>
                           <div className="text-left sm:text-right">
@@ -1259,14 +1260,11 @@ export const ProfilePage = ({ userRole }: { userRole: UserRole | null }) => {
                   </div>
                 )}
 
+                {!isClient && (
                 <div className="card">
                   <div className="flex items-center justify-between mb-6">
-                    <h2 className="text-xl font-black">{isClient ? 'Active Jobs' : 'Portfolio'}</h2>
-                    {isClient ? (
-                      <Link to="/dashboard" className="text-accent-orange text-xs font-bold hover:underline">View All</Link>
-                    ) : (
-                      <button className="text-accent-orange text-xs font-bold">View All</button>
-                    )}
+                    <h2 className="text-xl font-black">Portfolio</h2>
+                    <button className="text-accent-orange text-xs font-bold">View All</button>
                   </div>
                   <div className="space-y-4">
                     {recentProjects.slice(0, 4).map((project) => (
@@ -1284,6 +1282,7 @@ export const ProfilePage = ({ userRole }: { userRole: UserRole | null }) => {
                     {recentProjects.length === 0 && <p className="text-sm text-muted">No projects available yet.</p>}
                   </div>
                 </div>
+                )}
               </>
             )}
 

@@ -32,11 +32,13 @@ import type { AppJob } from '../types/job';
 export const HomePage = () => {
   const navigate = useNavigate();
   const { isSignedIn, walletAddress } = Shared.useWallet();
+  const DESCRIPTION_PREVIEW_LIMIT = 120;
   const [featuredJobs, setFeaturedJobs] = useState<AppJob[]>([]);
   const [topFreelancers, setTopFreelancers] = useState<ApiLeaderboardEntry[]>([]);
   const [feedPosts, setFeedPosts] = useState<ApiSocialPost[]>([]);
   const [feedComments, setFeedComments] = useState<Record<number, ApiSocialComment[]>>({});
   const [expandedComments, setExpandedComments] = useState<Record<number, boolean>>({});
+  const [expandedJobDescriptions, setExpandedJobDescriptions] = useState<Record<number, boolean>>({});
   const [commentDrafts, setCommentDrafts] = useState<Record<number, string>>({});
   const [loadingComments, setLoadingComments] = useState<Record<number, boolean>>({});
   const [submittingComments, setSubmittingComments] = useState<Record<number, boolean>>({});
@@ -250,25 +252,44 @@ export const HomePage = () => {
           </div>
           <div className="grid grid-cols-1 gap-6">
             {featuredJobs.map((job) => (
-              <div key={job.id} onClick={() => navigate('/jobs')} className="card p-6 flex flex-col md:flex-row justify-between items-start md:items-center gap-6 group hover:border-accent-orange transition-all cursor-pointer">
-                <div>
-                  <h3 className="text-xl font-black mb-2 group-hover:text-accent-orange transition-colors">{job.title}</h3>
-                  <div className="flex items-center gap-2 mb-2">
+              <div key={job.id} onClick={() => navigate('/jobs')} className="card p-4 sm:p-6 flex flex-col md:flex-row justify-between items-start md:items-center gap-4 sm:gap-6 group hover:border-accent-orange transition-all cursor-pointer">
+                <div className="w-full min-w-0">
+                  <h3 className="text-base sm:text-xl font-black mb-2 group-hover:text-accent-orange transition-colors">{job.title}</h3>
+                  <div className="flex flex-wrap items-center gap-2 mb-2">
                     <span className="text-xs font-bold text-muted">{job.category}</span>
                     <span className="text-muted text-xs">•</span>
                     <span className="text-xs text-muted">{job.subCategory}</span>
                   </div>
-                  <p className="text-sm text-muted mb-4">{job.description}</p>
-                  <div className="flex gap-2">
+                  <p className="text-xs sm:text-sm text-muted mb-2">
+                    {expandedJobDescriptions[job.id] || job.description.length <= DESCRIPTION_PREVIEW_LIMIT
+                      ? job.description
+                      : `${job.description.slice(0, DESCRIPTION_PREVIEW_LIMIT).trimEnd()}...`}
+                  </p>
+                  {job.description.length > DESCRIPTION_PREVIEW_LIMIT && (
+                    <button
+                      type="button"
+                      onClick={(event) => {
+                        event.stopPropagation();
+                        setExpandedJobDescriptions((current) => ({
+                          ...current,
+                          [job.id]: !current[job.id],
+                        }));
+                      }}
+                      className="text-[10px] font-bold uppercase tracking-widest text-accent-orange hover:underline mb-4"
+                    >
+                      {expandedJobDescriptions[job.id] ? 'View less' : 'View more'}
+                    </button>
+                  )}
+                  <div className="flex flex-wrap gap-2">
                     {job.tags.map((tag, i) => (
                       <span key={i} className="px-3 py-1 bg-ink/5 rounded-[15px] text-[10px] font-bold">{tag}</span>
                     ))}
                   </div>
                 </div>
-                <div className="text-right shrink-0">
-                  <p className={`text-2xl font-black ${job.color}`}>{job.budget} {job.currency}</p>
+                <div className="text-left md:text-right shrink-0 w-full md:w-auto">
+                  <p className={`text-xl sm:text-2xl font-black ${job.color}`}>{job.budget} {job.currency}</p>
                   <p className="text-[10px] font-bold text-muted uppercase mb-4">Budget</p>
-                  <button className="btn-outline py-2 px-6 text-xs">Apply Now</button>
+                  <button className="btn-outline py-2 px-4 sm:px-6 text-xs w-full sm:w-auto justify-center">Apply Now</button>
                 </div>
               </div>
             ))}
@@ -486,10 +507,7 @@ export const HomePage = () => {
                 </div>
                 <div className="flex-1 min-w-0">
                   <p className="text-white text-sm md:text-base font-bold leading-tight drop-shadow-sm">
-                    Special thanks to Deorganized Media
-                  </p>
-                  <p className="text-white/90 text-xs md:text-sm font-medium mt-1 drop-shadow-sm">
-                    They will receive a 1% royalty
+                    Special thanks to Deorganized Media for supporting this initiative—they will receive a 1% royalty.
                   </p>
                 </div>
               </div>

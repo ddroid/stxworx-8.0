@@ -432,6 +432,13 @@ export function formatTokenAmount(value: string | number | null | undefined) {
     return '0';
   }
 
+  const absoluteAmount = Math.abs(amount);
+
+  if (absoluteAmount < 0.01) {
+    const preciseAmount = amount.toFixed(8).replace(/\.0+$/, '').replace(/(\.\d*?)0+$/, '$1');
+    return preciseAmount === '-0' ? '0' : preciseAmount;
+  }
+
   return new Intl.NumberFormat('en-US', { maximumFractionDigits: 2 }).format(amount);
 }
 
