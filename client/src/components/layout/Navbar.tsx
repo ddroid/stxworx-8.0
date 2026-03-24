@@ -154,7 +154,7 @@ const AnnouncementBar = ({ navigate }: { navigate: (path: string) => void }) => 
         <span className="text-[9px] md:text-[10px] lg:text-[11px] font-black uppercase tracking-[0.14em] text-bg bg-accent-orange/45 border border-white/35 px-2.5 py-1 rounded-[11px] shadow-[0_2px_10px_rgba(0,0,0,0.28)]">Testnet</span>
       </div>
       <div className="absolute left-2 bottom-1 flex items-center gap-1.5 md:hidden">
-        <span className="h-2 w-2 rounded-full bg-bg animate-pulse shadow-[0_0_8px_rgba(255,255,255,0.8)]" />
+        <span className="h-1.5 w-1.5 rounded-full bg-bg animate-pulse shadow-[0_0_6px_rgba(255,255,255,0.8)]" />
         <span className="text-[9px] font-black uppercase tracking-[0.16em] text-bg bg-accent-orange/45 border border-white/35 px-2 py-0.5 rounded-[10px] shadow-[0_2px_8px_rgba(0,0,0,0.25)]">Testnet</span>
       </div>
       <AnimatePresence mode="wait">
@@ -413,7 +413,7 @@ export const TopHeader = ({ theme, toggleTheme }: { theme: 'dark' | 'light', tog
   return (
     <>
       <AnnouncementBar navigate={navigate} />
-      <header className={`fixed top-12 left-0 md:left-[120px] right-0 h-20 border-b backdrop-blur-xl z-40 px-3 sm:px-4 md:px-10 flex items-center justify-between overflow-x-clip ${
+      <header className={`fixed top-12 left-0 right-0 h-20 border-b backdrop-blur-xl z-40 px-3 sm:px-4 md:pl-[160px] md:pr-10 flex items-center justify-between overflow-x-clip ${
         theme === 'light'
           ? 'bg-white/95 border-black/10 shadow-[0_6px_24px_rgba(0,0,0,0.08)]'
           : 'bg-bg/80 border-border'
