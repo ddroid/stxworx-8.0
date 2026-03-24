@@ -2,6 +2,15 @@ import React, { useEffect, useState } from 'react';
 import { Link as LinkIcon, Mail, Shield, Twitter } from 'lucide-react';
 import { getSettings, updateSettings } from '../lib/api';
 
+type SettingsSection = 'general' | 'notifications' | 'privacy' | 'connections';
+
+const settingsSections: Array<{ id: SettingsSection; label: string }> = [
+  { id: 'general', label: 'General' },
+  { id: 'notifications', label: 'Notifications' },
+  { id: 'privacy', label: 'Privacy & Security' },
+  { id: 'connections', label: 'Connections' },
+];
+
 export const SettingsPage = () => {
   const [notificationsEnabled, setNotificationsEnabled] = useState(true);
   const [emailNotifications, setEmailNotifications] = useState(true);
@@ -12,6 +21,7 @@ export const SettingsPage = () => {
   const [isTwitterConnected, setIsTwitterConnected] = useState(false);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
+  const [activeSection, setActiveSection] = useState<SettingsSection>('general');
 
   useEffect(() => {
     const loadSettings = async () => {
@@ -75,6 +85,14 @@ export const SettingsPage = () => {
     }
   };
 
+  const handleSectionClick = (section: SettingsSection) => {
+    setActiveSection(section);
+    const target = document.getElementById(`settings-${section}`);
+    if (target) {
+      target.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    }
+  };
+
   return (
     <div className="pt-28 pb-20 px-6 md:pl-[92px] min-h-screen">
       <div className="container-custom max-w-4xl">
@@ -83,13 +101,38 @@ export const SettingsPage = () => {
           <p className="text-muted text-lg">Manage your account, identity, and preferences.</p>
         </div>
 
+        <div className="md:hidden mb-6 flex gap-2 overflow-x-auto no-scrollbar pb-1">
+          {settingsSections.map((section) => (
+            <button
+              key={section.id}
+              onClick={() => handleSectionClick(section.id)}
+              className={`shrink-0 px-4 py-2 rounded-[12px] text-xs font-bold transition-colors border ${
+                activeSection === section.id
+                  ? 'bg-ink text-bg border-ink'
+                  : 'bg-transparent border-border text-muted hover:text-ink hover:bg-ink/5'
+              }`}
+            >
+              {section.label}
+            </button>
+          ))}
+        </div>
+
         <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
           {/* Sidebar Navigation (Optional, for larger screens) */}
           <div className="hidden md:block col-span-1 space-y-2">
-            <button className="w-full text-left px-4 py-3 rounded-[15px] bg-ink/5 font-bold text-ink">General</button>
-            <button className="w-full text-left px-4 py-3 rounded-[15px] hover:bg-ink/5 font-bold text-muted transition-colors">Notifications</button>
-            <button className="w-full text-left px-4 py-3 rounded-[15px] hover:bg-ink/5 font-bold text-muted transition-colors">Privacy & Security</button>
-            <button className="w-full text-left px-4 py-3 rounded-[15px] hover:bg-ink/5 font-bold text-muted transition-colors">Connections</button>
+            {settingsSections.map((section) => (
+              <button
+                key={section.id}
+                onClick={() => handleSectionClick(section.id)}
+                className={`w-full text-left px-4 py-3 rounded-[15px] font-bold transition-colors border ${
+                  activeSection === section.id
+                    ? 'bg-ink text-bg border-ink'
+                    : 'bg-transparent border-transparent text-muted hover:bg-ink/5 hover:text-ink'
+                }`}
+              >
+                {section.label}
+              </button>
+            ))}
           </div>
 
           {/* Settings Content */}
@@ -98,9 +141,29 @@ export const SettingsPage = () => {
               <div className="card p-6 text-sm text-muted">Loading settings...</div>
             ) : (
               <>
+
+            {/* General */}
+            <section id="settings-general" className="card p-6 space-y-6 scroll-mt-36">
+              <h2 className="text-xl font-black mb-4">General</h2>
+
+              <div className="space-y-2">
+                <label className="block text-xs font-bold uppercase tracking-widest text-muted">Email Binding</label>
+                <div className="flex flex-col sm:flex-row gap-2">
+                  <input
+                    type="email"
+                    value={email}
+                    onChange={(e) => setEmail(e.target.value)}
+                    placeholder="Enter email for notifications"
+                    className="flex-1 bg-ink/5 border border-border rounded-[15px] px-4 py-3 text-sm focus:ring-1 focus:ring-accent-orange outline-none"
+                  />
+                  <button className="btn-primary w-full sm:w-auto px-6 py-3 shrink-0">Bind</button>
+                </div>
+                <p className="text-xs text-muted">Used for important account notifications and updates.</p>
+              </div>
+            </section>
             
             {/* Connections */}
-            <section className="card p-6 space-y-6">
+            <section id="settings-connections" className="card p-6 space-y-6 scroll-mt-36">
               <h2 className="text-xl font-black mb-4 flex items-center gap-2">
                 <LinkIcon size={20} className="text-accent-orange" />
                 Connections
@@ -128,26 +191,11 @@ export const SettingsPage = () => {
                     {isTwitterConnected ? 'Disconnect' : 'Connect'}
                   </button>
                 </div>
-
-                <div className="space-y-2">
-                  <label className="block text-xs font-bold uppercase tracking-widest text-muted">Email Binding</label>
-                  <div className="flex flex-col sm:flex-row gap-2">
-                    <input 
-                      type="email" 
-                      value={email}
-                      onChange={(e) => setEmail(e.target.value)}
-                      placeholder="Enter email for notifications"
-                      className="flex-1 bg-ink/5 border border-border rounded-[15px] px-4 py-3 text-sm focus:ring-1 focus:ring-accent-orange outline-none"
-                    />
-                    <button className="btn-primary w-full sm:w-auto px-6 py-3 shrink-0">Bind</button>
-                  </div>
-                  <p className="text-xs text-muted">Used for important account notifications and updates.</p>
-                </div>
               </div>
             </section>
 
             {/* Notifications */}
-            <section className="card p-6 space-y-6">
+            <section id="settings-notifications" className="card p-6 space-y-6 scroll-mt-36">
               <h2 className="text-xl font-black mb-4 flex items-center gap-2">
                 <Mail size={20} className="text-accent-cyan" />
                 Notifications
@@ -188,11 +236,11 @@ export const SettingsPage = () => {
               </div>
             </section>
 
-            {/* Privacy & Messaging */}
-            <section className="card p-6 space-y-6">
+            {/* Privacy & Security */}
+            <section id="settings-privacy" className="card p-6 space-y-6 scroll-mt-36">
               <h2 className="text-xl font-black mb-4 flex items-center gap-2">
                 <Shield size={20} className="text-accent-pink" />
-                Privacy & Messaging
+                Privacy & Security
               </h2>
               
               <div className="space-y-6">
