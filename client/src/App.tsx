@@ -107,6 +107,18 @@ const getInitialTheme = (): 'dark' | 'light' => {
   return window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
 };
 
+const DiscordIcon = ({ className }: { className?: string }) => (
+  <svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true" className={className}>
+    <path d="M20.317 4.369A19.791 19.791 0 0 0 15.885 3c-.192.344-.406.8-.557 1.158a18.27 18.27 0 0 0-5.656 0A12.245 12.245 0 0 0 9.115 3a19.736 19.736 0 0 0-4.433 1.37C1.885 8.555 1.131 12.635 1.508 16.657a19.89 19.89 0 0 0 5.98 3.055c.48-.654.907-1.35 1.27-2.079a12.99 12.99 0 0 1-1.995-.97c.167-.121.329-.247.486-.376c3.85 1.81 8.03 1.81 11.834 0c.16.13.322.256.486.376a12.92 12.92 0 0 1-2 .972a12.92 12.92 0 0 0 1.27 2.077a19.813 19.813 0 0 0 5.98-3.055c.442-4.663-.754-8.706-3.502-12.289ZM8.02 14.23c-1.162 0-2.116-1.07-2.116-2.384c0-1.315.936-2.385 2.116-2.385c1.18 0 2.134 1.07 2.116 2.385c0 1.314-.936 2.384-2.116 2.384Zm7.96 0c-1.162 0-2.116-1.07-2.116-2.384c0-1.315.936-2.385 2.116-2.385c1.18 0 2.134 1.07 2.116 2.385c0 1.314-.936 2.384-2.116 2.384Z" />
+  </svg>
+);
+
+const XBrandIcon = ({ className }: { className?: string }) => (
+  <svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true" className={className}>
+    <path d="M18.244 2H21l-6.02 6.88L22 22h-5.534l-4.338-6.41L6.52 22H3.762l6.44-7.36L2 2h5.676l3.92 5.8L18.244 2Zm-.966 18.35h1.527L6.847 3.568H5.21L17.278 20.35Z" />
+  </svg>
+);
+
 // --- Context ---
 // --- Types ---
 // --- Components ---
@@ -605,10 +617,32 @@ export default function App() {
                   <Shared.Logo className="text-sm" />
                   <p className="text-[8px] tracking-widest uppercase">POWERED BY STX - SBTC - USDCX</p>
                 </div>
-                <div className="flex flex-wrap justify-center md:justify-end gap-4 sm:gap-6 md:gap-8">
-                  <Link to="/privacy" className="hover:text-ink transition-colors">Privacy Policy</Link>
-                  <Link to="/terms" className="hover:text-ink transition-colors">Terms of Service</Link>
-                  <Link to="/contact" className="hover:text-ink transition-colors">Contact</Link>
+                <div className="flex flex-col items-center md:items-end gap-4">
+                  <div className="flex flex-wrap justify-center md:justify-end gap-4 sm:gap-6 md:gap-8">
+                    <Link to="/privacy" className="hover:text-ink transition-colors">Privacy Policy</Link>
+                    <Link to="/terms" className="hover:text-ink transition-colors">Terms of Service</Link>
+                    <Link to="/contact" className="hover:text-ink transition-colors">Contact</Link>
+                  </div>
+                  <div className="flex items-center gap-3 sm:gap-4">
+                    <a
+                      href="https://discord.gg/kwwSHtBdNK"
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      aria-label="Discord"
+                      className="group inline-flex items-center justify-center h-11 w-11 rounded-[14px] border border-accent-orange/70 bg-gradient-to-br from-accent-orange via-[#ff7e2f] to-[#ff5a00] text-bg shadow-[0_10px_28px_rgba(255,107,53,0.45)] transition-all duration-300 hover:-translate-y-1 hover:shadow-[0_16px_34px_rgba(255,107,53,0.55)]"
+                    >
+                      <DiscordIcon className="h-5 w-5" />
+                    </a>
+                    <a
+                      href="https://x.com/stxworx"
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      aria-label="X"
+                      className="group inline-flex items-center justify-center h-11 w-11 rounded-[14px] border border-accent-orange/70 bg-gradient-to-br from-accent-orange via-[#ff7e2f] to-[#ff5a00] text-bg shadow-[0_10px_28px_rgba(255,107,53,0.45)] transition-all duration-300 hover:-translate-y-1 hover:shadow-[0_16px_34px_rgba(255,107,53,0.55)]"
+                    >
+                      <XBrandIcon className="h-4.5 w-4.5" />
+                    </a>
+                  </div>
                 </div>
               </div>
               <div className="container-custom mt-6 text-center md:text-left">
