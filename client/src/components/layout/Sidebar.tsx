@@ -58,7 +58,7 @@ export const Sidebar = () => {
 
   return (
     <aside className="fixed inset-0 pointer-events-none z-[110]">
-      <div className="hidden md:flex flex-col gap-4 p-4 h-screen w-max">
+      <div className="hidden md:flex flex-col gap-4 pt-16 px-4 pb-4 h-screen w-max">
         <div className="flex flex-col gap-2 pointer-events-auto w-[60px] items-center">
           <button 
             onClick={() => setIsExpanded(!isExpanded)}
@@ -104,12 +104,6 @@ export const Sidebar = () => {
                 );
               })}
             </nav>
-
-            <div className={`py-6 text-center transition-all duration-300 whitespace-nowrap overflow-hidden flex items-center justify-center border-t border-[#1f2937] ${isExpanded ? 'opacity-100 h-16' : 'opacity-0 h-0 py-0 border-t-0'}`}>
-              <span className="text-[#374151] text-[10px] font-bold tracking-widest uppercase">
-                STXWORX
-              </span>
-            </div>
           </div>
         </div>
       </div>
