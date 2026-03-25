@@ -2,6 +2,9 @@ import type { ApiLeaderboardEntry } from '../types/leaderboard';
 import type { ApiCategory, ApiProject, AppJob, AppJobMilestone } from '../types/job';
 import type { AuthenticatedUserResponse, ApiUserProfile, ApiUserReview, ApiUsernameAvailability, UserRole } from '../types/user';
 
+// Re-export types for convenience
+export type { ApiProject, ApiCategory, AppJob, AppJobMilestone };
+
 const rawBase = (import.meta.env.VITE_API_BASE_URL || '/api').trim();
 const API_BASE_URL = rawBase.endsWith('/api')
   ? rawBase.replace(/\/$/, '')
