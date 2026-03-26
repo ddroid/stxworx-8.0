@@ -1,6 +1,7 @@
 import type { ApiLeaderboardEntry } from '../types/leaderboard';
 import type { ApiCategory, ApiProject, AppJob, AppJobMilestone } from '../types/job';
 import type { AuthenticatedUserResponse, ApiUserProfile, ApiUserReview, ApiUsernameAvailability, UserRole } from '../types/user';
+import { retryResponseWithX402Payment } from './x402';
 
 // Re-export types for convenience
 export type { ApiProject, ApiCategory, AppJob, AppJobMilestone };
@@ -34,6 +35,16 @@ export interface ApiProposal {
   freelancerAddress?: string;
   freelancerUsername?: string | null;
   freelancerName?: string | null;
+}
+
+export interface AcceptProposalPreflightResponse {
+  success: boolean;
+  payment: {
+    payer: string;
+    transaction: string;
+    network: string;
+    expiresAt: string;
+  };
 }
 
 export interface ApiMilestoneSubmission {
@@ -344,14 +355,25 @@ function createX402Headers(tokenType: X402TokenType) {
 
 async function apiRequest<T>(path: string, options: RequestOptions = {}): Promise<T> {
   const { searchParams, headers, ...init } = options;
-  const response = await fetch(buildUrl(path, searchParams), {
+  const requestUrl = buildUrl(path, searchParams);
+  const requestHeaders = {
+    ...(init.body && !(init.body instanceof FormData) ? { 'Content-Type': 'application/json' } : {}),
+    ...headers,
+  };
+
+  let response = await fetch(requestUrl, {
     credentials: 'include',
     ...init,
-    headers: {
-      ...(init.body && !(init.body instanceof FormData) ? { 'Content-Type': 'application/json' } : {}),
-      ...headers,
-    },
+    headers: requestHeaders,
   });
+
+  if (response.status === 402) {
+    response = await retryResponseWithX402Payment(response, requestUrl, {
+      credentials: 'include',
+      ...init,
+      headers: requestHeaders,
+    });
+  }
 
   if (!response.ok) {
     let message = `Request failed with status ${response.status}`;
@@ -666,8 +688,20 @@ export async function getMyProposals() {
   return apiRequest<ApiProposal[]>('/proposals/my', { method: 'GET' });
 }
 
-export async function acceptProposal(proposalId: number) {
-  return apiRequest<ApiProposal>(`/proposals/${proposalId}/accept`, { method: 'PATCH' });
+export async function acceptProposal(
+  proposalId: number,
+  input: { escrowTxId: string; onChainId: number },
+) {
+  return apiRequest<ApiProposal>(`/proposals/${proposalId}/accept`, {
+    method: 'PATCH',
+    body: JSON.stringify(input),
+  });
+}
+
+export async function preflightAcceptProposalPayment(proposalId: number) {
+  return apiRequest<AcceptProposalPreflightResponse>(`/proposals/${proposalId}/accept/preflight`, {
+    method: 'POST',
+  });
 }
 
 export async function rejectProposal(proposalId: number) {

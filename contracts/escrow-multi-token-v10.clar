@@ -3,7 +3,6 @@
     (transfer (uint principal principal (optional (buff 34))) (response bool uint))
   ))
 
-(define-constant DAO-FEE-BPS u1000)
 (define-constant TOKEN-STX u0)
 (define-constant TOKEN-SBTC u1)
 (define-constant TOKEN-USDCX u2)
@@ -20,7 +19,6 @@
 (define-constant ERR-INVALID-MILESTONE-LAYOUT (err u132))
 (define-constant ERR-SAME-PARTY (err u133))
 
-(define-constant CONTRACT-OWNER tx-sender)
 (define-data-var project-counter uint u0)
 
 (define-map projects uint
@@ -39,9 +37,6 @@
     complete: bool,
     released: bool
   })
-
-(define-private (calc-fee (amount uint))
-  (/ (* amount DAO-FEE-BPS) u10000))
 
 (define-private (count-milestones (m1 uint) (m2 uint) (m3 uint) (m4 uint))
   (+
@@ -73,15 +68,7 @@
   (m3 uint)
   (m4 uint))
   (let (
-      (m1-fee (calc-fee m1))
-      (m2-fee (calc-fee m2))
-      (m3-fee (calc-fee m3))
-      (m4-fee (calc-fee m4))
-      (m1-net (- m1 m1-fee))
-      (m2-net (- m2 m2-fee))
-      (m3-net (- m3 m3-fee))
-      (m4-net (- m4 m4-fee))
-      (total-net (+ m1-net (+ m2-net (+ m3-net m4-net))))
+      (total (+ m1 (+ m2 (+ m3 m4))))
       (num-milestones (count-milestones m1 m2 m3 m4))
     )
     (map-set projects id {
@@ -89,20 +76,20 @@
       freelancer: freelancer,
       token-type: token-type,
       token-contract: token-contract,
-      total-amount: total-net,
+      total-amount: total,
       num-milestones: num-milestones
     })
     (if (> m1 u0)
-      (map-set milestones {project-id: id, milestone-num: u1} {amount: m1-net, complete: false, released: false})
+      (map-set milestones {project-id: id, milestone-num: u1} {amount: m1, complete: false, released: false})
       true)
     (if (> m2 u0)
-      (map-set milestones {project-id: id, milestone-num: u2} {amount: m2-net, complete: false, released: false})
+      (map-set milestones {project-id: id, milestone-num: u2} {amount: m2, complete: false, released: false})
       true)
     (if (> m3 u0)
-      (map-set milestones {project-id: id, milestone-num: u3} {amount: m3-net, complete: false, released: false})
+      (map-set milestones {project-id: id, milestone-num: u3} {amount: m3, complete: false, released: false})
       true)
     (if (> m4 u0)
-      (map-set milestones {project-id: id, milestone-num: u4} {amount: m4-net, complete: false, released: false})
+      (map-set milestones {project-id: id, milestone-num: u4} {amount: m4, complete: false, released: false})
       true)
     true))
 
@@ -129,16 +116,6 @@
       true)
     (ok true)))
 
-(define-private (collect-stx-fee (amount uint))
-  (if (> amount u0)
-    (send-stx-from-escrow amount CONTRACT-OWNER)
-    (ok true)))
-
-(define-private (collect-ft-fee (amount uint) (token <sip010-ft-trait>))
-  (if (> amount u0)
-    (send-ft-from-escrow amount CONTRACT-OWNER token)
-    (ok true)))
-
 (define-public (create-project-stx
   (freelancer principal)
   (m1 uint)
@@ -148,13 +125,11 @@
   (let (
       (id (+ (var-get project-counter) u1))
       (total (+ m1 (+ m2 (+ m3 m4))))
-      (total-fee (+ (calc-fee m1) (+ (calc-fee m2) (+ (calc-fee m3) (calc-fee m4)))))
     )
     (asserts! (> total u0) ERR-INVALID-AMOUNT)
     (asserts! (not (is-eq contract-caller freelancer)) ERR-SAME-PARTY)
     (asserts! (is-valid-layout m1 m2 m3 m4) ERR-INVALID-MILESTONE-LAYOUT)
     (try! (deposit-stx-into-escrow total))
-    (try! (send-stx-from-escrow total-fee CONTRACT-OWNER))
     (var-set project-counter id)
     (store-project-and-milestones id freelancer TOKEN-STX none m1 m2 m3 m4)
     (ok id)))
@@ -169,14 +144,12 @@
   (let (
       (id (+ (var-get project-counter) u1))
       (total (+ m1 (+ m2 (+ m3 m4))))
-      (total-fee (+ (calc-fee m1) (+ (calc-fee m2) (+ (calc-fee m3) (calc-fee m4)))))
       (token-contract (contract-of sbtc-token))
     )
     (asserts! (> total u0) ERR-INVALID-AMOUNT)
     (asserts! (not (is-eq contract-caller freelancer)) ERR-SAME-PARTY)
     (asserts! (is-valid-layout m1 m2 m3 m4) ERR-INVALID-MILESTONE-LAYOUT)
     (try! (deposit-ft-into-escrow total sbtc-token))
-    (try! (send-ft-from-escrow total-fee CONTRACT-OWNER sbtc-token))
     (var-set project-counter id)
     (store-project-and-milestones id freelancer TOKEN-SBTC (some token-contract) m1 m2 m3 m4)
     (ok id)))
@@ -191,14 +164,12 @@
   (let (
       (id (+ (var-get project-counter) u1))
       (total (+ m1 (+ m2 (+ m3 m4))))
-      (total-fee (+ (calc-fee m1) (+ (calc-fee m2) (+ (calc-fee m3) (calc-fee m4)))))
       (token-contract (contract-of usdcx-token))
     )
     (asserts! (> total u0) ERR-INVALID-AMOUNT)
     (asserts! (not (is-eq contract-caller freelancer)) ERR-SAME-PARTY)
     (asserts! (is-valid-layout m1 m2 m3 m4) ERR-INVALID-MILESTONE-LAYOUT)
     (try! (deposit-ft-into-escrow total usdcx-token))
-    (try! (send-ft-from-escrow total-fee CONTRACT-OWNER usdcx-token))
     (var-set project-counter id)
     (store-project-and-milestones id freelancer TOKEN-USDCX (some token-contract) m1 m2 m3 m4)
     (ok id)))

@@ -3,7 +3,6 @@ import { ChevronRight, Star } from 'lucide-react';
 import { Link, useLocation } from 'react-router-dom';
 import * as Shared from '../shared';
 import {
-  activateProject,
   acceptProposal,
   formatAddress,
   formatRelativeTime,
@@ -11,6 +10,7 @@ import {
   getMyPostedProjects,
   getProject,
   getProjectProposals,
+  preflightAcceptProposalPayment,
   getUserProfile,
   getUserReviews,
   rejectProposal,
@@ -20,6 +20,59 @@ import {
 import { createEscrowForProject } from '../lib/escrow';
 import type { ApiProject } from '../types/job';
 import type { ApiUserProfile, ApiUserReview } from '../types/user';
+
+type AcceptanceStep = 'compensation' | 'platformFee' | 'finalize';
+
+type ProposalAcceptanceProgress = {
+  compensation?: {
+    amount: string;
+    onChainId: number;
+    txId: string;
+  };
+  platformFee?: {
+    amount: string;
+    txId: string;
+  };
+  error?: string | null;
+};
+
+const PLATFORM_FEE_PERCENTAGE = 10;
+
+function toAtomicUnits(amount: string | number | null | undefined, tokenType: ApiProject['tokenType']) {
+  const numeric = Number(amount ?? 0);
+  if (!Number.isFinite(numeric) || numeric <= 0) {
+    return 0;
+  }
+
+  const multiplier = tokenType === 'sBTC' ? 100_000_000 : 1_000_000;
+  return Math.floor(numeric * multiplier);
+}
+
+function fromAtomicUnits(amount: number, tokenType: ApiProject['tokenType']) {
+  const decimals = tokenType === 'sBTC' ? 8 : 6;
+  const multiplier = tokenType === 'sBTC' ? 100_000_000 : 1_000_000;
+  const formatted = (amount / multiplier).toFixed(decimals).replace(/\.0+$/, '').replace(/(\.\d*?)0+$/, '$1');
+  return formatted === '-0' ? '0' : formatted;
+}
+
+function getProposalPaymentBreakdown(proposal: ApiProposal, project: ApiProject) {
+  const totalUnits = toAtomicUnits(proposal.proposedAmount, project.tokenType);
+  const platformFeeUnits = toAtomicUnits(Number(proposal.proposedAmount) * (PLATFORM_FEE_PERCENTAGE / 100), project.tokenType);
+  const compensationUnits = totalUnits - platformFeeUnits;
+
+  if (totalUnits <= 0 || platformFeeUnits <= 0 || compensationUnits <= 0) {
+    return null;
+  }
+
+  return {
+    compensationAmount: fromAtomicUnits(compensationUnits, project.tokenType),
+    platformFeeAmount: fromAtomicUnits(platformFeeUnits, project.tokenType),
+  };
+}
+
+function getErrorMessage(error: unknown, fallback: string) {
+  return error instanceof Error && error.message ? error.message : fallback;
+}
 
 export const ReviewProposalsPage = () => {
   const location = useLocation();
@@ -32,6 +85,9 @@ export const ReviewProposalsPage = () => {
   const [messageRecipientAddress, setMessageRecipientAddress] = useState('');
   const [isMessageModalOpen, setIsMessageModalOpen] = useState(false);
   const [processingProposalId, setProcessingProposalId] = useState<number | null>(null);
+  const [processingStep, setProcessingStep] = useState<{ proposalId: number; step: AcceptanceStep } | null>(null);
+  const [expandedProposalId, setExpandedProposalId] = useState<number | null>(null);
+  const [acceptanceProgressByProposal, setAcceptanceProgressByProposal] = useState<Record<number, ProposalAcceptanceProgress>>({});
   const [loading, setLoading] = useState(true);
 
   const loadProposals = useCallback(async (projectIdOverride?: number) => {
@@ -105,29 +161,197 @@ export const ReviewProposalsPage = () => {
     [proposals],
   );
 
+  const finalizeProposalAcceptance = async (
+    proposal: ApiProposal,
+    compensation: NonNullable<ProposalAcceptanceProgress['compensation']>,
+  ) => {
+    if (!project) {
+      return false;
+    }
+
+    setProcessingProposalId(proposal.id);
+    setProcessingStep({ proposalId: proposal.id, step: 'finalize' });
+    setAcceptanceProgressByProposal((current) => ({
+      ...current,
+      [proposal.id]: {
+        ...(current[proposal.id] || {}),
+        error: null,
+      },
+    }));
+
+    try {
+      await acceptProposal(proposal.id, {
+        escrowTxId: compensation.txId,
+        onChainId: compensation.onChainId,
+      });
+      setExpandedProposalId((current) => (current === proposal.id ? null : current));
+      setAcceptanceProgressByProposal((current) => {
+        const next = { ...current };
+        delete next[proposal.id];
+        return next;
+      });
+      await loadProposals(project.id);
+      return true;
+    } catch (error) {
+      console.error('Failed to finalize proposal acceptance:', error);
+      setAcceptanceProgressByProposal((current) => ({
+        ...current,
+        [proposal.id]: {
+          ...(current[proposal.id] || {}),
+          error: getErrorMessage(error, 'Failed to finalize proposal acceptance'),
+        },
+      }));
+      return false;
+    } finally {
+      setProcessingProposalId(null);
+      setProcessingStep((current) => (
+        current?.proposalId === proposal.id && current.step === 'finalize'
+          ? null
+          : current
+      ));
+    }
+  };
+
   const handleAcceptProposal = async (proposal: ApiProposal) => {
+    const progress = acceptanceProgressByProposal[proposal.id];
+    if (progress?.compensation && progress.platformFee) {
+      await finalizeProposalAcceptance(proposal, progress.compensation);
+      return;
+    }
+
+    setExpandedProposalId((current) => (current === proposal.id ? null : proposal.id));
+  };
+
+  const handlePayClientCompensation = async (proposal: ApiProposal) => {
     if (!project || !proposal.freelancerAddress) {
       return;
     }
 
+    const paymentBreakdown = getProposalPaymentBreakdown(proposal, project);
+    if (!paymentBreakdown) {
+      setAcceptanceProgressByProposal((current) => ({
+        ...current,
+        [proposal.id]: {
+          ...(current[proposal.id] || {}),
+          error: 'Unable to calculate the client compensation split for this proposal',
+        },
+      }));
+      return;
+    }
+
     setProcessingProposalId(proposal.id);
+    setProcessingStep({ proposalId: proposal.id, step: 'compensation' });
+    setAcceptanceProgressByProposal((current) => ({
+      ...current,
+      [proposal.id]: {
+        ...(current[proposal.id] || {}),
+        error: null,
+      },
+    }));
+
     try {
-      const escrow = await createEscrowForProject(project, proposal.freelancerAddress, proposal.proposedAmount);
+      const escrow = await createEscrowForProject(project, proposal.freelancerAddress, paymentBreakdown.compensationAmount);
+      const nextProgress: ProposalAcceptanceProgress = {
+        ...(acceptanceProgressByProposal[proposal.id] || {}),
+        compensation: {
+          amount: paymentBreakdown.compensationAmount,
+          onChainId: escrow.onChainId,
+          txId: escrow.txId,
+        },
+        error: null,
+      };
 
-      if (proposal.status === 'pending') {
-        await acceptProposal(proposal.id);
+      setAcceptanceProgressByProposal((current) => ({
+        ...current,
+        [proposal.id]: nextProgress,
+      }));
+      setExpandedProposalId(proposal.id);
+
+      if (nextProgress.platformFee) {
+        await finalizeProposalAcceptance(proposal, nextProgress.compensation!);
       }
-
-      await activateProject(project.id, {
-        escrowTxId: escrow.txId,
-        onChainId: escrow.onChainId,
-        tokenType: project.tokenType,
-      });
-      await loadProposals(project?.id);
     } catch (error) {
-      console.error('Failed to accept proposal:', error);
+      console.error('Failed to pay client compensation:', error);
+      setAcceptanceProgressByProposal((current) => ({
+        ...current,
+        [proposal.id]: {
+          ...(current[proposal.id] || {}),
+          error: getErrorMessage(error, 'Failed to pay client compensation'),
+        },
+      }));
     } finally {
       setProcessingProposalId(null);
+      setProcessingStep((current) => (
+        current?.proposalId === proposal.id && current.step === 'compensation'
+          ? null
+          : current
+      ));
+    }
+  };
+
+  const handlePayPlatformFee = async (proposal: ApiProposal) => {
+    if (!project) {
+      return;
+    }
+
+    const paymentBreakdown = getProposalPaymentBreakdown(proposal, project);
+    if (!paymentBreakdown) {
+      setAcceptanceProgressByProposal((current) => ({
+        ...current,
+        [proposal.id]: {
+          ...(current[proposal.id] || {}),
+          error: 'Unable to calculate the platform fee split for this proposal',
+        },
+      }));
+      return;
+    }
+
+    setProcessingProposalId(proposal.id);
+    setProcessingStep({ proposalId: proposal.id, step: 'platformFee' });
+    setAcceptanceProgressByProposal((current) => ({
+      ...current,
+      [proposal.id]: {
+        ...(current[proposal.id] || {}),
+        error: null,
+      },
+    }));
+
+    try {
+      const payment = await preflightAcceptProposalPayment(proposal.id);
+      const nextProgress: ProposalAcceptanceProgress = {
+        ...(acceptanceProgressByProposal[proposal.id] || {}),
+        platformFee: {
+          amount: paymentBreakdown.platformFeeAmount,
+          txId: payment.payment.transaction,
+        },
+        error: null,
+      };
+
+      setAcceptanceProgressByProposal((current) => ({
+        ...current,
+        [proposal.id]: nextProgress,
+      }));
+      setExpandedProposalId(proposal.id);
+
+      if (nextProgress.compensation) {
+        await finalizeProposalAcceptance(proposal, nextProgress.compensation);
+      }
+    } catch (error) {
+      console.error('Failed to pay platform fee:', error);
+      setAcceptanceProgressByProposal((current) => ({
+        ...current,
+        [proposal.id]: {
+          ...(current[proposal.id] || {}),
+          error: getErrorMessage(error, 'Failed to pay platform fee'),
+        },
+      }));
+    } finally {
+      setProcessingProposalId(null);
+      setProcessingStep((current) => (
+        current?.proposalId === proposal.id && current.step === 'platformFee'
+          ? null
+          : current
+      ));
     }
   };
 
@@ -183,12 +407,19 @@ export const ReviewProposalsPage = () => {
               const address = proposal.freelancerAddress || '';
               const profile = address ? profilesByAddress[address] : undefined;
               const reviews = address ? reviewsByAddress[address] || [] : [];
+              const acceptanceProgress = acceptanceProgressByProposal[proposal.id];
+              const paymentBreakdown = project ? getProposalPaymentBreakdown(proposal, project) : null;
               const rating = reviews.length
                 ? (reviews.reduce((sum, review) => sum + review.rating, 0) / reviews.length).toFixed(1)
                 : '0.0';
               const displayName = profile ? toDisplayName(profile) : toDisplayName({ name: proposal.freelancerName, username: proposal.freelancerUsername, stxAddress: address || `freelancer-${proposal.freelancerId}` });
-              const canFundEscrow = proposal.status === 'accepted' && project?.status !== 'active';
-              const canAcceptProposal = proposal.status === 'pending' || canFundEscrow;
+              const canAcceptProposal = proposal.status === 'pending';
+              const hasCompletedBothPayments = Boolean(acceptanceProgress?.compensation && acceptanceProgress.platformFee);
+              const isProcessingThisProposal = processingProposalId === proposal.id;
+              const isProcessingCompensation = processingStep?.proposalId === proposal.id && processingStep.step === 'compensation';
+              const isProcessingPlatformFee = processingStep?.proposalId === proposal.id && processingStep.step === 'platformFee';
+              const isFinalizingAcceptance = processingStep?.proposalId === proposal.id && processingStep.step === 'finalize';
+              const isBlockedByOtherAcceptedProposal = Boolean(acceptedProposal && acceptedProposal.id !== proposal.id && project?.status !== 'active');
 
               return (
                 <div key={proposal.id} className="card p-6">
@@ -218,23 +449,79 @@ export const ReviewProposalsPage = () => {
                     </div>
                     <p className="text-sm text-muted leading-relaxed">{proposal.coverLetter}</p>
                   </div>
+                  {expandedProposalId === proposal.id && canAcceptProposal && (
+                    <div className="bg-ink/5 rounded-[15px] p-4 mb-6">
+                      <div className="flex items-center justify-between gap-4 mb-3">
+                        <p className="text-[10px] font-bold uppercase tracking-widest text-muted">Complete Acceptance Payments</p>
+                        <p className="font-black text-lg text-accent-cyan">{project?.tokenType}</p>
+                      </div>
+                      {paymentBreakdown ? (
+                        <>
+                          <div className="grid gap-3 sm:grid-cols-2 mb-4">
+                            <button
+                              onClick={() => handlePayClientCompensation(proposal)}
+                              disabled={Boolean(acceptanceProgress?.compensation) || isProcessingThisProposal || !proposal.freelancerAddress || isBlockedByOtherAcceptedProposal}
+                              className="btn-primary py-3 justify-center disabled:opacity-50"
+                            >
+                              {acceptanceProgress?.compensation
+                                ? 'Client Compensation Paid'
+                                : isProcessingCompensation
+                                  ? 'Opening Wallet...'
+                                  : 'Pay Client Compensation'}
+                            </button>
+                            <button
+                              onClick={() => handlePayPlatformFee(proposal)}
+                              disabled={Boolean(acceptanceProgress?.platformFee) || isProcessingThisProposal || isBlockedByOtherAcceptedProposal}
+                              className="btn-outline py-3 justify-center disabled:opacity-50"
+                            >
+                              {acceptanceProgress?.platformFee
+                                ? 'Platform Fee Paid'
+                                : isProcessingPlatformFee
+                                  ? 'Opening Wallet...'
+                                  : 'Pay Platform Fee'}
+                            </button>
+                          </div>
+                          <div className="space-y-2 text-sm text-muted">
+                            <div className="flex items-center justify-between gap-4">
+                              <p>Client compensation</p>
+                              <p className="font-bold text-ink">{formatTokenAmount(paymentBreakdown.compensationAmount)} {project?.tokenType}</p>
+                            </div>
+                            <div className="flex items-center justify-between gap-4">
+                              <p>Platform fee</p>
+                              <p className="font-bold text-ink">{formatTokenAmount(paymentBreakdown.platformFeeAmount)} {project?.tokenType}</p>
+                            </div>
+                          </div>
+                          {hasCompletedBothPayments && !isFinalizingAcceptance && (
+                            <p className="text-xs text-muted mt-4">Both payments are complete. Click Accept Proposal again if final assignment does not finish automatically.</p>
+                          )}
+                        </>
+                      ) : (
+                        <p className="text-sm text-muted">Unable to calculate the payment split for this proposal.</p>
+                      )}
+                      {acceptanceProgress?.error && (
+                        <p className="text-xs text-red-400 mt-4">{acceptanceProgress.error}</p>
+                      )}
+                    </div>
+                  )}
                   <div className="flex flex-col sm:flex-row gap-3 sm:gap-4">
                     <button
                       onClick={() => handleAcceptProposal(proposal)}
-                      disabled={!canAcceptProposal || processingProposalId === proposal.id || Boolean(acceptedProposal && acceptedProposal.id !== proposal.id && project?.status !== 'active')}
+                      disabled={(!canAcceptProposal && !hasCompletedBothPayments) || isProcessingThisProposal || isBlockedByOtherAcceptedProposal}
                       className="flex-1 btn-primary py-3 justify-center disabled:opacity-50"
                     >
-                      {processingProposalId === proposal.id
-                        ? 'Opening Wallet...'
-                        : canFundEscrow
-                          ? 'Fund Escrow'
-                          : proposal.status === 'accepted'
-                            ? 'Accepted'
-                            : 'Accept Proposal'}
+                      {proposal.status === 'accepted'
+                        ? 'Accepted'
+                        : isFinalizingAcceptance
+                          ? 'Finalizing...'
+                          : hasCompletedBothPayments
+                            ? 'Finalize Acceptance'
+                            : expandedProposalId === proposal.id
+                              ? 'Hide Payment Steps'
+                              : 'Accept Proposal'}
                     </button>
                     <button
                       onClick={() => handleRejectProposal(proposal.id)}
-                      disabled={proposal.status !== 'pending' || processingProposalId === proposal.id}
+                      disabled={proposal.status !== 'pending' || isProcessingThisProposal}
                       className="flex-1 btn-outline py-3 justify-center disabled:opacity-50"
                     >
                       Reject Proposal
