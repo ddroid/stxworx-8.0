@@ -37,14 +37,47 @@ export interface ApiProposal {
   freelancerName?: string | null;
 }
 
+export interface ApiProposalAcceptanceProgress {
+  proposalId: number;
+  projectId: number;
+  clientId: number;
+  compensationAmount: string;
+  platformFeeAmount: string;
+  compensation: {
+    status: 'not_started' | 'pending' | 'confirmed' | 'failed';
+    txId?: string | null;
+    onChainId?: number | null;
+    verifiedAt?: string | null;
+    lastCheckedAt?: string | null;
+    error?: string | null;
+  };
+  platformFee: {
+    status: 'not_started' | 'pending' | 'confirmed' | 'failed';
+    txId?: string | null;
+    payer?: string | null;
+    network?: string | null;
+    verifiedAt?: string | null;
+    expiresAt?: string | null;
+    error?: string | null;
+  };
+  finalizedAt?: string | null;
+  canFinalize: boolean;
+}
+
+export interface AcceptProposalStatusResponse {
+  success: boolean;
+  progress: ApiProposalAcceptanceProgress | null;
+}
+
 export interface AcceptProposalPreflightResponse {
   success: boolean;
   payment: {
-    payer: string;
-    transaction: string;
-    network: string;
-    expiresAt: string;
+    payer: string | null;
+    transaction: string | null;
+    network: string | null;
+    expiresAt: string | null;
   };
+  progress?: ApiProposalAcceptanceProgress | null;
 }
 
 export interface ApiMilestoneSubmission {
@@ -690,10 +723,24 @@ export async function getMyProposals() {
 
 export async function acceptProposal(
   proposalId: number,
-  input: { escrowTxId: string; onChainId: number },
 ) {
   return apiRequest<ApiProposal>(`/proposals/${proposalId}/accept`, {
     method: 'PATCH',
+  });
+}
+
+export async function getProposalAcceptanceStatus(proposalId: number) {
+  return apiRequest<AcceptProposalStatusResponse>(`/proposals/${proposalId}/accept/status`, {
+    method: 'GET',
+  });
+}
+
+export async function recordProposalCompensationPayment(
+  proposalId: number,
+  input: { escrowTxId: string; onChainId: number },
+) {
+  return apiRequest<AcceptProposalStatusResponse>(`/proposals/${proposalId}/accept/compensation`, {
+    method: 'POST',
     body: JSON.stringify(input),
   });
 }

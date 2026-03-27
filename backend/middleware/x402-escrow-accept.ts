@@ -2,6 +2,7 @@ import type { NextFunction, Request, Response } from 'express';
 import { projectService } from '../services/project.service';
 import { proposalService } from '../services/proposal.service';
 import { platformSettingsService } from '../services/platform-settings.service';
+import { proposalAcceptanceService } from '../services/proposal-acceptance.service';
 import {
   X402_HEADERS,
   getStacksCaip2Network,
@@ -18,63 +19,10 @@ const DEFAULT_USDCX_CONTRACT_NAME = 'usdcx';
 const DEFAULT_FACILITATOR_URL = 'https://facilitator.stacksx402.com';
 const DEFAULT_TIMEOUT_MS = 60_000;
 
-type EscrowAcceptanceReceipt = {
-  userId: number;
-  proposalId: number;
-  payer: string;
-  transaction: string;
-  network: X402SettlementResponse['network'];
-  expiresAt: number;
-};
-
-const escrowAcceptanceReceipts = new Map<string, EscrowAcceptanceReceipt>();
-
-function getReceiptKey(userId: number, proposalId: number) {
-  return `${userId}:${proposalId}`;
-}
-
 function getReceiptTtlMs(maxTimeoutSeconds: number) {
   const configuredSeconds = Number(process.env.X402_ESCROW_RECEIPT_TTL_SECONDS || 600);
   const fallbackSeconds = Number.isFinite(maxTimeoutSeconds) ? maxTimeoutSeconds : 60;
   return Math.max(1, configuredSeconds, fallbackSeconds) * 1000;
-}
-
-function storeEscrowAcceptanceReceipt(
-  userId: number,
-  proposalId: number,
-  settlement: X402SettlementResponse,
-  maxTimeoutSeconds: number,
-) {
-  if (!settlement.payer) {
-    throw new Error('Settled x402 escrow payment is missing a payer address');
-  }
-
-  escrowAcceptanceReceipts.set(getReceiptKey(userId, proposalId), {
-    userId,
-    proposalId,
-    payer: settlement.payer,
-    transaction: settlement.transaction,
-    network: settlement.network,
-    expiresAt: Date.now() + getReceiptTtlMs(maxTimeoutSeconds),
-  });
-}
-
-export function getEscrowAcceptanceReceipt(userId: number, proposalId: number) {
-  const receipt = escrowAcceptanceReceipts.get(getReceiptKey(userId, proposalId));
-  if (!receipt) {
-    return null;
-  }
-
-  if (receipt.expiresAt <= Date.now()) {
-    escrowAcceptanceReceipts.delete(getReceiptKey(userId, proposalId));
-    return null;
-  }
-
-  return receipt;
-}
-
-export function clearEscrowAcceptanceReceipt(userId: number, proposalId: number) {
-  escrowAcceptanceReceipts.delete(getReceiptKey(userId, proposalId));
 }
 
 function toAtomicUnits(amount: number, tokenType: 'STX' | 'sBTC' | 'USDCx') {
@@ -231,6 +179,13 @@ export async function x402EscrowAcceptancePaywall(req: Request, res: Response, n
     }
 
     const platformConfig = await platformSettingsService.get();
+    const progress = await proposalAcceptanceService.ensureForProposal({
+      proposalId: proposal.id,
+      projectId: project.id,
+      clientId: project.clientId,
+      proposedAmount: proposal.proposedAmount,
+      feePercentage: platformConfig.daoFeePercentage,
+    });
     const payTo = (platformConfig.daoWalletAddress || process.env.X402_PAY_TO || process.env.SERVER_ADDRESS || '').trim();
 
     if (!payTo) {
@@ -250,6 +205,21 @@ export async function x402EscrowAcceptancePaywall(req: Request, res: Response, n
         tokenType: project.tokenType,
       },
     };
+
+    if (
+      progress.platformFeeStatus === 'confirmed'
+      && progress.platformFeeTxId
+      && progress.platformFeePayer
+      && progress.platformFeeNetwork
+    ) {
+      res.locals.x402Payment = {
+        success: true,
+        payer: progress.platformFeePayer,
+        transaction: progress.platformFeeTxId,
+        network: progress.platformFeeNetwork,
+      };
+      return next();
+    }
 
     const paymentHeaderValue = req.headers[X402_HEADERS.PAYMENT_SIGNATURE];
     const encodedPayload = Array.isArray(paymentHeaderValue) ? paymentHeaderValue[0] : paymentHeaderValue;
@@ -274,14 +244,40 @@ export async function x402EscrowAcceptancePaywall(req: Request, res: Response, n
     const settlement = await settlePayment(paymentPayload, paymentRequirements);
 
     if (!settlement.success) {
+      await proposalAcceptanceService.updatePlatformFee(proposal.id, {
+        txId: settlement.transaction || null,
+        payer: settlement.payer || null,
+        network: settlement.network || null,
+        status: 'failed',
+        error: settlement.errorReason || 'Payment settlement failed',
+        verifiedAt: null,
+        expiresAt: null,
+      });
       return sendPaymentRequired(req, res, paymentRequirements, settlement.errorReason || 'Payment settlement failed');
     }
 
     if (normalizeAddress(settlement.payer) !== normalizeAddress(req.user.stxAddress)) {
+      await proposalAcceptanceService.updatePlatformFee(proposal.id, {
+        txId: settlement.transaction || null,
+        payer: settlement.payer || null,
+        network: settlement.network || null,
+        status: 'failed',
+        error: 'Payment must be signed by the authenticated client wallet',
+        verifiedAt: null,
+        expiresAt: null,
+      });
       return sendPaymentRequired(req, res, paymentRequirements, 'Payment must be signed by the authenticated client wallet');
     }
 
-    storeEscrowAcceptanceReceipt(req.user.id, proposal.id, settlement, paymentRequirements.maxTimeoutSeconds);
+    await proposalAcceptanceService.updatePlatformFee(proposal.id, {
+      txId: settlement.transaction,
+      payer: settlement.payer,
+      network: settlement.network,
+      status: 'confirmed',
+      error: null,
+      verifiedAt: new Date(),
+      expiresAt: new Date(Date.now() + getReceiptTtlMs(paymentRequirements.maxTimeoutSeconds)),
+    });
 
     res.locals.x402Payment = settlement;
     res.setHeader(X402_HEADERS.PAYMENT_RESPONSE, encodeBase64Json({

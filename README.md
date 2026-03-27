@@ -10,8 +10,6 @@ A decentralized freelance escrow and bounty platform built on the Stacks blockch
 git clone https://github.com/ddroid/stxworx-8.git
 cd stxworx-8
 npm install
-cd backend
-npm install
 cd ../client
 npm install
 

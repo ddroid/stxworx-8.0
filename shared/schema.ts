@@ -30,6 +30,12 @@ export const PROPOSAL_STATUSES = [
   "rejected",
   "withdrawn",
 ] as const;
+export const ACCEPTANCE_PAYMENT_STATUSES = [
+  "not_started",
+  "pending",
+  "confirmed",
+  "failed",
+] as const;
 export const MILESTONE_SUBMISSION_STATUSES = [
   "submitted",
   "approved",
@@ -149,6 +155,38 @@ export const proposals = mysqlTable("proposals", {
   coverLetter: text("cover_letter").notNull(),
   proposedAmount: decimal("proposed_amount", { precision: 18, scale: 8 }).notNull(),
   status: mysqlEnum("status", [...PROPOSAL_STATUSES]).default("pending").notNull(),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  updatedAt: timestamp("updated_at").defaultNow().notNull(),
+});
+
+export const proposalAcceptanceProgress = mysqlTable("proposal_acceptance_progress", {
+  id: bigint("id", { mode: "number", unsigned: true }).autoincrement().primaryKey(),
+  proposalId: bigint("proposal_id", { mode: "number", unsigned: true })
+    .references(() => proposals.id)
+    .unique()
+    .notNull(),
+  projectId: bigint("project_id", { mode: "number", unsigned: true })
+    .references(() => projects.id)
+    .notNull(),
+  clientId: bigint("client_id", { mode: "number", unsigned: true })
+    .references(() => users.id)
+    .notNull(),
+  compensationAmount: decimal("compensation_amount", { precision: 18, scale: 8 }).default("0").notNull(),
+  compensationTxId: varchar("compensation_tx_id", { length: 100 }),
+  compensationOnChainId: int("compensation_on_chain_id"),
+  compensationStatus: mysqlEnum("compensation_status", [...ACCEPTANCE_PAYMENT_STATUSES]).default("not_started").notNull(),
+  compensationVerifiedAt: timestamp("compensation_verified_at"),
+  compensationLastCheckedAt: timestamp("compensation_last_checked_at"),
+  compensationError: text("compensation_error"),
+  platformFeeAmount: decimal("platform_fee_amount", { precision: 18, scale: 8 }).default("0").notNull(),
+  platformFeeTxId: varchar("platform_fee_tx_id", { length: 100 }),
+  platformFeePayer: varchar("platform_fee_payer", { length: 255 }),
+  platformFeeNetwork: varchar("platform_fee_network", { length: 64 }),
+  platformFeeStatus: mysqlEnum("platform_fee_status", [...ACCEPTANCE_PAYMENT_STATUSES]).default("not_started").notNull(),
+  platformFeeVerifiedAt: timestamp("platform_fee_verified_at"),
+  platformFeeExpiresAt: timestamp("platform_fee_expires_at"),
+  platformFeeError: text("platform_fee_error"),
+  finalizedAt: timestamp("finalized_at"),
   createdAt: timestamp("created_at").defaultNow().notNull(),
   updatedAt: timestamp("updated_at").defaultNow().notNull(),
 });
@@ -428,6 +466,8 @@ export const insertProposalSchema = createInsertSchema(proposals, {
 
 export const selectProposalSchema = createSelectSchema(proposals);
 
+export const selectProposalAcceptanceProgressSchema = createSelectSchema(proposalAcceptanceProgress);
+
 export const insertMilestoneSubmissionSchema = createInsertSchema(milestoneSubmissions, {
   milestoneNum: z.number().int().min(1).max(4),
   deliverableUrl: z.string().url().max(500),
@@ -493,6 +533,7 @@ export type Project = typeof projects.$inferSelect;
 export type InsertProject = z.infer<typeof insertProjectSchema>;
 export type Proposal = typeof proposals.$inferSelect;
 export type InsertProposal = z.infer<typeof insertProposalSchema>;
+export type ProposalAcceptanceProgress = typeof proposalAcceptanceProgress.$inferSelect;
 export type MilestoneSubmission = typeof milestoneSubmissions.$inferSelect;
 export type InsertMilestoneSubmission = z.infer<typeof insertMilestoneSubmissionSchema>;
 export type Dispute = typeof disputes.$inferSelect;
