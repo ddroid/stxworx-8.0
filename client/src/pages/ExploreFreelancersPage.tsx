@@ -1,7 +1,8 @@
 import React, { useEffect, useMemo, useState } from 'react';
+import { Link } from 'react-router-dom';
 import { ChevronRight, ChevronsRight, MoreHorizontal, Search, Star } from 'lucide-react';
 import * as Shared from '../shared';
-import { getLeaderboard, getUserProfile, toDisplayName, toHandle } from '../lib/api';
+import { getConnections, getLeaderboard, getUserProfile, toApiAssetUrl, toDisplayName, toHandle, getUserProfilePath } from '../lib/api';
 import type { ApiLeaderboardEntry } from '../types/leaderboard';
 import type { ApiUserProfile } from '../types/user';
 
@@ -17,6 +18,7 @@ export const FreelancersPage = () => {
   const [selectedFilter, setSelectedFilter] = useState('All');
   const [searchQuery, setSearchQuery] = useState('');
   const [freelancers, setFreelancers] = useState<FreelancerCard[]>([]);
+  const [connectedUserIds, setConnectedUserIds] = useState<Set<number>>(new Set());
 
   const handleOpenMessage = (recipient: string, recipientAddress: string) => {
     console.log('Opening message modal for:', recipient, recipientAddress);
@@ -49,6 +51,40 @@ export const FreelancersPage = () => {
     loadFreelancers();
   }, []);
 
+  useEffect(() => {
+    let isMounted = true;
+
+    const loadConnections = async () => {
+      if (!walletAddress) {
+        setConnectedUserIds(new Set());
+        return;
+      }
+
+      try {
+        const rows = await getConnections();
+        if (!isMounted) {
+          return;
+        }
+
+        setConnectedUserIds(
+          new Set(
+            rows
+              .filter((connection) => connection.status === 'accepted' && typeof connection.otherUser?.id === 'number')
+              .map((connection) => connection.otherUser!.id),
+          ),
+        );
+      } catch (error) {
+        console.error('Failed to load connections for freelancer filters:', error);
+      }
+    };
+
+    loadConnections();
+
+    return () => {
+      isMounted = false;
+    };
+  }, [walletAddress]);
+
   const recentIds = useMemo(
     () =>
       new Set(
@@ -63,6 +99,7 @@ export const FreelancersPage = () => {
   const filters = useMemo(
     () => [
       { label: 'All', count: freelancers.filter((f) => f.stxAddress !== walletAddress && (!f.profile?.username || f.profile.username !== walletAddress)).length },
+      { label: 'Connected Friends', count: freelancers.filter((freelancer) => connectedUserIds.has(freelancer.profile?.id ?? freelancer.id) && freelancer.stxAddress !== walletAddress).length },
       { label: 'Top Rated', count: freelancers.filter((freelancer) => freelancer.avgRating >= 4.5 && freelancer.stxAddress !== walletAddress && (!freelancer.profile?.username || freelancer.profile.username !== walletAddress)).length },
       { label: 'Most Reviewed', count: freelancers.filter((freelancer) => freelancer.reviewCount > 0 && freelancer.stxAddress !== walletAddress && (!freelancer.profile?.username || freelancer.profile.username !== walletAddress)).length },
       { label: 'Recently Joined', count: Array.from(recentIds).filter(id => {
@@ -70,7 +107,7 @@ export const FreelancersPage = () => {
         return freelancer && freelancer.stxAddress !== walletAddress && (!freelancer.profile?.username || freelancer.profile.username !== walletAddress);
       }).length },
     ],
-    [freelancers, recentIds, walletAddress],
+    [connectedUserIds, freelancers, recentIds, walletAddress],
   );
 
   const visibleFreelancers = useMemo(() => {
@@ -81,6 +118,7 @@ export const FreelancersPage = () => {
       if (freelancer.stxAddress === walletAddress) return false;      
       const matchesFilter =
         selectedFilter === 'All' ||
+        (selectedFilter === 'Connected Friends' && connectedUserIds.has(freelancer.profile?.id ?? freelancer.id)) ||
         (selectedFilter === 'Top Rated' && freelancer.avgRating >= 4.5) ||
         (selectedFilter === 'Most Reviewed' && freelancer.reviewCount > 0) ||
         (selectedFilter === 'Recently Joined' && recentIds.has(freelancer.id));
@@ -100,7 +138,7 @@ export const FreelancersPage = () => {
 
       return matchesFilter && matchesSearch;
     });
-  }, [freelancers, recentIds, searchQuery, selectedFilter, walletAddress]);
+  }, [connectedUserIds, freelancers, recentIds, searchQuery, selectedFilter, walletAddress]);
 
   return (
     <div className="pt-28 pb-20 px-6 md:pl-[92px]">
@@ -135,10 +173,6 @@ export const FreelancersPage = () => {
                   className="bg-transparent text-sm text-ink placeholder:text-muted outline-none w-full"
                 />
               </div>
-              <div className="bg-surface border border-border rounded-[15px] px-4 py-2 text-[10px] font-bold flex items-center justify-between sm:justify-start gap-4 cursor-pointer w-full sm:w-auto">
-                {selectedFilter}
-                <ChevronRight size={14} className="rotate-90" />
-              </div>
             </div>
           </div>
 
@@ -153,16 +187,29 @@ export const FreelancersPage = () => {
                   <span className="bg-accent-orange text-bg px-3 py-1 rounded-[15px] text-[8px] font-black uppercase tracking-widest mb-4 inline-block">
                     {(freelancer.profile?.specialty || 'Freelancer').toUpperCase()}
                   </span>
-                  <h3 className="text-3xl font-black tracking-tighter mb-1 leading-none">{toDisplayName(freelancer)}</h3>
-                  <p className="text-sm font-bold text-accent-orange mb-2">{toHandle(freelancer)}</p>
+                  <Link to={getUserProfilePath(freelancer.profile || freelancer)} className="hover:text-accent-orange transition-colors">
+                    <h3 className="text-3xl font-black tracking-tighter mb-1 leading-none">{toDisplayName(freelancer)}</h3>
+                  </Link>
+                  <Link to={getUserProfilePath(freelancer.profile || freelancer)} className="hover:text-accent-orange transition-colors">
+                    <p className="text-sm font-bold text-accent-orange mb-2">{toHandle(freelancer)}</p>
+                  </Link>
                   <p className="text-[10px] text-muted font-medium">{freelancer.stxAddress}</p>
                 </div>
 
                 <div className="flex flex-col sm:flex-row sm:items-center gap-4 sm:gap-6 mb-8">
                   <div className="relative">
-                    <div className="w-24 h-24 rounded-[10px] bg-accent-pink/20 overflow-hidden border-4 border-bg flex items-center justify-center text-2xl font-black uppercase">
-                      {toDisplayName(freelancer).slice(0, 2)}
-                    </div>
+                    {toApiAssetUrl(freelancer.profile?.avatar) ? (
+                      <img
+                        src={toApiAssetUrl(freelancer.profile?.avatar)}
+                        alt={toDisplayName(freelancer)}
+                        className="w-24 h-24 rounded-[10px] object-cover border-4 border-bg"
+                        referrerPolicy="no-referrer"
+                      />
+                    ) : (
+                      <div className="w-24 h-24 rounded-[10px] bg-accent-pink/20 overflow-hidden border-4 border-bg flex items-center justify-center text-2xl font-black uppercase">
+                        {toDisplayName(freelancer).slice(0, 2)}
+                      </div>
+                    )}
                   </div>
                   <div className="flex-1 space-y-4">
                     <div>

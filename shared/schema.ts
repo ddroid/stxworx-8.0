@@ -336,6 +336,10 @@ export const messages = mysqlTable("messages", {
     .references(() => users.id)
     .notNull(),
   body: text("body").notNull(),
+  attachmentUrl: varchar("attachment_url", { length: 500 }),
+  attachmentName: varchar("attachment_name", { length: 255 }),
+  attachmentMimeType: varchar("attachment_mime_type", { length: 255 }),
+  attachmentSize: int("attachment_size", { unsigned: true }),
   createdAt: timestamp("created_at").defaultNow().notNull(),
 });
 

@@ -11,7 +11,7 @@ import {
 } from 'lucide-react';
 import { GoogleGenAI } from '@google/genai';
 import type { UserSession } from '@stacks/connect';
-import { createProject, createProposal, getCategories, submitMilestone, startConversation, getConversationMessages, sendConversationMessage, getUserProfile, getCurrentUser, toDisplayName, formatRelativeTime, type ApiConversationMessage } from './lib/api';
+import { createProject, createProposal, getCategories, submitMilestone, startConversation, getConversationMessages, sendConversationMessage, getUserProfile, getCurrentUser, toApiAssetUrl, toDisplayName, formatRelativeTime, type ApiConversationMessage } from './lib/api';
 import { convertAmount, getUSDValue } from './lib/currency';
 import { completeEscrowMilestone } from './lib/escrow';
 import type { ApiCategory } from './types/job';
@@ -496,10 +496,27 @@ export const MessageModal = ({ isOpen, onClose, recipientAddress }: { isOpen: bo
                       )}
                       {messages.map((msg) => {
                         const isMine = msg.senderId === currentUserId;
+                        const attachmentUrl = toApiAssetUrl(msg.attachmentUrl);
+                        const isImageAttachment = Boolean(attachmentUrl && msg.attachmentMimeType?.startsWith('image/'));
                         return (
                           <div key={msg.id} className={`flex ${isMine ? 'justify-end' : 'justify-start'}`}>
                             <div className={`max-w-[80%] p-3 rounded-[15px] text-xs font-medium ${isMine ? 'bg-ink text-bg rounded-tr-none' : 'bg-ink/5 text-ink rounded-tl-none border border-border'}`}>
-                              <p>{msg.body}</p>
+                              {attachmentUrl ? (
+                                isImageAttachment ? (
+                                  <a href={attachmentUrl} target="_blank" rel="noreferrer" className="block mb-2">
+                                    <img src={attachmentUrl} alt={msg.attachmentName || 'Uploaded image'} className="max-h-52 w-auto rounded-[12px] object-cover" referrerPolicy="no-referrer" />
+                                  </a>
+                                ) : (
+                                  <a href={attachmentUrl} target="_blank" rel="noreferrer" className={`mb-2 flex items-center justify-between gap-3 rounded-[12px] border px-3 py-2 ${isMine ? 'border-bg/15 bg-bg/10 text-bg' : 'border-border bg-surface text-ink'}`}>
+                                    <div className="min-w-0">
+                                      <p className="text-xs font-bold truncate">{msg.attachmentName || 'Attachment'}</p>
+                                      <p className={`text-[9px] truncate ${isMine ? 'text-bg/70' : 'text-muted'}`}>{msg.attachmentMimeType || 'File'}</p>
+                                    </div>
+                                    <span className="text-[9px] font-bold uppercase tracking-widest shrink-0">Open</span>
+                                  </a>
+                                )
+                              ) : null}
+                              {msg.body ? <p>{msg.body}</p> : null}
                               <p className={`text-[9px] mt-1 ${isMine ? 'text-bg/70' : 'text-muted'}`}>
                                 {formatRelativeTime(msg.createdAt)}
                               </p>

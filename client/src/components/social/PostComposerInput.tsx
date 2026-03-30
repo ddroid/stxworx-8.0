@@ -165,7 +165,7 @@ export const PostComposerInput = ({
   };
 
   return (
-    <div className="relative">
+    <div className="relative w-full min-w-0">
       <textarea
         ref={textareaRef}
         value={value}

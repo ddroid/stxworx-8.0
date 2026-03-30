@@ -225,7 +225,6 @@ function sortTimelinePosts(posts: ApiSocialPost[]) {
 export const ProfilePage = ({ userRole }: { userRole: UserRole | null }) => {
   const { walletAddress, isSignedIn } = Shared.useWallet();
   const { walletAddressParam, profileIdentifier } = useParams<{ walletAddressParam?: string; profileIdentifier?: string }>();
-  const tabs = ['Timeline', 'Profile', 'Bounties', 'Friends', 'NFTs'];
   const [activeTab, setActiveTab] = useState('Profile');
   const [isEditing, setIsEditing] = useState(false);
   const [isMessageModalOpen, setIsMessageModalOpen] = useState(false);
@@ -789,6 +788,10 @@ export const ProfilePage = ({ userRole }: { userRole: UserRole | null }) => {
   };
 
   const isOwnProfile = Boolean(walletAddress && profile?.stxAddress && walletAddress === profile.stxAddress);
+  const tabs = useMemo(
+    () => (isOwnProfile ? ['Timeline', 'Profile', 'Bounties', 'Friends', 'NFTs'] : ['Timeline', 'Profile', 'NFTs']),
+    [isOwnProfile],
+  );
   const resolvedRole = profile?.role || userRole;
   const isClient = resolvedRole === 'client';
   const normalizedUsername = profileDraft.username.trim().toLowerCase();
@@ -827,6 +830,17 @@ export const ProfilePage = ({ userRole }: { userRole: UserRole | null }) => {
   const incomingConnectionRequests = isOwnProfile ? connections.filter((connection) => connection.status === 'pending' && connection.direction === 'incoming') : [];
   const outgoingConnectionRequests = isOwnProfile ? connections.filter((connection) => connection.status === 'pending' && connection.direction === 'outgoing') : [];
   const relationship = !isOwnProfile && profile ? connections.find((connection) => connection.otherUser?.id === profile.id) || null : null;
+
+  useEffect(() => {
+    if (!tabs.includes(activeTab)) {
+      setActiveTab('Profile');
+    }
+  }, [activeTab, tabs]);
+
+  const getConversationPath = (user?: Pick<ApiUserProfile, 'username' | 'stxAddress'> | null) => {
+    const identifier = user?.username?.trim() || user?.stxAddress?.trim() || '';
+    return identifier ? `/messages?user=${encodeURIComponent(identifier)}` : '/messages';
+  };
 
   const handleSaveProfile = async () => {
     if (!profile || !canSaveProfile) {
@@ -1131,7 +1145,13 @@ export const ProfilePage = ({ userRole }: { userRole: UserRole | null }) => {
                         <>
                           <span className="flex items-center gap-1"><MapPin size={14} /> {locationDisplay || 'Location not added'}</span>
                           <span className="flex items-center gap-1"><Globe size={14} /> {language || 'Language not added'}</span>
-                          <span className="flex items-center gap-1"><LinkIcon size={14} /> {websiteLink || 'No website yet'}</span>
+                          {normalizedWebsite ? (
+                            <a href={websiteHref} target="_blank" rel="noreferrer" className="flex items-center gap-1 hover:text-accent-cyan transition-colors">
+                              <LinkIcon size={14} /> {websiteLink}
+                            </a>
+                          ) : (
+                            <span className="flex items-center gap-1"><LinkIcon size={14} /> No website yet</span>
+                          )}
                           <div className="flex gap-3 ml-2">
                             <Twitter size={14} className="hover:text-accent-orange cursor-pointer" />
                             <Instagram size={14} className="hover:text-accent-orange cursor-pointer" />
@@ -1300,7 +1320,11 @@ export const ProfilePage = ({ userRole }: { userRole: UserRole | null }) => {
                         </div>
                         <div>
                           <p className="text-xs text-muted mb-1">Website</p>
-                          <a href={websiteHref} className="font-bold text-sm text-accent-cyan hover:underline">{websiteLink || 'Not added yet'}</a>
+                          {normalizedWebsite ? (
+                            <a href={websiteHref} target="_blank" rel="noreferrer" className="font-bold text-sm text-accent-cyan hover:underline">{websiteLink}</a>
+                          ) : (
+                            <p className="font-bold text-sm">Not added yet</p>
+                          )}
                         </div>
                         <div>
                           <p className="text-xs text-muted mb-1">Location</p>
@@ -1726,15 +1750,22 @@ export const ProfilePage = ({ userRole }: { userRole: UserRole | null }) => {
                 <div className="card p-6">
                   <h3 className="font-bold text-lg mb-4">Connections</h3>
                   <div className="space-y-4">
-                    {acceptedConnections.map((connection) => (
+                    {acceptedConnections.map((connection) => {
+                      const otherUserProfilePath = getUserProfilePath(connection.otherUser);
+                      const conversationPath = getConversationPath(connection.otherUser);
+
+                      return (
                       <div key={connection.id} className="border border-border rounded-[15px] p-4 flex items-center justify-between gap-4">
                         <div>
-                          <p className="font-bold text-sm">{toDisplayName(connection.otherUser) || 'Connection'}</p>
+                          <Link to={otherUserProfilePath} className="font-bold text-sm hover:text-accent-orange transition-colors">{toDisplayName(connection.otherUser) || 'Connection'}</Link>
                           <p className="text-[10px] text-muted uppercase tracking-widest">{connection.otherUser?.role || 'User'}</p>
                         </div>
-                        <span className="text-xs font-bold text-accent-cyan">Connected</span>
+                        <div className="flex items-center gap-3 shrink-0">
+                          <Link to={conversationPath} className="btn-outline py-2 px-4 text-xs">Chat</Link>
+                          <span className="text-xs font-bold text-accent-cyan">Connected</span>
+                        </div>
                       </div>
-                    ))}
+                    )})}
                     {acceptedConnections.length === 0 && <p className="text-sm text-muted">No accepted connections yet.</p>}
                   </div>
                 </div>

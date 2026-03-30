@@ -2,6 +2,7 @@ import { db } from "../db";
 import { conversationParticipants, conversations, messages, userSettings, users } from "@shared/schema";
 import { and, asc, desc, eq, gt, ne, inArray } from "drizzle-orm";
 import { connectionsService } from "./connections.service";
+import { saveChatAttachment, type ChatAttachmentUpload } from "./message-attachment.service";
 
 async function getUser(userId: number) {
   const [user] = await db.select().from(users).where(eq(users.id, userId));
@@ -26,6 +27,31 @@ async function getUnreadMessagesForParticipant(conversationId: number, userId: n
         .where(and(eq(messages.conversationId, conversationId), ne(messages.senderId, userId)));
 
   return unreadMessages.length;
+}
+
+type SendMessageInput = {
+  body?: string;
+  attachment?: ChatAttachmentUpload;
+};
+
+function toMessagePreview(message?: {
+  body?: string | null;
+  attachmentName?: string | null;
+  attachmentMimeType?: string | null;
+}) {
+  const body = message?.body?.trim();
+  if (body) {
+    return body;
+  }
+
+  const attachmentName = message?.attachmentName?.trim();
+  if (!attachmentName) {
+    return "";
+  }
+
+  return message?.attachmentMimeType?.startsWith("image/")
+    ? `Image: ${attachmentName}`
+    : `Attachment: ${attachmentName}`;
 }
 
 export const messagesService = {
@@ -158,7 +184,12 @@ export const messagesService = {
           .where(eq(users.id, otherParticipant.userId));
 
         const [lastMessage] = await db
-          .select()
+          .select({
+            body: messages.body,
+            attachmentName: messages.attachmentName,
+            attachmentMimeType: messages.attachmentMimeType,
+            createdAt: messages.createdAt,
+          })
           .from(messages)
           .where(eq(messages.conversationId, membership.conversationId))
           .orderBy(desc(messages.createdAt));
@@ -172,7 +203,7 @@ export const messagesService = {
         return {
           id: membership.conversationId,
           participant: participantUser,
-          lastMessage: lastMessage?.body ?? "",
+          lastMessage: toMessagePreview(lastMessage),
           lastMessageAt: lastMessage?.createdAt ?? membership.createdAt,
           unreadCount,
         };
@@ -193,6 +224,10 @@ export const messagesService = {
         conversationId: messages.conversationId,
         senderId: messages.senderId,
         body: messages.body,
+        attachmentUrl: messages.attachmentUrl,
+        attachmentName: messages.attachmentName,
+        attachmentMimeType: messages.attachmentMimeType,
+        attachmentSize: messages.attachmentSize,
         createdAt: messages.createdAt,
         senderAddress: users.stxAddress,
         senderName: users.name,
@@ -217,19 +252,26 @@ export const messagesService = {
     const conversation = await this.getOrCreateDirectConversation(userId, otherUserId);
 
     if (initialMessage?.trim() && conversation) {
-      await this.sendMessage(conversation.id, userId, initialMessage);
+      await this.sendMessage(conversation.id, userId, { body: initialMessage });
     }
 
     return conversation;
   },
 
-  async sendMessage(conversationId: number, userId: number, body: string) {
+  async sendMessage(conversationId: number, userId: number, input: SendMessageInput) {
     await this.assertConversationAccess(conversationId, userId);
+
+    const body = input.body?.trim() ?? "";
+    const savedAttachment = input.attachment ? await saveChatAttachment(input.attachment) : null;
 
     const [result] = await db.insert(messages).values({
       conversationId,
       senderId: userId,
       body,
+      attachmentUrl: savedAttachment?.url,
+      attachmentName: savedAttachment?.fileName,
+      attachmentMimeType: savedAttachment?.mimeType,
+      attachmentSize: savedAttachment?.size,
     });
 
     await db
@@ -248,6 +290,10 @@ export const messagesService = {
         conversationId: messages.conversationId,
         senderId: messages.senderId,
         body: messages.body,
+        attachmentUrl: messages.attachmentUrl,
+        attachmentName: messages.attachmentName,
+        attachmentMimeType: messages.attachmentMimeType,
+        attachmentSize: messages.attachmentSize,
         createdAt: messages.createdAt,
         senderAddress: users.stxAddress,
         senderName: users.name,

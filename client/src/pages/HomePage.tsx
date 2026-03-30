@@ -25,6 +25,7 @@ import {
   getSocialPostPath,
   getSocialPostsPagePath,
   getSocialPostShareUrl,
+  getUserProfile,
   getUserProfilePath,
   toApiAssetUrl,
   toAppJob,
@@ -37,12 +38,16 @@ import {
 import type { ApiLeaderboardEntry } from '../types/leaderboard';
 import type { AppJob } from '../types/job';
 
+type HomeLeaderboardEntry = ApiLeaderboardEntry & {
+  avatar?: string | null;
+};
+
 export const HomePage = () => {
   const navigate = useNavigate();
   const { isSignedIn, walletAddress } = Shared.useWallet();
   const DESCRIPTION_PREVIEW_LIMIT = 120;
   const [featuredJobs, setFeaturedJobs] = useState<AppJob[]>([]);
-  const [topFreelancers, setTopFreelancers] = useState<ApiLeaderboardEntry[]>([]);
+  const [topFreelancers, setTopFreelancers] = useState<HomeLeaderboardEntry[]>([]);
   const [feedPosts, setFeedPosts] = useState<ApiSocialPost[]>([]);
   const [feedComments, setFeedComments] = useState<Record<number, ApiSocialComment[]>>({});
   const [expandedComments, setExpandedComments] = useState<Record<number, boolean>>({});
@@ -90,6 +95,21 @@ export const HomePage = () => {
           getLeaderboard(),
           getSocialFeed(4).catch(() => []),
         ]);
+        const featuredFreelancers = await Promise.all(
+          leaderboard.slice(0, 4).map(async (entry) => {
+            try {
+              const profile = await getUserProfile(entry.stxAddress);
+              return {
+                ...entry,
+                avatar: profile.avatar || null,
+                name: profile.name ?? entry.name,
+                username: profile.username ?? entry.username,
+              };
+            } catch {
+              return { ...entry, avatar: null };
+            }
+          }),
+        );
 
         const commentEntries = await Promise.all(
           feed.map(async (post) => [post.id, await getSocialPostComments(post.id).catch(() => [])] as const),
@@ -100,7 +120,7 @@ export const HomePage = () => {
         }
 
         setFeaturedJobs(projects.slice(0, 2).map(toAppJob));
-        setTopFreelancers(leaderboard.slice(0, 4));
+        setTopFreelancers(featuredFreelancers);
         setFeedPosts(feed);
         setFeedComments(Object.fromEntries(commentEntries) as Record<number, ApiSocialComment[]>);
       } catch (error) {
@@ -312,15 +332,28 @@ export const HomePage = () => {
                   Search Freelancers <ArrowRight size={18} />
                 </button>
                 <div className="flex -space-x-3 items-center ml-4">
-                  {topFreelancers.map((freelancer) => (
-                    <div
-                      key={freelancer.id}
-                      className="w-10 h-10 rounded-[10px] border-2 border-bg bg-surface flex items-center justify-center text-[10px] font-black uppercase"
-                      title={toDisplayName(freelancer)}
-                    >
-                      {toDisplayName(freelancer).slice(0, 2)}
-                    </div>
-                  ))}
+                  {topFreelancers.map((freelancer) => {
+                    const avatarUrl = toApiAssetUrl(freelancer.avatar);
+
+                    return avatarUrl ? (
+                      <img
+                        key={freelancer.id}
+                        src={avatarUrl}
+                        alt={toDisplayName(freelancer)}
+                        title={toDisplayName(freelancer)}
+                        className="w-10 h-10 rounded-[10px] border-2 border-bg object-cover bg-surface"
+                        referrerPolicy="no-referrer"
+                      />
+                    ) : (
+                      <div
+                        key={freelancer.id}
+                        className="w-10 h-10 rounded-[10px] border-2 border-bg bg-surface flex items-center justify-center text-[10px] font-black uppercase"
+                        title={toDisplayName(freelancer)}
+                      >
+                        {toDisplayName(freelancer).slice(0, 2)}
+                      </div>
+                    );
+                  })}
                   <div className="w-10 h-10 rounded-[10px] border-2 border-bg bg-surface flex items-center justify-center text-[10px] font-bold">
                     +{topFreelancers.length}
                   </div>

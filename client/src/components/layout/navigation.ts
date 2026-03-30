@@ -12,7 +12,7 @@ export type PlatformMenuItem = {
     | 'bounties'
     | 'leaderboard'
     | 'ai-proposal'
-    | 'pro'
+    | 'posts'
     | 'messages'
     | 'notifications'
     | 'profile'
@@ -109,11 +109,11 @@ export const platformMenuItems: PlatformMenuItem[] = [
     iconKey: 'settings',
   },
   {
-    id: 'pro',
-    label: 'Pro Plan',
-    path: '/pro',
-    shortLabel: 'Pro',
-    keywords: ['membership', 'subscription', 'upgrade'],
-    iconKey: 'pro',
+    id: 'posts',
+    label: 'Posts',
+    path: '/posts',
+    shortLabel: 'Posts',
+    keywords: ['social', 'timeline', 'community', 'feed'],
+    iconKey: 'posts',
   },
 ];

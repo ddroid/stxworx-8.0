@@ -12,10 +12,10 @@ import {
   Mail,
   MessageCircle,
   Moon,
+  Newspaper,
   PenTool,
   Search,
   Settings,
-  ShieldCheck,
   ShoppingBag,
   Sparkles,
   Star,
@@ -72,7 +72,7 @@ const menuIconMap: Record<PlatformMenuItem['iconKey'], LucideIcon> = {
   bounties: Trophy,
   leaderboard: Star,
   'ai-proposal': Sparkles,
-  pro: ShieldCheck,
+  posts: Newspaper,
   messages: MessageCircle,
   notifications: Bell,
   profile: User,
@@ -517,7 +517,7 @@ export const TopHeader = ({ theme, toggleTheme }: { theme: 'dark' | 'light', tog
         <button
           onClick={() => (isSignedIn ? setShowLogoutConfirm(true) : handleConnect())}
           className={`flex items-center justify-center sm:justify-start gap-2 min-w-10 h-10 px-2 sm:px-4 rounded-[15px] text-xs font-bold transition-all ${isSignedIn ? (theme === 'light' ? 'bg-accent-blue/10 text-accent-blue border border-accent-blue/25 hover:bg-accent-blue/15' : 'bg-accent-cyan/10 text-accent-cyan border border-accent-cyan/20') : 'bg-ink text-bg hover:bg-accent-orange'} ${isBlocked ? 'opacity-70 cursor-not-allowed' : ''}`}
-          disabled={isBlocked}
+          disabled={Boolean(isBlocked)}
         >
           <Wallet size={16} />
           <span className="hidden sm:inline">{isSignedIn ? displayWalletAddress : 'Connect Wallet'}</span>

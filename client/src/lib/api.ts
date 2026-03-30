@@ -273,11 +273,22 @@ export interface ApiConversation {
   unreadCount: number;
 }
 
+export interface ApiConversationAttachmentInput {
+  dataUrl: string;
+  fileName: string;
+  mimeType: string;
+  size: number;
+}
+
 export interface ApiConversationMessage {
   id: number;
   conversationId: number;
   senderId: number;
   body: string;
+  attachmentUrl?: string | null;
+  attachmentName?: string | null;
+  attachmentMimeType?: string | null;
+  attachmentSize?: number | null;
   createdAt?: string;
   senderAddress?: string;
   senderName?: string | null;
@@ -938,10 +949,15 @@ export async function getConversationMessages(conversationId: number) {
   return apiRequest<ApiConversationMessage[]>(`/messages/conversations/${conversationId}/messages`, { method: 'GET' });
 }
 
-export async function sendConversationMessage(conversationId: number, body: string) {
+export async function sendConversationMessage(conversationId: number, body?: string, attachment?: ApiConversationAttachmentInput) {
+  const normalizedBody = body?.trim();
+
   return apiRequest<ApiConversationMessage>(`/messages/conversations/${conversationId}/messages`, {
     method: 'POST',
-    body: JSON.stringify({ body }),
+    body: JSON.stringify({
+      body: normalizedBody || (attachment ? ' ' : body),
+      attachment,
+    }),
   });
 }
 

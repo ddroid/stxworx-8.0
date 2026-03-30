@@ -7,8 +7,24 @@ const startConversationSchema = z.object({
   message: z.string().max(4000).optional(),
 });
 
+const chatAttachmentSchema = z.object({
+  dataUrl: z.string().min(1),
+  fileName: z.string().trim().min(1).max(255),
+  mimeType: z.string().trim().min(1).max(255),
+  size: z.number().int().positive().max(5 * 1024 * 1024),
+});
+
 const sendMessageSchema = z.object({
-  body: z.string().min(1).max(4000),
+  body: z.string().max(4000).optional(),
+  attachment: chatAttachmentSchema.optional(),
+}).superRefine((value, ctx) => {
+  if (!value.body?.trim() && !value.attachment) {
+    ctx.addIssue({
+      code: z.ZodIssueCode.custom,
+      message: "Message body or attachment is required",
+      path: ["body"],
+    });
+  }
 });
 
 export const messagesController = {
@@ -36,7 +52,10 @@ export const messagesController = {
     try {
       const result = startConversationSchema.safeParse(req.body);
       if (!result.success) {
-        return res.status(400).json({ message: "Validation error", errors: result.error.errors });
+        return res.status(400).json({
+          message: result.error.errors[0]?.message || "Validation error",
+          errors: result.error.errors,
+        });
       }
 
       const conversation = await messagesService.startConversation(req.user!.id, result.data.participantId, result.data.message);
@@ -71,10 +90,16 @@ export const messagesController = {
 
       const result = sendMessageSchema.safeParse(req.body);
       if (!result.success) {
-        return res.status(400).json({ message: "Validation error", errors: result.error.errors });
+        return res.status(400).json({
+          message: result.error.errors[0]?.message || "Validation error",
+          errors: result.error.errors,
+        });
       }
 
-      const message = await messagesService.sendMessage(id, req.user!.id, result.data.body);
+      const message = await messagesService.sendMessage(id, req.user!.id, {
+        body: result.data.body,
+        attachment: result.data.attachment,
+      });
       return res.status(201).json(message);
     } catch (error) {
       console.error("Send message error:", error);

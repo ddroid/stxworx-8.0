@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { BrowserRouter as Router, Routes, Route, Link, useLocation, useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'motion/react';
@@ -22,7 +21,7 @@ const sidebarIconMap = {
   bounties: Trophy,
   leaderboard: Star,
   'ai-proposal': Sparkles,
-  pro: ShieldCheck,
+  posts: Newspaper,
   messages: MessageCircle,
   notifications: Bell,
   profile: Users,
@@ -35,14 +34,14 @@ export const Sidebar = () => {
   const [showMobileMore, setShowMobileMore] = useState(false);
 
   const desktopMenuItems = platformMenuItems
-    .filter((item) => ['home', 'dashboard', 'jobs', 'freelancers', 'bounties', 'leaderboard', 'ai-proposal', 'pro', 'settings'].includes(item.id))
+    .filter((item) => ['home', 'dashboard', 'jobs', 'freelancers', 'bounties', 'leaderboard', 'ai-proposal', 'posts', 'settings'].includes(item.id))
     .map((item) => ({
       ...item,
       icon: sidebarIconMap[item.iconKey as keyof typeof sidebarIconMap],
     }));
 
   const mobileMenuItems = platformMenuItems
-    .filter((item) => ['home', 'dashboard', 'jobs', 'freelancers', 'bounties', 'leaderboard', 'ai-proposal', 'messages', 'notifications', 'profile', 'settings', 'pro'].includes(item.id))
+    .filter((item) => ['home', 'dashboard', 'jobs', 'freelancers', 'bounties', 'leaderboard', 'ai-proposal', 'messages', 'notifications', 'profile', 'settings', 'posts'].includes(item.id))
     .map((item) => ({
       ...item,
       icon: sidebarIconMap[item.iconKey as keyof typeof sidebarIconMap],
