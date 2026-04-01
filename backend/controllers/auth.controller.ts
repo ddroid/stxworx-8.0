@@ -42,8 +42,12 @@ export const authController = {
         },
       });
     } catch (error: any) {
-      if (error.message === "Invalid wallet signature") {
-        return res.status(401).json({ message: "Invalid wallet signature" });
+      if (
+        error.message === "Invalid wallet signature" ||
+        error.message === "Wallet address does not match public key" ||
+        error.message === "Invalid wallet address"
+      ) {
+        return res.status(401).json({ message: "Wallet verification failed" });
       }
       console.error("Wallet verify error:", error);
       return res.status(500).json({ message: "Internal server error" });
