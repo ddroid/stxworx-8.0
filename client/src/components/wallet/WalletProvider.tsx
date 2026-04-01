@@ -2,6 +2,7 @@ import React, { useCallback, useEffect, useMemo, useState } from "react";
 import * as Shared from "../../shared";
 import { getCurrentUser, getUserProfile, logoutUser, verifyWallet } from "../../lib/api";
 import { authenticate, userSession, getUserData, getUserAddress, requestSignMessage } from "../../lib/stacks";
+import { IS_TESTNET } from "../../lib/constants";
 import type { UserRole } from "../../types/user";
 
 type WalletProviderProps = {
@@ -97,7 +98,7 @@ export function WalletProvider({ value, children }: WalletProviderProps) {
           const data = await userSession.handlePendingSignIn();
           setUserData(data);
           const address =
-            getUserAddress() || data.profile?.stxAddress?.mainnet || data.profile?.stxAddress?.testnet || null;
+            getUserAddress() || (IS_TESTNET ? data.profile?.stxAddress?.testnet : data.profile?.stxAddress?.mainnet) || null;
           setWalletAddress(address);
           await authenticateBackendSession();
         } catch (error) {

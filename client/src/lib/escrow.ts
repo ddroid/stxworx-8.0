@@ -12,6 +12,7 @@ import type { ApiProject } from '../types/job';
 import {
   CONTRACT_ADDRESS,
   CONTRACT_NAME,
+  STACKS_NETWORK,
   SBTC_CONTRACT_ADDRESS,
   SBTC_CONTRACT_NAME,
   USDCX_CONTRACT_ADDRESS,
@@ -54,7 +55,23 @@ function formatTokenAmount(amount: number, tokenType: EscrowTokenType) {
   return (amount / 10 ** decimals).toFixed(decimals);
 }
 
+function assertPrincipalMatchesNetwork(label: string, address: string) {
+  const normalized = address.trim().toUpperCase();
+  if (!normalized) {
+    throw new Error(`${label} is missing`);
+  }
+
+  if (STACKS_NETWORK === 'mainnet' && normalized.startsWith('ST')) {
+    throw new Error(`${label} uses a testnet address (${address}) while the app is configured for mainnet`);
+  }
+
+  if (STACKS_NETWORK !== 'mainnet' && (normalized.startsWith('SP') || normalized.startsWith('SM'))) {
+    throw new Error(`${label} uses a mainnet address (${address}) while the app is configured for ${STACKS_NETWORK}`);
+  }
+}
+
 async function getSip10Balance(contractAddress: string, contractName: string, ownerAddress: string) {
+  assertPrincipalMatchesNetwork('Connected wallet address', ownerAddress);
   const result = await fetchCallReadOnlyFunction({
     network,
     contractAddress,
@@ -75,6 +92,7 @@ function contractCall(options: ContractCallOptions) {
         reject(new Error('No connected wallet address found'));
         return;
       }
+      assertPrincipalMatchesNetwork('Connected wallet address', senderAddress);
 
       openContractCall({
         network,
@@ -128,6 +146,8 @@ export async function createEscrowForProject(
   if (!senderAddress) {
     throw new Error('No connected wallet address found');
   }
+  assertPrincipalMatchesNetwork('Connected wallet address', senderAddress);
+  assertPrincipalMatchesNetwork('Freelancer address', freelancerAddress);
 
   const onChainId = await getNextProjectOnChainId();
   const distributed = proposedAmount != null
@@ -155,6 +175,7 @@ export async function createEscrowForProject(
   let functionName = 'create-project-stx';
   if (project.tokenType === 'sBTC') {
     functionName = 'create-project-sbtc';
+    assertPrincipalMatchesNetwork('sBTC contract address', SBTC_CONTRACT_ADDRESS);
     const balance = await getSip10Balance(SBTC_CONTRACT_ADDRESS, SBTC_CONTRACT_NAME, senderAddress);
     if (balance < total) {
       throw new Error(
@@ -164,6 +185,7 @@ export async function createEscrowForProject(
     functionArgs.push(contractPrincipalCV(SBTC_CONTRACT_ADDRESS, SBTC_CONTRACT_NAME));
   } else if (project.tokenType === 'USDCx') {
     functionName = 'create-project-usdcx';
+    assertPrincipalMatchesNetwork('USDCx contract address', USDCX_CONTRACT_ADDRESS);
     const balance = await getSip10Balance(USDCX_CONTRACT_ADDRESS, USDCX_CONTRACT_NAME, senderAddress);
     if (balance < total) {
       throw new Error(

@@ -53,8 +53,8 @@ export function getUserData() {
 export function getUserAddress() {
   const userData = getUserData();
   return IS_TESTNET
-    ? userData?.profile?.stxAddress?.testnet || userData?.profile?.stxAddress?.mainnet || null
-    : userData?.profile?.stxAddress?.mainnet || userData?.profile?.stxAddress?.testnet || null;
+    ? userData?.profile?.stxAddress?.testnet || null
+    : userData?.profile?.stxAddress?.mainnet || null;
 }
 
 export function signOut() {
