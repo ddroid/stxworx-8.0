@@ -18,4 +18,3 @@ projectRoutes.get("/:id", projectController.getById);
 projectRoutes.post("/", requireAuth, requireRole("client"), projectController.create);
 projectRoutes.patch("/:id", requireAuth, projectController.update);
 projectRoutes.delete("/:id", requireAuth, projectController.cancel);
-projectRoutes.patch("/:id/activate", requireAuth, projectController.activate);

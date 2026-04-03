@@ -12,7 +12,7 @@ const createProposalSchema = z.object({
 
 const acceptProposalSchema = z.object({
   escrowTxId: z.string().min(1),
-  onChainId: z.number().int(),
+  onChainId: z.number().int().optional(),
 });
 
 export const proposalController = {
@@ -108,10 +108,14 @@ export const proposalController = {
         return res.status(409).json({ message: verification.error || "Escrow contract call has not been verified yet" });
       }
 
+      if (verification.onChainId == null) {
+        return res.status(409).json({ message: "Escrow contract call did not return a valid on-chain project id" });
+      }
+
       const accepted = await proposalService.acceptWithEscrowFunding(
         id,
         result.data.escrowTxId,
-        verification.onChainId ?? result.data.onChainId,
+        verification.onChainId,
       );
 
       return res.status(200).json(accepted);

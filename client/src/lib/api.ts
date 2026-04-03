@@ -652,6 +652,13 @@ export async function getProjects(filters?: {
   });
 }
 
+export async function createProject(input: CreateProjectInput) {
+  return apiRequest<ApiProject>('/projects', {
+    method: 'POST',
+    body: JSON.stringify(input),
+  });
+}
+
 export async function getCategories() {
   return apiRequest<ApiCategory[]>('/categories', { method: 'GET' });
 }
@@ -672,22 +679,19 @@ export async function getMyCompletedProjects() {
   return apiRequest<ApiProject[]>('/projects/my/completed', { method: 'GET' });
 }
 
-export async function createProject(input: CreateProjectInput) {
-  return apiRequest<ApiProject>('/projects', {
-    method: 'POST',
-    body: JSON.stringify(input),
-  });
+export async function getLeaderboard() {
+  return apiRequest<ApiLeaderboardEntry[]>('/users/leaderboard', { method: 'GET' });
 }
 
-export async function activateProject(projectId: number, input: { escrowTxId: string; onChainId: number }) {
-  return apiRequest<ApiProject>(`/projects/${projectId}/activate`, {
+export async function updateProject(id: number, input: Partial<CreateProjectInput>) {
+  return apiRequest<ApiProject>(`/projects/${id}`, {
     method: 'PATCH',
     body: JSON.stringify(input),
   });
 }
 
-export async function getLeaderboard() {
-  return apiRequest<ApiLeaderboardEntry[]>('/users/leaderboard', { method: 'GET' });
+export async function deleteProject(id: number) {
+  return apiRequest<{ message: string }>(`/projects/${id}`, { method: 'DELETE' });
 }
 
 export async function getUserProfile(address: string) {
@@ -759,7 +763,7 @@ export async function getMyProposals() {
 
 export async function acceptProposal(
   proposalId: number,
-  input: { escrowTxId: string; onChainId: number },
+  input: { escrowTxId: string; onChainId?: number },
 ) {
   return apiRequest<ApiProposal>(`/proposals/${proposalId}/accept`, {
     method: 'PATCH',

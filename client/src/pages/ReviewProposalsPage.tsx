@@ -1,7 +1,6 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { ChevronRight, Star } from 'lucide-react';
 import { Link, useLocation } from 'react-router-dom';
-import * as Shared from '../shared';
 import {
   acceptProposal,
   formatAddress,
@@ -13,7 +12,6 @@ import {
   getUserProfilePath,
   getUserProfile,
   getUserReviews,
-  rejectProposal,
   toDisplayName,
   type ApiProposal,
 } from '../lib/api';
@@ -33,8 +31,6 @@ export const ReviewProposalsPage = () => {
   const [proposals, setProposals] = useState<ApiProposal[]>([]);
   const [profilesByAddress, setProfilesByAddress] = useState<Record<string, ApiUserProfile>>({});
   const [reviewsByAddress, setReviewsByAddress] = useState<Record<string, ApiUserReview[]>>({});
-  const [messageRecipientAddress, setMessageRecipientAddress] = useState('');
-  const [isMessageModalOpen, setIsMessageModalOpen] = useState(false);
   const [processingProposalId, setProcessingProposalId] = useState<number | null>(null);
   const [acceptanceErrorsByProposal, setAcceptanceErrorsByProposal] = useState<Record<number, string>>({});
   const [loading, setLoading] = useState(true);
@@ -136,7 +132,6 @@ export const ReviewProposalsPage = () => {
       const escrow = await createEscrowForProject(project, proposal.freelancerAddress, proposal.proposedAmount);
       await acceptProposal(proposal.id, {
         escrowTxId: escrow.txId,
-        onChainId: escrow.onChainId,
       });
       await loadProposals(project.id);
     } catch (error) {
@@ -147,24 +142,10 @@ export const ReviewProposalsPage = () => {
     }
   };
 
-  const handleRejectProposal = async (proposalId: number) => {
-    try {
-      await rejectProposal(proposalId);
-      await loadProposals(project?.id);
-    } catch (error) {
-      console.error('Failed to reject proposal:', error);
-    }
-  };
-
 
   return (
     <div className="pt-28 pb-20 px-6 md:pl-[92px]">
       <div className="container-custom">
-        <Shared.MessageModal
-          isOpen={isMessageModalOpen}
-          onClose={() => setIsMessageModalOpen(false)}
-          recipientAddress={messageRecipientAddress}
-        />
         <Link to="/dashboard" className="inline-flex items-center gap-2 text-xs font-bold text-muted hover:text-ink mb-8 transition-colors">
           <ChevronRight size={14} className="rotate-180" /> Back to Dashboard
         </Link>
@@ -209,6 +190,15 @@ export const ReviewProposalsPage = () => {
               const canAcceptProposal = proposal.status === 'pending';
               const isProcessingThisProposal = processingProposalId === proposal.id;
               const isBlockedByOtherAcceptedProposal = Boolean(acceptedProposal && acceptedProposal.id !== proposal.id && project?.status !== 'active');
+              const primaryButtonLabel = isProcessingThisProposal
+                ? 'Opening Wallet...'
+                : canFundEscrow
+                  ? 'Fund Escrow'
+                  : canAcceptProposal
+                    ? 'Fund Escrow & Accept Proposal'
+                    : proposal.status === 'accepted'
+                      ? 'Escrow Activated'
+                      : 'Proposal Closed';
 
               return (
                 <div key={proposal.id} className="card p-6">
@@ -241,36 +231,19 @@ export const ReviewProposalsPage = () => {
                   {acceptanceError && (
                     <p className="text-xs text-red-400 mb-6">{acceptanceError}</p>
                   )}
-                  <div className="flex flex-col sm:flex-row gap-3 sm:gap-4">
+                  <div className="flex flex-col gap-3">
                     <button
                       onClick={() => handleAcceptProposal(proposal)}
                       disabled={(!(canAcceptProposal || canFundEscrow)) || isProcessingThisProposal || isBlockedByOtherAcceptedProposal}
-                      className="flex-1 btn-primary py-3 justify-center disabled:opacity-50"
+                      className="w-full btn-primary py-3 justify-center disabled:opacity-50"
                     >
-                      {isProcessingThisProposal
-                        ? 'Opening Wallet...'
-                        : canFundEscrow
-                          ? 'Fund Escrow'
-                          : proposal.status === 'accepted'
-                            ? 'Accepted'
-                            : 'Accept Proposal'}
+                      {primaryButtonLabel}
                     </button>
-                    <button
-                      onClick={() => handleRejectProposal(proposal.id)}
-                      disabled={proposal.status !== 'pending' || isProcessingThisProposal}
-                      className="flex-1 btn-outline py-3 justify-center disabled:opacity-50"
-                    >
-                      Reject Proposal
-                    </button>
-                    <button
-                      onClick={() => {
-                        setMessageRecipientAddress(proposal.freelancerAddress || '');
-                        setIsMessageModalOpen(true);
-                      }}
-                      className="flex-1 btn-outline py-3 justify-center"
-                    >
-                      Message
-                    </button>
+                    {proposal.status === 'pending' || proposal.status === 'accepted' ? (
+                      <p className="text-xs text-muted">
+                        Funding escrow verifies the on-chain transaction, assigns the freelancer, and activates the project in one flow.
+                      </p>
+                    ) : null}
                   </div>
                 </div>
               );

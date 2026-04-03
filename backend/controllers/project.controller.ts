@@ -1,15 +1,9 @@
 import { type Request, type Response } from "express";
-import { z } from "zod";
 import { projectService } from "../services/project.service";
 import { insertProjectSchema } from "@shared/schema";
 import { db } from "../db";
 import { users } from "@shared/schema";
 import { eq, inArray } from "drizzle-orm";
-
-const activateSchema = z.object({
-  escrowTxId: z.string().min(1),
-  onChainId: z.number().int(),
-});
 
 export const projectController = {
   /** Resolve clientAddress/freelancerAddress by joining user IDs */
@@ -178,29 +172,6 @@ export const projectController = {
       return res.status(200).json(enriched);
     } catch (error) {
       console.error("My completed projects error:", error);
-      return res.status(500).json({ message: "Internal server error" });
-    }
-  },
-
-  // PATCH /api/projects/:id/activate
-  async activate(req: Request, res: Response) {
-    try {
-      const id = parseInt(req.params.id);
-      if (isNaN(id)) return res.status(400).json({ message: "Invalid project ID" });
-
-      const result = activateSchema.safeParse(req.body);
-      if (!result.success) {
-        return res.status(400).json({ message: "Validation error", errors: result.error.errors });
-      }
-
-      const project = await projectService.getById(id);
-      if (!project) return res.status(404).json({ message: "Project not found" });
-      if (project.clientId !== req.user!.id) return res.status(403).json({ message: "Not authorized" });
-
-      const activated = await projectService.activate(id, result.data.escrowTxId, result.data.onChainId);
-      return res.status(200).json(activated);
-    } catch (error) {
-      console.error("Activate project error:", error);
       return res.status(500).json({ message: "Internal server error" });
     }
   },

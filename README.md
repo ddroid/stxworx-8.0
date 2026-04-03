@@ -1,45 +1,40 @@
-# STX Freelance Platform
+# STXWORX
 
-A decentralized freelance escrow and bounty platform built on the Stacks blockchain, supporting STX,sBTC and usdcx payments with milestone-based project management.
+STXWORX is a Stacks-based freelance marketplace with on-chain escrow, milestone releases, admin moderation, social identity, and reputation features. The current product flow is: create a project, receive proposals, fund escrow on-chain, verify the escrow transaction, activate the project, and then manage milestone delivery and releases.
 
 ## 🚀 Quick Start
 
 ```bash
-
-# 0. Clone and install
-git clone https://github.com/ddroid/stxworx-8.git
-cd stxworx-8
-npm install
-cd ../client
+# 1. Clone and install
+git clone <your-repo-url>
+cd stxworx-8.0
 npm install
 
-# 1. Docker compose
+# 2. Start local services if needed
 docker compose up -d
 
-# 2. Setup environment
+# 3. Configure environment
 cp .env.example .env
-# Edit .env with your database URL and session secret
 
-# 3. Setup database
+# 4. Initialize the database
 npm run db:setup
 
-# 4. Start development
+# 5. Run the app stack
 npm run dev
-# Visit http://localhost:5000
 ```
 
-**For testnet deployment**, jump to [Testnet Deployment](#-testnet-deployment) section.
+The app is served at `http://localhost:5000` and the API is available under `http://localhost:5000/api`.
 
 ---
 
 ## 🌟 Features
 
-- **Multi-Token Support**: Create escrow projects with STX or sBTC
-- **Milestone-Based Payments**: 4 milestones per project with automatic distribution
-- **Secure Escrow**: Smart contract-based fund locking and release
-- **Role-Based Dashboards**: Separate interfaces for clients and freelancers
-- **Real-Time Updates**: Live blockchain transaction tracking
-- **5% Platform Fee**: Sustainable fee structure for platform maintenance
+- **Escrow-first project funding**: Clients create projects off-chain and fund them on-chain when accepting a proposal.
+- **Multi-token support**: Escrow creation and releases support STX, sBTC, and USDCx.
+- **Milestone delivery workflow**: Freelancers submit deliverables, clients approve releases, and disputes can be raised when work stalls.
+- **Marketplace roles**: Wallet-authenticated client and freelancer flows with admin moderation.
+- **Social identity and reputation**: Profiles, social posts, reviews, badges, and reputation contract integrations.
+- **Canonical activation flow**: Proposal acceptance verifies the escrow contract call and activates the project in one path.
 
 ## 🏗️ Tech Stack
 
@@ -47,7 +42,7 @@ npm run dev
 - **React 18** with TypeScript
 - **Vite** for blazing-fast development
 - **TanStack Query** for data fetching and caching
-- **Wouter** for client-side routing
+- **react-router-dom** for client-side routing
 - **Tailwind CSS** with custom theme
 - **Radix UI** for accessible components
 - **Stacks Connect** for wallet integration
@@ -61,7 +56,8 @@ npm run dev
 ### Blockchain
 - **Clarity** smart contracts on Stacks
 - **Clarinet** for contract development and testing
-- Support for **STX** (native) and **sBTC** (SIP-010 token)
+- Escrow contract: **`escrow-multi-token-v11.clar`**
+- Reputation contracts: **`rep-sft.clar`**, **`stxworx-badge.clar`**, **`verify-soulbound.clar`**
 
 ---
 
@@ -101,7 +97,7 @@ Before you begin, ensure you have the following installed:
 
 5. **Stacks Wallet**
    - Install [Hiro Wallet](https://wallet.hiro.so/) browser extension
-   - Create or import a testnet wallet
+   - Create or import a wallet that matches your configured `VITE_STACKS_NETWORK`
 
 ---
 
@@ -111,7 +107,7 @@ Before you begin, ensure you have the following installed:
 
 ```bash
 git clone <your-repo-url>
-cd stx-freelance-platform
+cd stxworx-8.0
 ```
 
 ### Step 2: Install Dependencies
@@ -181,9 +177,12 @@ The application will be available at:
 
 ### Understanding the Contract
 
-The platform uses a multi-token escrow contract (`escrow-multi-token.clar`) that supports:
+The platform uses `contracts/escrow-multi-token-v11.clar` as the active escrow contract. It supports:
 - **STX**: Native Stacks token (6 decimal places)
 - **sBTC**: Bitcoin on Stacks (8 decimal places)
+- **USDCx**: SIP-010 token support for escrow creation and release
+
+Proposal acceptance is tied to this contract. The frontend opens the wallet transaction first, then the backend verifies the confirmed contract call through the Hiro API before marking the project active.
 
 ### Testing Contracts Locally
 
@@ -194,18 +193,26 @@ The platform uses a multi-token escrow contract (`escrow-multi-token.clar`) that
 
 2. **Test Contract Functions**:
    ```clarity
-   ;; Create a test escrow with STX
-   (contract-call? .escrow-multi-token-v4 create-escrow
+   ;; Create a test project escrow with STX
+   (contract-call? .escrow-multi-token-v11 create-project-stx
      'ST1PQHQKV0RJXZFY1DGX8MNSNYVE3VGZJSRTPGZGM
-     u60000000  ;; 60 STX (60 * 1,000,000 microstacks)
-     "none"     ;; Token type (none = STX)
+     u15000000
+     u15000000
+     u15000000
+     u15000000
    )
    
-   ;; Create a test escrow with sBTC
-   (contract-call? .escrow-multi-token-v4 create-escrow
+   ;; Release milestone 1 for an STX-funded project
+   (contract-call? .escrow-multi-token-v11 release-milestone-stx u1 u1)
+
+   ;; Create a test project escrow with sBTC
+   (contract-call? .escrow-multi-token-v11 create-project-sbtc
      'ST1PQHQKV0RJXZFY1DGX8MNSNYVE3VGZJSRTPGZGM
-     u2000000000  ;; 20 sBTC (20 * 100,000,000 micro-sBTC)
-     "some .sbtc-token"  ;; sBTC token contract
+     u50000000
+     u50000000
+     u0
+     u0
+     .sbtc-token
    )
    ```
 
@@ -216,50 +223,47 @@ The platform uses a multi-token escrow contract (`escrow-multi-token.clar`) that
 
 ---
 
-## 🌐 Testnet Deployment
+## 🌐 Deployment Configuration
 
-### Step 1: Prepare Your Testnet Wallet
+### Step 1: Configure Clarinet and app environment
 
-1. **Get Testnet STX**:
-   - Visit [Stacks Testnet Faucet](https://explorer.hiro.so/sandbox/faucet?chain=testnet)
-   - Enter your wallet address
-   - Request testnet STX tokens
-
-2. **Get Testnet sBTC** (if needed):
-   - Visit [sBTC Bridge Testnet](https://bridge.sbtc.tech)
-   - Bridge some testnet BTC to sBTC
-
-### Step 2: Configure Testnet Deployment
-
-1. **Update `Clarinet.toml`**:
+1. **Confirm `Clarinet.toml`** points at the active escrow contract:
    ```toml
    [project]
-   name = "stx-freelance-platform"
+   name = "stxworx-8"
    
-   [contracts.escrow-multi-token-v4]
-   path = "contracts/escrow-multi-token.clar"
-   clarity_version = 2
-   epoch = 2.5
+   [contracts.escrow-multi-token-v11]
+   path = "contracts/escrow-multi-token-v11.clar"
+   clarity_version = 4
+   epoch = "latest"
    ```
 
-2. **Update Deployment Plan** (`deployments/default.testnet-plan.yaml`):
+2. **Set the matching environment values** in `.env`:
+   ```env
+   VITE_STACKS_NETWORK=mainnet
+   VITE_CONTRACT_ADDRESS=SP37JRPTQ0KFMB3HAFVCCAWDQWHKRJCGBW1W19TJH
+   VITE_ESCROW_CONTRACT_NAME=escrow-multi-token-v11
+   VITE_HIRO_API_BASE_URL=https://api.hiro.so
+   ```
+
+3. **Adjust the deployment manifest** when targeting a different network:
    ```yaml
    ---
    id: 0
    name: Escrow Multi-Token Contract
-   network: testnet
-   stacks-node: "https://api.testnet.hiro.so"
+   network: mainnet
+   stacks-node: "https://api.hiro.so"
    contracts:
      - contract-publish:
-         contract-name: escrow-multi-token-v4
-         expected-sender: ST1PQHQKV0RJXZFY1DGX8MNSNYVE3VGZJSRTPGZGM
+         contract-name: escrow-multi-token-v11
+         expected-sender: SP37JRPTQ0KFMB3HAFVCCAWDQWHKRJCGBW1W19TJH
          cost: 50000
-         path: contracts/escrow-multi-token.clar
-         clarity-version: 2
-         epoch: 2.5
+         path: contracts/escrow-multi-token-v11.clar
+         clarity-version: 4
+         epoch: latest
    ```
 
-### Step 3: Deploy Contract to Testnet
+### Step 2: Deploy and verify
 
 1. **Check Contract Syntax**:
    ```bash
@@ -268,48 +272,21 @@ The platform uses a multi-token escrow contract (`escrow-multi-token.clar`) that
 
 2. **Deploy Using Clarinet**:
    ```bash
-   clarinet deployments apply --manifest ./deployments/default.testnet-plan.yaml
+   clarinet deployments apply --manifest ./deployments/default.mainnet-plan.yaml
    ```
 
-   Or manually deploy using the Hiro Platform:
-
-3. **Manual Deployment (Alternative)**:
-   - Visit [Hiro Platform](https://platform.hiro.so/)
-   - Connect your testnet wallet
-   - Navigate to "Deploy Contract"
-   - Upload `contracts/escrow-multi-token.clar`
-   - Set contract name: `escrow-multi-token-v4`
-   - Review and deploy
-
-### Step 4: Update Frontend Configuration
-
-After deploying, update the contract address in your frontend:
-
-**File**: `client/src/lib/stacks.ts`
-
-```typescript
-// Update these values with your deployed contract
-const CONTRACT_ADDRESS = 'ST1PQHQKV0RJXZFY1DGX8MNSNYVE3VGZJSRTPGZGM'; // Your testnet address
-const CONTRACT_NAME = 'escrow-multi-token-v4';
-
-// For sBTC, update the token contract address
-const SBTC_CONTRACT = 'ST1PQHQKV0RJXZFY1DGX8MNSNYVE3VGZJSRTPGZGM.sbtc-token'; // Testnet sBTC contract
-```
-
-### Step 5: Verify Deployment
-
-1. **Check Contract on Explorer**:
-   - Visit [Stacks Testnet Explorer](https://explorer.hiro.so/?chain=testnet)
+3. **Check the contract on Explorer**:
+   - Visit the appropriate Hiro Explorer for your configured network
    - Search for your contract address
    - Verify contract is deployed and callable
 
-2. **Test Contract Functions**:
+4. **Inspect the published contract**:
    ```bash
    # Read contract source
-   clarinet contracts describe escrow-multi-token-v4 --testnet
+   clarinet contracts describe escrow-multi-token-v11 --mainnet
    
    # Check contract functions
-   clarinet contracts functions escrow-multi-token-v4 --testnet
+   clarinet contracts functions escrow-multi-token-v11 --mainnet
    ```
 
 ---
@@ -323,25 +300,25 @@ const SBTC_CONTRACT = 'ST1PQHQKV0RJXZFY1DGX8MNSNYVE3VGZJSRTPGZGM.sbtc-token'; //
    - Approve connection in Hiro Wallet
 
 2. **Create Project**:
-   - Navigate to `/client` dashboard
-   - Click "Create New Project"
+   - Post a project from the client flow
    - Fill in project details:
      - **Title**: Project name
      - **Category**: Type of work
-     - **Token Type**: STX or sBTC
-     - **Total Amount**: Total project budget
-     - **Freelancer Address**: Recipient wallet address
+     - **Token Type**: STX, sBTC, or USDCx
+     - **Milestones**: 1 to 4 milestone titles and amounts
      - **Description**: Project requirements
 
-3. **Fund Project**:
-   - After creation, click "Fund Project"
-   - Approve blockchain transaction
-   - Funds locked in escrow contract
+3. **Accept a proposal and fund escrow**:
+   - Review incoming proposals for the project
+   - Use the proposal payment action to open the wallet
+   - Submit the escrow `create-project-*` transaction
+   - Let the backend verify the confirmed transaction and activate the project
 
 4. **Manage Milestones**:
    - View milestone progress
    - Review freelancer submissions
    - Release payments upon approval
+   - Escalate disputes to admin tooling when needed
 
 ### For Freelancers (Completing Work)
 
@@ -349,19 +326,18 @@ const SBTC_CONTRACT = 'ST1PQHQKV0RJXZFY1DGX8MNSNYVE3VGZJSRTPGZGM.sbtc-token'; //
    - Use the same address shared with client
 
 2. **View Projects**:
-   - Navigate to `/freelancer` dashboard
-   - See all assigned projects
+   - Browse open work and submit proposals
+   - Track accepted and active projects from the freelancer flow
 
 3. **Complete Milestones**:
    - Deliver work for each milestone
-   - Click "Mark Complete" button
-   - Add completion description and deliverable links
-   - Submit blockchain transaction
+   - Submit deliverable links and milestone notes
+   - Trigger the milestone completion step when required
 
 4. **Receive Payments**:
    - Client reviews and releases payment
-   - Funds automatically sent to your wallet
-   - Platform fee (5%) deducted automatically
+   - Funds are released from escrow to your wallet
+   - Contract fee handling follows the active escrow contract configuration
 
 ---
 
@@ -429,7 +405,7 @@ stxworx-8.0/
 │   ├── middleware
 │   │   ├── admin-auth.ts
 │   │   ├── auth.ts
-│   │   └── x402.ts
+│   │   └── additional middleware utilities
 │   ├── routes
 │   │   ├── admin.routes.ts
 │   │   ├── auth.routes.ts
@@ -702,7 +678,7 @@ stxworx-8.0/
 
 ```bash
 # Development
-npm run dev              # Start development server (frontend + backend)
+npm run dev              # Start the Express app with Vite-served frontend
 
 # Database
 npm run db:push          # Push schema changes to database
@@ -721,7 +697,7 @@ npm run check            # TypeScript type checking
 clarinet check           # Check contract syntax
 clarinet test            # Run contract tests
 clarinet console         # Start interactive console
-clarinet deployments apply --manifest ./deployments/default.testnet-plan.yaml  # Deploy to testnet
+clarinet deployments apply --manifest ./deployments/default.mainnet-plan.yaml   # Deploy using the mainnet manifest
 ```
 
 ---
@@ -760,8 +736,8 @@ npm run dev
 # Run all tests
 clarinet test
 
-# Run specific test file
-clarinet test tests/escrow-v4_test.ts
+# Or run the repo-level contract test script
+npm test
 
 # Interactive testing
 clarinet console
@@ -769,14 +745,14 @@ clarinet console
 
 ### Manual Testing Checklist
 
-- [ ] Connect wallet (testnet)
+- [ ] Connect wallet for the configured network
 - [ ] Create STX project
 - [ ] Create sBTC project
-- [ ] Fund project
+- [ ] Accept proposal and fund escrow
 - [ ] Mark milestone complete (freelancer)
 - [ ] Release milestone payment (client)
 - [ ] Verify amounts display correctly
-- [ ] Check platform fee deduction (5%)
+- [ ] Confirm escrow verification activates the project
 - [ ] Test all 4 milestones
 - [ ] Verify project completion
 
@@ -792,8 +768,8 @@ clarinet console
 
 ### Issue: "Contract not found"
 **Solution**:
-- Verify contract is deployed to testnet
-- Check `CONTRACT_ADDRESS` and `CONTRACT_NAME` in `stacks.ts`
+- Verify contract is deployed to the configured network
+- Check `VITE_CONTRACT_ADDRESS` and `VITE_ESCROW_CONTRACT_NAME` in `.env`
 - Ensure you're connected to the correct network in wallet
 
 ### Issue: "Post-condition failed"
@@ -805,8 +781,8 @@ clarinet console
 
 ### Issue: "Insufficient STX balance"
 **Solution**:
-- Get testnet STX from [faucet](https://explorer.hiro.so/sandbox/faucet?chain=testnet)
-- Ensure you have enough for transaction fees (~0.1 STX)
+- Fund the wallet you are using for contract calls
+- Ensure you have enough balance for the escrow call and network fees
 
 ### Issue: "sBTC displays wrong amount"
 **Solution**:
@@ -819,51 +795,51 @@ clarinet console
 ## 📚 Key Concepts
 
 ### Milestone System
-- Each project has **4 milestones** (25% each)
+- Each project supports **1 to 4 milestones**
 - Funds locked in smart contract escrow
 - Freelancer marks milestones complete
 - Client reviews and releases payment
-- Automatic 5% platform fee on each release
+- Fee handling is enforced by the active escrow contract and mirrored in platform settings
 
 ### Transaction Flow
 
 1. **Project Creation**:
    ```
-   Client → Frontend → Backend DB → Blockchain (Contract deployment)
+   Client → Backend DB → Open marketplace listing
    ```
 
-2. **Funding**:
+2. **Proposal Acceptance + Escrow Activation**:
    ```
-   Client → Wallet → Smart Contract (STX/sBTC locked)
+   Client → Wallet → Escrow contract call → Backend verification → Project active
    ```
 
 3. **Milestone Completion**:
    ```
-   Freelancer → Mark Complete → Blockchain (update state)
+   Freelancer → Submit deliverable → Complete milestone state
    ```
 
 4. **Payment Release**:
    ```
-   Client → Approve → Smart Contract → Transfer (95% to freelancer, 5% platform fee)
+   Client → Approve → Release milestone on-chain → Funds move from escrow
    ```
 
 ### Smart Contract Functions
 
 ```clarity
-;; Create new escrow
-(define-public (create-escrow (freelancer principal) (total-amount uint) (token (optional principal))))
+;; Create a project with STX escrow
+(define-public (create-project-stx (freelancer principal) (m1 uint) (m2 uint) (m3 uint) (m4 uint)))
 
-;; Fund escrow with tokens
-(define-public (fund-escrow (escrow-id uint)))
+;; Create a project with sBTC escrow
+(define-public (create-project-sbtc (freelancer principal) (m1 uint) (m2 uint) (m3 uint) (m4 uint) (sbtc-token <sip010-ft-trait>)))
 
 ;; Mark milestone as complete (freelancer)
-(define-public (mark-complete (escrow-id uint) (milestone-num uint)))
+(define-public (complete-milestone (project-id uint) (milestone-num uint)))
 
-;; Release milestone payment (client)
-(define-public (release-payment (escrow-id uint) (milestone-num uint)))
+;; Release milestone payment for STX projects
+(define-public (release-milestone-stx (project-id uint) (milestone-num uint)))
 
-;; Get escrow details
-(define-read-only (get-escrow (escrow-id uint)))
+;; Get project details
+(define-read-only (get-project (project-id uint)))
 ```
 
 ---

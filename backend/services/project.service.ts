@@ -118,14 +118,6 @@ export const projectService = {
     return updated || null;
   },
 
-  async activate(id: number, escrowTxId: string, onChainId: number) {
-    return this.update(id, {
-      status: "active",
-      escrowTxId,
-      onChainId,
-    });
-  },
-
   async cancel(id: number) {
     return this.update(id, { status: "cancelled" });
   },

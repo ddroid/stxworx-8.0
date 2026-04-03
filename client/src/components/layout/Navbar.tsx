@@ -40,7 +40,6 @@ import {
   type ApiConversation,
   type ApiNotification,
 } from '../../lib/api';
-import { IS_TESTNET } from '../../lib/constants';
 import type { ApiUserProfile } from '../../types/user';
 import { platformMenuItems, type PlatformMenuItem } from './navigation';
 
@@ -106,33 +105,10 @@ function scoreMenuItem(item: PlatformMenuItem, terms: string[]) {
   return score;
 }
 
-const announcementSlides = [
-  {
-    text: (
-      <>
-        We're currently in <span className="font-black text-accent-orange">Beta!</span> Official launch planned for{' '}
-        <span className="font-black">April 2nd.</span> Currently addressing{' '}
-        <span className="font-black text-accent-orange">wallet</span> &{' '}
-        <span className="font-black text-accent-blue">AI integration</span> QA/QC.
-      </>
-    ),
-  },
-  {
-    text: (
-      <>
-        For <span className="font-black">collaborations</span>, <span className="font-black">ambassador roles</span>, or{' '}
-        <span className="font-black">media partnerships</span> —{' '}
-        <span className="inline-flex items-center gap-1.5 bg-accent-orange text-bg px-3 py-1 rounded-[25px] text-[11px] font-black uppercase tracking-widest" style={{ backgroundImage: 'linear-gradient(135deg, rgba(255,255,255,0.15) 0%, rgba(0,0,0,0.1) 100%)', boxShadow: '0 2px 0 var(--btn-shadow-color, #CC5500)' }}>
-          <Mail size={12} /> Contact now
-        </span>
-      </>
-    ),
-  },
-];
+const announcementSlides = ['marketplace', 'contact'] as const;
 
 const AnnouncementBar = ({ navigate }: { navigate: (path: string) => void }) => {
   const [current, setCurrent] = useState(0);
-  const networkLabel = IS_TESTNET ? 'Testnet' : 'Mainnet';
 
   useEffect(() => {
     const timer = window.setInterval(() => {
@@ -151,14 +127,6 @@ const AnnouncementBar = ({ navigate }: { navigate: (path: string) => void }) => 
         ? 'bg-gradient-to-r from-accent-orange via-accent-yellow to-accent-orange/80' 
         : 'bg-gradient-to-r from-accent-blue via-accent-lightblue to-accent-blue/80'
     }`}>
-      <div className="absolute left-2 items-center gap-2 hidden md:flex">
-        <span className="h-2.5 w-2.5 rounded-full bg-bg animate-pulse shadow-[0_0_8px_rgba(255,255,255,0.8)]" />
-        <span className="text-[9px] md:text-[10px] lg:text-[11px] font-black uppercase tracking-[0.14em] text-bg bg-accent-orange/45 border border-white/35 px-2.5 py-1 rounded-[11px] shadow-[0_2px_10px_rgba(0,0,0,0.28)]">{networkLabel}</span>
-      </div>
-      <div className="absolute left-2 bottom-1 flex items-center gap-1.5 md:hidden">
-        <span className="h-1.5 w-1.5 rounded-full bg-bg animate-pulse shadow-[0_0_6px_rgba(255,255,255,0.8)]" />
-        <span className="text-[9px] font-black uppercase tracking-[0.16em] text-bg bg-accent-orange/45 border border-white/35 px-2 py-0.5 rounded-[10px] shadow-[0_2px_8px_rgba(0,0,0,0.25)]">{networkLabel}</span>
-      </div>
       <AnimatePresence mode="wait">
         <motion.p
           key={current}
@@ -168,7 +136,7 @@ const AnnouncementBar = ({ navigate }: { navigate: (path: string) => void }) => 
           transition={{ duration: 0.3 }}
           className="text-[9px] sm:text-[10px] md:text-xs lg:text-sm font-black uppercase tracking-[0.12em] sm:tracking-[0.14em] lg:tracking-widest text-bg text-center px-8 sm:px-12 lg:px-14"
         >
-          {current === 1 ? (
+          {announcementSlides[current] === 'contact' ? (
             <>
               <span className="sm:hidden cursor-pointer hover:opacity-80 transition-opacity flex items-center justify-center gap-2" onClick={handleContactClick}>
                 FOR COLLAB OR MEDIA PARTNERSHIPS — CONTACT NOW
@@ -181,9 +149,8 @@ const AnnouncementBar = ({ navigate }: { navigate: (path: string) => void }) => 
             </>
           ) : (
             <>
-              <span className="sm:hidden">WE'RE CURRENTLY IN BETA! OFFICIAL LAUNCH PLANNED FOR APRIL 2ND</span>
-              <span className="hidden sm:inline">WE'RE CURRENTLY IN BETA! OFFICIAL LAUNCH PLANNED FOR APRIL 2ND. STAY TUNED FOR EXCITING UPDATES.
-              CURRENTLY ADDRESSING WALLET & AI INTEGRATION QA/QC.</span>
+              <span className="sm:hidden">FUND PROJECTS IN ESCROW. RELEASE MILESTONES ONCHAIN.</span>
+              <span className="hidden sm:inline">STACKS FREELANCE MARKETPLACE — FUND PROJECTS IN ESCROW, RELEASE MILESTONES ONCHAIN, AND HANDLE DISPUTES THROUGH ADMIN MODERATION.</span>
             </>
           )}
         </motion.p>
