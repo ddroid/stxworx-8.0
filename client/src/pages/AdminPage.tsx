@@ -1,9 +1,10 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
-import { LogOut, ShieldCheck, Users } from 'lucide-react';
+import { LogOut, ShieldCheck, Users, Wallet } from 'lucide-react';
 import * as Shared from '../shared';
 import {
   adminLogin,
   adminLogout,
+  executeAdminProjectRefund,
   formatAddress,
   formatRelativeTime,
   formatTokenAmount,
@@ -11,6 +12,7 @@ import {
   getAdminDisputes,
   getAdminMe,
   getAdminPlatformConfig,
+  getAdminRefundQueue,
   getAdminUsers,
   toDisplayName,
   resolveAdminDispute,
@@ -19,9 +21,11 @@ import {
   updateAdminUserStatus,
   type ApiAdmin,
   type ApiAdminDashboard,
+  type AdminRefundQueueItem,
   type ApiDispute,
   type ApiPlatformConfig,
 } from '../lib/api';
+import { adminEscrowRefund } from '../lib/escrow';
 import type { ApiUserProfile } from '../types/user';
 
 type ResolutionDraft = {
@@ -30,7 +34,13 @@ type ResolutionDraft = {
   resolutionTxId: string;
 };
 
+type RefundDraft = {
+  note: string;
+  txId: string;
+};
+
 export const AdminDashboard = () => {
+  const { walletAddress } = Shared.useWallet();
   const [admin, setAdmin] = useState<ApiAdmin | null>(null);
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
@@ -40,26 +50,31 @@ export const AdminDashboard = () => {
   const [dashboard, setDashboard] = useState<ApiAdminDashboard | null>(null);
   const [users, setUsers] = useState<ApiUserProfile[]>([]);
   const [disputes, setDisputes] = useState<ApiDispute[]>([]);
+  const [refundQueue, setRefundQueue] = useState<AdminRefundQueueItem[]>([]);
   const [platformConfig, setPlatformConfig] = useState<ApiPlatformConfig | null>(null);
   const [daoFeePercentage, setDaoFeePercentage] = useState('');
   const [daoWalletAddress, setDaoWalletAddress] = useState('');
   const [resolutionDrafts, setResolutionDrafts] = useState<Record<number, ResolutionDraft>>({});
+  const [refundDrafts, setRefundDrafts] = useState<Record<number, RefundDraft>>({});
+  const [processingRefundProjectId, setProcessingRefundProjectId] = useState<number | null>(null);
 
   const loadAdminData = useCallback(async () => {
     setLoading(true);
     try {
-      const [{ admin: currentAdmin }, dashboardResponse, userResponse, disputeResponse, configResponse] = await Promise.all([
+      const [{ admin: currentAdmin }, dashboardResponse, userResponse, disputeResponse, configResponse, refundQueueResponse] = await Promise.all([
         getAdminMe(),
         getAdminDashboard(),
         getAdminUsers(),
         getAdminDisputes(),
         getAdminPlatformConfig(),
+        getAdminRefundQueue(),
       ]);
 
       setAdmin(currentAdmin);
       setDashboard(dashboardResponse);
       setUsers(userResponse);
       setDisputes(disputeResponse);
+      setRefundQueue(refundQueueResponse);
       setPlatformConfig(configResponse);
       setDaoFeePercentage(configResponse.daoFeePercentage || '');
       setDaoWalletAddress(configResponse.daoWalletAddress || '');
@@ -68,6 +83,14 @@ export const AdminDashboard = () => {
           disputeResponse.map((dispute) => [
             dispute.id,
             { favorFreelancer: true, resolution: '', resolutionTxId: '' },
+          ]),
+        ),
+      );
+      setRefundDrafts(
+        Object.fromEntries(
+          refundQueueResponse.map((refund) => [
+            refund.projectId,
+            { note: refund.note || '', txId: refund.txId || '' },
           ]),
         ),
       );
@@ -86,6 +109,11 @@ export const AdminDashboard = () => {
   const activeDisputes = useMemo(
     () => disputes.filter((dispute) => dispute.status === 'open'),
     [disputes],
+  );
+
+  const pendingRefundQueue = useMemo(
+    () => refundQueue.filter((refund) => refund.status === 'requested' && refund.project),
+    [refundQueue],
   );
 
   const handleLogin = async (e: React.FormEvent) => {
@@ -171,6 +199,43 @@ export const AdminDashboard = () => {
       setDaoWalletAddress(updated.daoWalletAddress || '');
     } catch (error) {
       console.error('Failed to update platform config:', error);
+    }
+  };
+
+  const updateRefundDraft = (projectId: number, patch: Partial<RefundDraft>) => {
+    setRefundDrafts((current) => ({
+      ...current,
+      [projectId]: {
+        note: current[projectId]?.note ?? '',
+        txId: current[projectId]?.txId ?? '',
+        ...patch,
+      },
+    }));
+  };
+
+  const handleAdminRefund = async (refundItem: AdminRefundQueueItem) => {
+    if (!refundItem.project?.onChainId || processingRefundProjectId) {
+      return;
+    }
+
+    const configuredAdminPrincipal = refundItem.configuredAdminPrincipal?.trim().toUpperCase() || '';
+    const connectedWallet = walletAddress?.trim().toUpperCase() || '';
+    if (!configuredAdminPrincipal || !connectedWallet || configuredAdminPrincipal !== connectedWallet) {
+      return;
+    }
+
+    setProcessingRefundProjectId(refundItem.projectId);
+    try {
+      const txId = await adminEscrowRefund(refundItem.project.onChainId, refundItem.project.tokenType);
+      await executeAdminProjectRefund(refundItem.projectId, {
+        txId,
+        note: refundDrafts[refundItem.projectId]?.note?.trim() || undefined,
+      });
+      await loadAdminData();
+    } catch (error) {
+      console.error('Failed to execute admin refund:', error);
+    } finally {
+      setProcessingRefundProjectId(null);
     }
   };
 
@@ -342,6 +407,92 @@ export const AdminDashboard = () => {
             <button onClick={handleSavePlatformConfig} className="btn-primary py-3 px-5 text-xs">
               Save DAO Config
             </button>
+          </div>
+        </div>
+
+        <div className="card mb-8">
+          <div className="flex items-center justify-between mb-8">
+            <h3 className="font-bold flex items-center gap-2"><Wallet size={18} /> Refund Fallback Queue</h3>
+            <span className="text-xs text-muted bg-ink/5 px-3 py-1 rounded-full font-bold">{pendingRefundQueue.length} Pending</span>
+          </div>
+          <div className="space-y-6">
+            {pendingRefundQueue.map((refund) => {
+              const project = refund.project;
+              if (!project) {
+                return null;
+              }
+
+              const draft = refundDrafts[refund.projectId] || { note: '', txId: refund.txId || '' };
+              const configuredAdminPrincipal = refund.configuredAdminPrincipal?.trim().toUpperCase() || '';
+              const connectedWallet = walletAddress?.trim().toUpperCase() || '';
+              const walletMatches = Boolean(configuredAdminPrincipal && connectedWallet && configuredAdminPrincipal === connectedWallet);
+              const isProcessing = processingRefundProjectId === refund.projectId;
+
+              return (
+                <div key={refund.id} className="border border-border rounded-[15px] p-5">
+                  <div className="flex flex-col md:flex-row md:items-start justify-between gap-4 mb-5">
+                    <div>
+                      <p className="font-black text-lg">{project.title}</p>
+                      <p className="text-xs text-muted">Project #{project.id} • Requested {refund.requestedAt ? formatRelativeTime(refund.requestedAt) : 'recently'}</p>
+                    </div>
+                    <span className="px-3 py-1 rounded-full text-[10px] font-bold uppercase tracking-widest bg-accent-orange/10 text-accent-orange">
+                      {refund.status}
+                    </span>
+                  </div>
+
+                  <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                    <div className="space-y-3">
+                      <div>
+                        <p className="text-[10px] font-bold uppercase tracking-widest text-muted mb-1">Client</p>
+                        <p className="text-sm font-bold">{formatAddress(project.clientAddress || '')}</p>
+                      </div>
+                      <div>
+                        <p className="text-[10px] font-bold uppercase tracking-widest text-muted mb-1">Remaining Escrow</p>
+                        <p className="text-sm font-bold">{formatTokenAmount(refund.refundSummary?.remainingAmount || 0)} {project.tokenType}</p>
+                      </div>
+                      {refund.reason && (
+                        <div>
+                          <p className="text-[10px] font-bold uppercase tracking-widest text-muted mb-1">Reason</p>
+                          <p className="text-sm text-muted">{refund.reason}</p>
+                        </div>
+                      )}
+                      <div>
+                        <p className="text-[10px] font-bold uppercase tracking-widest text-muted mb-1">Configured Refund Admin</p>
+                        <p className="text-xs break-all text-muted">{refund.configuredAdminPrincipal || 'Not configured'}</p>
+                      </div>
+                      <div>
+                        <p className="text-[10px] font-bold uppercase tracking-widest text-muted mb-1">Connected Wallet</p>
+                        <p className={`text-xs break-all ${walletMatches ? 'text-accent-cyan' : 'text-accent-red'}`}>{walletAddress || 'No wallet connected'}</p>
+                      </div>
+                    </div>
+
+                    <div className="space-y-3">
+                      <textarea
+                        value={draft.note}
+                        onChange={(e) => updateRefundDraft(refund.projectId, { note: e.target.value })}
+                        className="w-full bg-ink/5 border border-border rounded-[15px] p-4 text-sm min-h-[110px] outline-none"
+                        placeholder="Admin refund note"
+                      />
+                      <input
+                        value={draft.txId}
+                        onChange={(e) => updateRefundDraft(refund.projectId, { txId: e.target.value })}
+                        disabled
+                        className="w-full bg-ink/5 border border-border rounded-[15px] px-4 py-3 text-sm outline-none disabled:opacity-50"
+                        placeholder="Refund transaction ID will populate after wallet confirmation"
+                      />
+                      <button
+                        onClick={() => handleAdminRefund(refund)}
+                        disabled={!walletMatches || !project.onChainId || isProcessing}
+                        className="btn-primary py-3 px-4 text-xs disabled:opacity-50"
+                      >
+                        {isProcessing ? 'Opening Wallet...' : 'Execute Admin Refund'}
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              );
+            })}
+            {pendingRefundQueue.length === 0 && <p className="text-sm text-muted">No refund fallback actions are pending.</p>}
           </div>
         </div>
 

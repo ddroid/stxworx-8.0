@@ -5,6 +5,7 @@ import { milestoneSubmissions, users } from "@shared/schema";
 import { eq, and, sql } from "drizzle-orm";
 import { projectService } from "../services/project.service";
 import { notificationService } from "../services/notification.service";
+import { refundService } from "../services/refund.service";
 import type { Project } from "@shared/schema";
 
 const submitSchema = z.object({
@@ -156,6 +157,14 @@ export const milestoneController = {
       const project = await projectService.getById(submission.projectId);
       if (!project || project.clientId !== req.user!.id) {
         return res.status(403).json({ message: "Not authorized" });
+      }
+      if (project.status !== "active") {
+        return res.status(400).json({ message: "Only active projects can release milestone funds" });
+      }
+
+      const refundSummary = await refundService.getProjectRefundStatus(project.id);
+      if (refundSummary.status === "requested" || refundSummary.status === "approved" || refundSummary.status === "refunded") {
+        return res.status(400).json({ message: "Milestone payout is blocked while a refund is pending or completed" });
       }
 
       await db

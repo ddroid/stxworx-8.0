@@ -83,6 +83,8 @@ export const ReviewWorkPage = () => {
     return `${formatTokenAmount(milestone?.amount)} ${project.tokenType}`;
   }, [project, selectedSubmission]);
 
+  const isRefundBlockingReview = project?.refundSummary?.status === 'requested' || project?.refundSummary?.status === 'approved' || project?.refundSummary?.status === 'refunded';
+
   const handleApprove = async () => {
     if (!selectedSubmission || !project?.onChainId) {
       return;
@@ -167,17 +169,33 @@ export const ReviewWorkPage = () => {
               </a>
             </div>
 
+            <div className="mb-8 rounded-[15px] border border-border bg-ink/5 p-4">
+              <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
+                <div>
+                  <p className="text-[10px] font-bold uppercase tracking-widest text-muted mb-1">Refund Status</p>
+                  <p className="text-sm font-bold capitalize">{project.refundSummary?.status || 'none'}</p>
+                </div>
+                <div className="sm:text-right">
+                  <p className="text-[10px] font-bold uppercase tracking-widest text-muted mb-1">Remaining Escrow</p>
+                  <p className="text-sm font-bold">{formatTokenAmount(project.refundSummary?.remainingAmount || 0)} {project.tokenType}</p>
+                </div>
+              </div>
+              {isRefundBlockingReview ? (
+                <p className="text-xs text-muted mt-3">Milestone release is disabled while a refund is pending or after escrow has been refunded.</p>
+              ) : null}
+            </div>
+
             <div className="flex flex-col sm:flex-row gap-4">
               <button
                 onClick={handleApprove}
-                disabled={selectedSubmission.status !== 'submitted' || !project.onChainId || isApproving}
+                disabled={selectedSubmission.status !== 'submitted' || !project.onChainId || isApproving || isRefundBlockingReview}
                 className="flex-1 btn-primary py-4 justify-center disabled:opacity-50"
               >
                 {isApproving ? 'Opening Wallet...' : selectedSubmission.status === 'approved' ? 'Funds Released' : 'Approve & Release Funds'}
               </button>
               <button
                 onClick={handleReject}
-                disabled={selectedSubmission.status !== 'submitted' || isApproving}
+                disabled={selectedSubmission.status !== 'submitted' || isApproving || isRefundBlockingReview}
                 className="flex-1 btn-outline py-4 justify-center disabled:opacity-50"
               >
                 {selectedSubmission.status === 'rejected' ? 'Changes Requested' : 'Request Changes'}

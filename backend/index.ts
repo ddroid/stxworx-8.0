@@ -23,6 +23,7 @@ import { messagesRoutes } from "./routes/messages.routes";
 import { bountyRoutes } from "./routes/bounty.routes";
 import { socialRoutes } from "./routes/social.routes";
 import { nftRoutes } from "./routes/nft.routes";
+import { refundRoutes } from "./routes/refund.routes";
 
 const app = express();
 
@@ -108,6 +109,7 @@ app.use("/api/messages", messagesRoutes);
 app.use("/api/bounties", bountyRoutes);
 app.use("/api/social", socialRoutes);
 app.use("/api/nfts", nftRoutes);
+app.use("/api/refunds", refundRoutes);
 
 // Error handler
 app.use((err: any, _req: Request, res: Response, _next: NextFunction) => {

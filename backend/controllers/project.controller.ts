@@ -4,6 +4,7 @@ import { insertProjectSchema } from "@shared/schema";
 import { db } from "../db";
 import { users } from "@shared/schema";
 import { eq, inArray } from "drizzle-orm";
+import { refundService } from "../services/refund.service";
 
 export const projectController = {
   /** Resolve clientAddress/freelancerAddress by joining user IDs */
@@ -25,6 +26,11 @@ export const projectController = {
       clientAddress: idToAddr[p.clientId] || '',
       freelancerAddress: p.freelancerId ? idToAddr[p.freelancerId] || '' : '',
     }));
+  },
+
+  async _enrichProjects(projects: any[]) {
+    const withAddresses = await projectController._enrichWithAddresses(projects);
+    return refundService.attachRefundSummary(withAddresses);
   },
 
   // POST /api/projects
@@ -60,7 +66,7 @@ export const projectController = {
         budget: projectService.computeBudget(p),
       }));
 
-      const enriched = await projectController._enrichWithAddresses(withBudget);
+      const enriched = await projectController._enrichProjects(withBudget);
       return res.status(200).json(enriched);
     } catch (error) {
       console.error("Get projects error:", error);
@@ -79,11 +85,12 @@ export const projectController = {
         return res.status(404).json({ message: "Project not found" });
       }
 
-      return res.status(200).json({
-        ...project,
-        budget: projectService.computeBudget(project),
-        ...(await projectController._enrichWithAddresses([project]))[0],
-      });
+      return res.status(200).json((await projectController._enrichProjects([
+        {
+          ...project,
+          budget: projectService.computeBudget(project),
+        },
+      ]))[0]);
     } catch (error) {
       console.error("Get project error:", error);
       return res.status(500).json({ message: "Internal server error" });
@@ -136,7 +143,7 @@ export const projectController = {
         ...p,
         budget: projectService.computeBudget(p),
       }));
-      const enriched = await projectController._enrichWithAddresses(withBudget);
+      const enriched = await projectController._enrichProjects(withBudget);
       return res.status(200).json(enriched);
     } catch (error) {
       console.error("My posted projects error:", error);
@@ -152,7 +159,7 @@ export const projectController = {
         ...p,
         budget: projectService.computeBudget(p),
       }));
-      const enriched = await projectController._enrichWithAddresses(withBudget);
+      const enriched = await projectController._enrichProjects(withBudget);
       return res.status(200).json(enriched);
     } catch (error) {
       console.error("My active projects error:", error);
@@ -168,7 +175,7 @@ export const projectController = {
         ...p,
         budget: projectService.computeBudget(p),
       }));
-      const enriched = await projectController._enrichWithAddresses(withBudget);
+      const enriched = await projectController._enrichProjects(withBudget);
       return res.status(200).json(enriched);
     } catch (error) {
       console.error("My completed projects error:", error);

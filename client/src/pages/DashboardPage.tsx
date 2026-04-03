@@ -3,6 +3,8 @@ import { Link } from 'react-router-dom';
 import { ShieldCheck, Star } from 'lucide-react';
 import * as Shared from '../shared';
 import {
+  approveProjectRefund,
+  cancelProjectRefund,
   createReview,
   type ApiMilestoneSubmission,
   formatAddress,
@@ -18,10 +20,12 @@ import {
   getProjectProposals,
   getUserProfile,
   getUserReviews,
+  requestProjectRefund,
   toAppJob,
   type ApiProposal,
   withdrawProposal,
 } from '../lib/api';
+import { approveEscrowRefund, cancelEscrowRefundRequest, requestEscrowRefund } from '../lib/escrow';
 import type { ApiProject } from '../types/job';
 import type { ApiUserProfile, ApiUserReview } from '../types/user';
 
@@ -86,6 +90,7 @@ export const DashboardPage = () => {
   const [reviewError, setReviewError] = useState<string | null>(null);
   const [pendingProposals, setPendingProposals] = useState<PendingProposalView[]>([]);
   const [withdrawingProposalId, setWithdrawingProposalId] = useState<number | null>(null);
+  const [processingRefundProjectId, setProcessingRefundProjectId] = useState<number | null>(null);
   const [loading, setLoading] = useState(true);
 
   const handleSubmitWork = (milestone: MilestoneView) => {
@@ -268,6 +273,57 @@ export const DashboardPage = () => {
     }
   };
 
+  const handleRequestRefund = async (project: ApiProject) => {
+    if (processingRefundProjectId || !project.onChainId) {
+      return;
+    }
+
+    setProcessingRefundProjectId(project.id);
+    try {
+      await requestEscrowRefund(project.onChainId);
+      await requestProjectRefund({ projectId: project.id });
+      await loadDashboardData();
+    } catch (error) {
+      console.error('Failed to request refund:', error);
+    } finally {
+      setProcessingRefundProjectId(null);
+    }
+  };
+
+  const handleCancelRefund = async (project: ApiProject) => {
+    if (processingRefundProjectId || !project.onChainId) {
+      return;
+    }
+
+    setProcessingRefundProjectId(project.id);
+    try {
+      await cancelEscrowRefundRequest(project.onChainId);
+      await cancelProjectRefund(project.id);
+      await loadDashboardData();
+    } catch (error) {
+      console.error('Failed to cancel refund request:', error);
+    } finally {
+      setProcessingRefundProjectId(null);
+    }
+  };
+
+  const handleApproveRefund = async (project: ApiProject) => {
+    if (processingRefundProjectId || !project.onChainId) {
+      return;
+    }
+
+    setProcessingRefundProjectId(project.id);
+    try {
+      const txId = await approveEscrowRefund(project.onChainId, project.tokenType);
+      await approveProjectRefund(project.id, { txId });
+      await loadDashboardData();
+    } catch (error) {
+      console.error('Failed to approve refund:', error);
+    } finally {
+      setProcessingRefundProjectId(null);
+    }
+  };
+
   if (!walletAddress) {
     return (
       <div className="pt-28 pb-20 px-6 md:pl-[92px]">
@@ -322,6 +378,8 @@ export const DashboardPage = () => {
                   const approvedCount = submissions.filter((submission) => submission.status === 'approved').length;
                   const progressWidth = `${Math.min(100, Math.round((approvedCount / Math.max(project.numMilestones || 1, 1)) * 100))}%`;
                   const currentMilestone = milestones.find((milestone) => milestone.status !== 'approved') || milestones[milestones.length - 1];
+                  const refundSummary = project.refundSummary;
+                  const isProcessingRefund = processingRefundProjectId === project.id;
 
                   return (
                     <div key={project.id} className="border border-border rounded-[15px] p-6">
@@ -338,12 +396,36 @@ export const DashboardPage = () => {
                           <div className="bg-accent-orange h-full" style={{ width: progressWidth }}></div>
                         </div>
                       </div>
+                      <div className="mb-4 rounded-[15px] border border-border bg-ink/5 p-4">
+                        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
+                          <div>
+                            <p className="text-[10px] text-muted uppercase tracking-widest font-bold mb-1">Refund Status</p>
+                            <p className="text-sm font-bold capitalize">{refundSummary?.status || 'none'}</p>
+                          </div>
+                          <div className="sm:text-right">
+                            <p className="text-[10px] text-muted uppercase tracking-widest font-bold mb-1">Remaining Escrow</p>
+                            <p className="text-sm font-bold">{formatTokenAmount(refundSummary?.remainingAmount || 0)} {project.tokenType}</p>
+                          </div>
+                        </div>
+                        {refundSummary?.current?.txId && (
+                          <p className="text-xs text-muted mt-3 break-all">Refund Tx: {refundSummary.current.txId}</p>
+                        )}
+                      </div>
                       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 border-t border-border pt-4">
                         <div>
                           <p className="text-[10px] text-muted uppercase tracking-widest font-bold mb-1">Escrow Status</p>
                           <p className="font-bold text-accent-cyan flex items-center gap-1"><ShieldCheck size={14} /> Locked ({formatTokenAmount(project.budget)} {project.tokenType})</p>
                         </div>
                         <div className="flex flex-col sm:flex-row gap-2 w-full sm:w-auto">
+                          {refundSummary?.status === 'requested' ? (
+                            <button onClick={() => handleCancelRefund(project)} disabled={isProcessingRefund || !project.onChainId} className="btn-outline py-2 px-4 text-xs flex items-center justify-center w-full sm:w-auto disabled:opacity-50">
+                              {isProcessingRefund ? 'Opening Wallet...' : 'Cancel Refund Request'}
+                            </button>
+                          ) : refundSummary?.eligibleForClientRequest ? (
+                            <button onClick={() => handleRequestRefund(project)} disabled={isProcessingRefund || !project.onChainId} className="btn-outline py-2 px-4 text-xs flex items-center justify-center w-full sm:w-auto disabled:opacity-50">
+                              {isProcessingRefund ? 'Opening Wallet...' : 'Request Refund'}
+                            </button>
+                          ) : null}
                           <button onClick={() => handleOpenMessage(project.freelancerAddress || 'Freelancer')} className="btn-outline py-2 px-4 text-xs flex items-center justify-center w-full sm:w-auto">Message</button>
                           {pendingReview ? (
                             <Link to="/review-work" state={{ projectId: project.id, submissionId: pendingReview.id }} className="btn-primary py-2 px-4 text-xs flex items-center justify-center w-full sm:w-auto">Review Work</Link>
@@ -565,6 +647,8 @@ export const DashboardPage = () => {
               <div className="space-y-6">
                 {activeProjects.map((project) => {
                   const milestones = buildMilestones(project, milestonesByProject[project.id] || []);
+                  const refundSummary = project.refundSummary;
+                  const isProcessingRefund = processingRefundProjectId === project.id;
 
                   return (
                     <div key={project.id} className="border border-border rounded-[15px] p-6">
@@ -610,12 +694,35 @@ export const DashboardPage = () => {
                         </div>
                       </div>
 
+                      <div className="mb-6 rounded-[15px] border border-border bg-ink/5 p-4">
+                        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
+                          <div>
+                            <p className="text-[10px] text-muted uppercase tracking-widest font-bold mb-1">Refund Status</p>
+                            <p className="text-sm font-bold capitalize">{refundSummary?.status || 'none'}</p>
+                          </div>
+                          <div className="sm:text-right">
+                            <p className="text-[10px] text-muted uppercase tracking-widest font-bold mb-1">Remaining Escrow</p>
+                            <p className="text-sm font-bold">{formatTokenAmount(refundSummary?.remainingAmount || 0)} {project.tokenType}</p>
+                          </div>
+                        </div>
+                        {refundSummary?.current?.txId && (
+                          <p className="text-xs text-muted mt-3 break-all">Refund Tx: {refundSummary.current.txId}</p>
+                        )}
+                      </div>
+
                       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 border-t border-border pt-4">
                         <div>
                           <p className="text-[10px] text-muted uppercase tracking-widest font-bold mb-1">Escrow Status</p>
                           <p className="font-bold text-accent-cyan flex items-center gap-1"><ShieldCheck size={14} /> Funded ({formatTokenAmount(project.budget)} {project.tokenType})</p>
                         </div>
-                        <button onClick={() => handleOpenMessage(project.clientAddress || 'Client')} className="btn-outline py-2 px-4 text-xs flex items-center justify-center w-full sm:w-auto">Message Client</button>
+                        <div className="flex flex-col sm:flex-row gap-2 w-full sm:w-auto">
+                          {refundSummary?.eligibleForFreelancerApproval ? (
+                            <button onClick={() => handleApproveRefund(project)} disabled={isProcessingRefund || !project.onChainId} className="btn-primary py-2 px-4 text-xs flex items-center justify-center w-full sm:w-auto disabled:opacity-50">
+                              {isProcessingRefund ? 'Opening Wallet...' : 'Approve Refund'}
+                            </button>
+                          ) : null}
+                          <button onClick={() => handleOpenMessage(project.clientAddress || 'Client')} className="btn-outline py-2 px-4 text-xs flex items-center justify-center w-full sm:w-auto">Message Client</button>
+                        </div>
                       </div>
                     </div>
                   );

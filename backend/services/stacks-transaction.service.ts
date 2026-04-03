@@ -1,4 +1,12 @@
 type EscrowTokenType = 'STX' | 'sBTC' | 'USDCx';
+ type RefundKind = 'mutual' | 'admin';
+
+ type HiroFunctionArg = {
+   hex?: string;
+   repr?: string;
+   name?: string;
+   type?: string;
+ };
 
 type HiroTransactionResponse = {
   tx_status?: string;
@@ -10,6 +18,7 @@ type HiroTransactionResponse = {
   contract_call?: {
     contract_id?: string;
     function_name?: string;
+    function_args?: HiroFunctionArg[];
   };
   tx_result?: {
     repr?: string;
@@ -32,6 +41,41 @@ function getExpectedFunctionName(tokenType: EscrowTokenType) {
   }
 
   return 'create-project-stx';
+}
+
+function getExpectedRefundFunctionName(tokenType: EscrowTokenType, refundKind: RefundKind) {
+  if (refundKind === 'admin') {
+    if (tokenType === 'sBTC') {
+      return 'admin-refund-sbtc';
+    }
+
+    if (tokenType === 'USDCx') {
+      return 'admin-refund-usdcx';
+    }
+
+    return 'admin-refund-stx';
+  }
+
+  if (tokenType === 'sBTC') {
+    return 'approve-refund-sbtc';
+  }
+
+  if (tokenType === 'USDCx') {
+    return 'approve-refund-usdcx';
+  }
+
+  return 'approve-refund-stx';
+}
+
+function getExpectedTokenContract(tokenType: Exclude<EscrowTokenType, 'STX'>) {
+  const address = ((tokenType === 'sBTC' ? process.env.VITE_SBTC_CONTRACT_ADDRESS : process.env.VITE_USDCX_CONTRACT_ADDRESS) || '').trim();
+  const name = ((tokenType === 'sBTC' ? process.env.VITE_SBTC_CONTRACT_NAME : process.env.VITE_USDCX_CONTRACT_NAME) || '').trim();
+
+  if (!address || !name) {
+    throw new Error(`${tokenType} contract address and name must be configured for escrow transaction verification`);
+  }
+
+  return `${address}.${name}`.toUpperCase();
 }
 
 function getExpectedContractId() {
@@ -143,6 +187,41 @@ function extractOnChainId(txResultRepr?: string) {
   return Number.parseInt(match[1], 10);
 }
 
+function extractUintArgument(argument?: HiroFunctionArg | null) {
+  const match = argument?.repr?.match(/^u(\d+)$/);
+  if (!match) {
+    return null;
+  }
+
+  return Number.parseInt(match[1], 10);
+}
+
+function extractContractPrincipal(argument?: HiroFunctionArg | null) {
+  const match = argument?.repr?.match(/([A-Z0-9]+\.[a-zA-Z0-9-_]+)/i);
+  return match ? match[1].toUpperCase() : null;
+}
+
+function verifyExpectedTokenArgument(transaction: HiroTransactionResponse, tokenType: EscrowTokenType) {
+  if (tokenType === 'STX') {
+    return null;
+  }
+
+  const functionArgs = transaction.contract_call?.function_args || [];
+  const tokenArgument = functionArgs[functionArgs.length - 1];
+  const actualContract = extractContractPrincipal(tokenArgument);
+  const expectedContract = getExpectedTokenContract(tokenType);
+
+  if (!actualContract) {
+    return 'Escrow contract call did not expose the expected token contract argument';
+  }
+
+  if (actualContract !== expectedContract) {
+    return `Escrow contract call must use the configured ${tokenType} contract ${expectedContract}`;
+  }
+
+  return null;
+}
+
 export const stacksTransactionService = {
   async verifyEscrowCreateProjectTx(input: {
     txId: string;
@@ -219,6 +298,15 @@ export const stacksTransactionService = {
       };
     }
 
+    const tokenArgumentError = verifyExpectedTokenArgument(transaction, input.tokenType);
+    if (tokenArgumentError) {
+      return {
+        status: 'failed' as const,
+        onChainId: input.expectedOnChainId ?? null,
+        error: tokenArgumentError,
+      };
+    }
+
     const onChainId = extractOnChainId(transaction.tx_result?.repr);
     if (input.expectedOnChainId != null && onChainId !== input.expectedOnChainId) {
       return {
@@ -231,6 +319,107 @@ export const stacksTransactionService = {
     return {
       status: 'confirmed' as const,
       onChainId,
+      error: null,
+    };
+  },
+
+  async verifyRefundTx(input: {
+    txId: string;
+    tokenType: EscrowTokenType;
+    expectedSenderAddress: string;
+    expectedOnChainId?: number | null;
+    refundKind: RefundKind;
+  }) {
+    const { maxAttempts, delayMs } = getVerificationRetryConfig();
+    let transaction: HiroTransactionResponse | null = null;
+    let status: VerificationStatus = 'pending';
+
+    for (let attempt = 0; attempt < maxAttempts; attempt += 1) {
+      transaction = await fetchTransaction(input.txId);
+      status = mapTxStatus(transaction?.tx_status, transaction);
+
+      if (status !== 'pending') {
+        break;
+      }
+
+      if (attempt < maxAttempts - 1) {
+        await sleep(delayMs);
+      }
+    }
+
+    if (!transaction) {
+      return {
+        status: 'pending' as const,
+        error: 'Refund contract call has not been indexed by the Stacks API yet',
+      };
+    }
+
+    if (status !== 'confirmed') {
+      return {
+        status,
+        error: status === 'pending'
+          ? (transaction.tx_status ? `Refund contract call is still pending confirmation (${transaction.tx_status})` : 'Refund contract call is not yet confirmed')
+          : (transaction.tx_status ? `Refund contract call status is ${transaction.tx_status}` : 'Refund contract call failed before confirmation'),
+      };
+    }
+
+    if (transaction.tx_type !== 'contract_call') {
+      return {
+        status: 'failed' as const,
+        error: 'Refund transaction is not a contract call',
+      };
+    }
+
+    if (normalizeAddress(transaction.sender_address) !== normalizeAddress(input.expectedSenderAddress)) {
+      return {
+        status: 'failed' as const,
+        error: 'Refund contract call must be submitted by the expected wallet principal',
+      };
+    }
+
+    const expectedContractId = getExpectedContractId();
+    if (normalizeAddress(transaction.contract_call?.contract_id) !== expectedContractId) {
+      return {
+        status: 'failed' as const,
+        error: 'Refund contract call was sent to an unexpected contract',
+      };
+    }
+
+    const expectedFunctionName = getExpectedRefundFunctionName(input.tokenType, input.refundKind);
+    if (transaction.contract_call?.function_name !== expectedFunctionName) {
+      return {
+        status: 'failed' as const,
+        error: `Refund contract call must invoke ${expectedFunctionName}`,
+      };
+    }
+
+    const tokenArgumentError = verifyExpectedTokenArgument(transaction, input.tokenType);
+    if (tokenArgumentError) {
+      return {
+        status: 'failed' as const,
+        error: tokenArgumentError,
+      };
+    }
+
+    if (input.expectedOnChainId != null) {
+      const actualOnChainId = extractUintArgument(transaction.contract_call?.function_args?.[0]);
+      if (actualOnChainId == null) {
+        return {
+          status: 'failed' as const,
+          error: 'Refund contract call did not expose the expected project id argument',
+        };
+      }
+
+      if (actualOnChainId !== input.expectedOnChainId) {
+        return {
+          status: 'failed' as const,
+          error: 'Refund contract call targeted a different on-chain project id than expected',
+        };
+      }
+    }
+
+    return {
+      status: 'confirmed' as const,
       error: null,
     };
   },

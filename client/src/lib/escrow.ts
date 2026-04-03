@@ -120,6 +120,20 @@ function contractCall(options: ContractCallOptions) {
   });
 }
 
+function getRefundTokenArgs(projectOnChainId: number, tokenType: EscrowTokenType) {
+  const functionArgs: any[] = [uintCV(projectOnChainId)];
+
+  if (tokenType === 'sBTC') {
+    assertPrincipalMatchesNetwork('sBTC contract address', SBTC_CONTRACT_ADDRESS);
+    functionArgs.push(contractPrincipalCV(SBTC_CONTRACT_ADDRESS, SBTC_CONTRACT_NAME));
+  } else if (tokenType === 'USDCx') {
+    assertPrincipalMatchesNetwork('USDCx contract address', USDCX_CONTRACT_ADDRESS);
+    functionArgs.push(contractPrincipalCV(USDCX_CONTRACT_ADDRESS, USDCX_CONTRACT_NAME));
+  }
+
+  return functionArgs;
+}
+
 export async function getNextProjectOnChainId() {
   const result = await fetchCallReadOnlyFunction({
     network,
@@ -244,6 +258,68 @@ export async function releaseEscrowMilestone(
     contractName: CONTRACT_NAME,
     functionName,
     functionArgs,
+    postConditionMode: PostConditionMode.Allow,
+  });
+}
+
+export async function requestEscrowRefund(projectOnChainId: number) {
+  return contractCall({
+    contractAddress: CONTRACT_ADDRESS,
+    contractName: CONTRACT_NAME,
+    functionName: 'request-refund',
+    functionArgs: [uintCV(projectOnChainId)],
+    postConditionMode: PostConditionMode.Deny,
+  });
+}
+
+export async function cancelEscrowRefundRequest(projectOnChainId: number) {
+  return contractCall({
+    contractAddress: CONTRACT_ADDRESS,
+    contractName: CONTRACT_NAME,
+    functionName: 'cancel-refund-request',
+    functionArgs: [uintCV(projectOnChainId)],
+    postConditionMode: PostConditionMode.Deny,
+  });
+}
+
+export async function approveEscrowRefund(projectOnChainId: number, tokenType: ApiProject['tokenType']) {
+  if (!isEscrowTokenType(tokenType)) {
+    throw new Error(`Unsupported token type for escrow contract: ${tokenType}`);
+  }
+
+  let functionName = 'approve-refund-stx';
+  if (tokenType === 'sBTC') {
+    functionName = 'approve-refund-sbtc';
+  } else if (tokenType === 'USDCx') {
+    functionName = 'approve-refund-usdcx';
+  }
+
+  return contractCall({
+    contractAddress: CONTRACT_ADDRESS,
+    contractName: CONTRACT_NAME,
+    functionName,
+    functionArgs: getRefundTokenArgs(projectOnChainId, tokenType),
+    postConditionMode: PostConditionMode.Allow,
+  });
+}
+
+export async function adminEscrowRefund(projectOnChainId: number, tokenType: ApiProject['tokenType']) {
+  if (!isEscrowTokenType(tokenType)) {
+    throw new Error(`Unsupported token type for escrow contract: ${tokenType}`);
+  }
+
+  let functionName = 'admin-refund-stx';
+  if (tokenType === 'sBTC') {
+    functionName = 'admin-refund-sbtc';
+  } else if (tokenType === 'USDCx') {
+    functionName = 'admin-refund-usdcx';
+  }
+
+  return contractCall({
+    contractAddress: CONTRACT_ADDRESS,
+    contractName: CONTRACT_NAME,
+    functionName,
+    functionArgs: getRefundTokenArgs(projectOnChainId, tokenType),
     postConditionMode: PostConditionMode.Allow,
   });
 }

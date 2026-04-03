@@ -1,10 +1,10 @@
 import type { ApiLeaderboardEntry } from '../types/leaderboard';
-import type { ApiCategory, ApiProject, AppJob, AppJobMilestone } from '../types/job';
+import type { ApiCategory, ApiProject, ApiRefundRecord, ApiRefundSummary, AppJob, AppJobMilestone } from '../types/job';
 import type { AuthenticatedUserResponse, ApiUserProfile, ApiUserReview, ApiUsernameAvailability, UserRole } from '../types/user';
 import { decodeSocialPostId, encodeSocialPostId } from '@shared/social-post-permalink';
 
 // Re-export types for convenience
-export type { ApiProject, ApiCategory, AppJob, AppJobMilestone };
+export type { ApiProject, ApiCategory, AppJob, AppJobMilestone, ApiRefundRecord, ApiRefundSummary };
 
 const rawBase = (import.meta.env.VITE_API_BASE_URL || '/api').trim();
 const API_BASE_URL = rawBase.endsWith('/api')
@@ -61,6 +61,9 @@ export interface ApiNotification {
     | 'milestone_rejected'
     | 'dispute_filed'
     | 'dispute_resolved'
+    | 'refund_requested'
+    | 'refund_approved'
+    | 'refund_refunded'
     | 'proposal_received'
     | 'proposal_accepted'
     | 'project_completed';
@@ -181,6 +184,21 @@ export interface AdminDisputeResolutionInput {
   resolution: string;
   resolutionTxId: string;
   favorFreelancer: boolean;
+}
+
+export interface RequestProjectRefundInput {
+  reason?: string;
+}
+
+export interface ApproveProjectRefundInput {
+  txId: string;
+  note?: string;
+}
+
+export interface AdminRefundQueueItem extends ApiRefundRecord {
+  project: ApiProject | null;
+  refundSummary: ApiRefundSummary | null;
+  configuredAdminPrincipal?: string | null;
 }
 
 export interface ApiSettings {
@@ -799,6 +817,39 @@ export async function approveMilestone(submissionId: number, input: ApproveMiles
 
 export async function rejectMilestone(submissionId: number) {
   return apiRequest<ApiMilestoneSubmission>(`/milestones/${submissionId}/reject`, { method: 'PATCH' });
+}
+
+export async function getProjectRefundStatus(projectId: number) {
+  return apiRequest<ApiRefundSummary>(`/refunds/project/${projectId}`, { method: 'GET' });
+}
+
+export async function requestProjectRefund(input: { projectId: number; reason?: string }) {
+  return apiRequest<ApiRefundSummary>('/refunds/request', {
+    method: 'POST',
+    body: JSON.stringify(input),
+  });
+}
+
+export async function cancelProjectRefund(projectId: number) {
+  return apiRequest<ApiRefundSummary>(`/refunds/project/${projectId}/cancel`, { method: 'PATCH' });
+}
+
+export async function approveProjectRefund(projectId: number, input: ApproveProjectRefundInput) {
+  return apiRequest<ApiRefundSummary>(`/refunds/project/${projectId}/approve`, {
+    method: 'PATCH',
+    body: JSON.stringify(input),
+  });
+}
+
+export async function getAdminRefundQueue() {
+  return apiRequest<AdminRefundQueueItem[]>('/refunds/admin/queue', { method: 'GET' });
+}
+
+export async function executeAdminProjectRefund(projectId: number, input: ApproveProjectRefundInput) {
+  return apiRequest<ApiRefundSummary>(`/refunds/project/${projectId}/admin-refund`, {
+    method: 'PATCH',
+    body: JSON.stringify(input),
+  });
 }
 
 export async function getNotifications() {

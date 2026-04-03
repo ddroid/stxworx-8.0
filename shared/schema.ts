@@ -41,6 +41,12 @@ export const DISPUTE_STATUSES = [
   "resolved",
   "reset",
 ] as const;
+export const REFUND_STATUSES = [
+  "requested",
+  "approved",
+  "refunded",
+  "cancelled",
+] as const;
 export const NFT_TYPES = [
   "milestone_streak",
   "top_freelancer",
@@ -191,6 +197,32 @@ export const disputes = mysqlTable("disputes", {
   resolvedAt: timestamp("resolved_at"),
 });
 
+export const refunds = mysqlTable("refunds", {
+  id: bigint("id", { mode: "number", unsigned: true }).autoincrement().primaryKey(),
+  projectId: bigint("project_id", { mode: "number", unsigned: true })
+    .references(() => projects.id)
+    .notNull(),
+  status: mysqlEnum("status", [...REFUND_STATUSES]).default("requested").notNull(),
+  requestedBy: bigint("requested_by", { mode: "number", unsigned: true })
+    .references(() => users.id)
+    .notNull(),
+  approvedBy: bigint("approved_by", { mode: "number", unsigned: true })
+    .references(() => users.id),
+  adminActorId: bigint("admin_actor_id", { mode: "number", unsigned: true })
+    .references(() => admins.id),
+  reason: text("reason"),
+  note: text("note"),
+  txId: varchar("tx_id", { length: 100 }),
+  refundedAmount: decimal("refunded_amount", { precision: 18, scale: 8 }),
+  remainingAmount: decimal("remaining_amount", { precision: 18, scale: 8 }),
+  requestedAt: timestamp("requested_at").defaultNow().notNull(),
+  approvedAt: timestamp("approved_at"),
+  executedAt: timestamp("executed_at"),
+  cancelledAt: timestamp("cancelled_at"),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  updatedAt: timestamp("updated_at").defaultNow().notNull(),
+});
+
 export const reviews = mysqlTable("reviews", {
   id: bigint("id", { mode: "number", unsigned: true }).autoincrement().primaryKey(),
   projectId: bigint("project_id", { mode: "number", unsigned: true })
@@ -220,6 +252,9 @@ export const NOTIFICATION_TYPES = [
   "milestone_rejected",
   "dispute_filed",
   "dispute_resolved",
+  "refund_requested",
+  "refund_approved",
+  "refund_refunded",
   "proposal_received",
   "proposal_accepted",
   "project_completed",
@@ -467,6 +502,16 @@ export const insertDisputeSchema = createInsertSchema(disputes, {
 
 export const selectDisputeSchema = createSelectSchema(disputes);
 
+export const insertRefundSchema = createInsertSchema(refunds, {
+  reason: z.string().optional(),
+  note: z.string().optional(),
+  txId: z.string().max(100).optional(),
+  refundedAmount: z.string().optional(),
+  remainingAmount: z.string().optional(),
+}).omit({ id: true, createdAt: true, updatedAt: true, status: true, requestedBy: true, approvedBy: true, adminActorId: true, requestedAt: true, approvedAt: true, executedAt: true, cancelledAt: true });
+
+export const selectRefundSchema = createSelectSchema(refunds);
+
 export const insertReviewSchema = createInsertSchema(reviews, {
   rating: z.number().int().min(1).max(5),
   comment: z.string().optional(),
@@ -518,6 +563,8 @@ export type MilestoneSubmission = typeof milestoneSubmissions.$inferSelect;
 export type InsertMilestoneSubmission = z.infer<typeof insertMilestoneSubmissionSchema>;
 export type Dispute = typeof disputes.$inferSelect;
 export type InsertDispute = z.infer<typeof insertDisputeSchema>;
+export type Refund = typeof refunds.$inferSelect;
+export type InsertRefund = z.infer<typeof insertRefundSchema>;
 export type Review = typeof reviews.$inferSelect;
 export type InsertReview = z.infer<typeof insertReviewSchema>;
 export type Category = typeof categories.$inferSelect;

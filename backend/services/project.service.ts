@@ -100,7 +100,10 @@ export const projectService = {
       .from(projects)
       .where(
         and(
-          eq(projects.status, "completed"),
+          or(
+            eq(projects.status, "completed"),
+            eq(projects.status, "refunded")
+          ),
           or(
             eq(projects.clientId, userId),
             eq(projects.freelancerId, userId)
