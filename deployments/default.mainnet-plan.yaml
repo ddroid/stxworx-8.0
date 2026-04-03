@@ -8,10 +8,10 @@ plan:
   - id: 0
     transactions:
     - transaction-type: contract-publish
-      contract-name: escrow-v2
+      contract-name: escrow
       expected-sender: SP37JRPTQ0KFMB3HAFVCCAWDQWHKRJCGBW1W19TJH
-      cost: 253600
-      path: contracts/escrow-v2.clar
+      cost: 251970
+      path: contracts/escrow.clar
       anchor-block-only: true
       clarity-version: 4
     - transaction-type: contract-publish
