@@ -35,15 +35,14 @@
 (define-constant ERR-REFUND-ALREADY-REQUESTED (err u138))
 (define-constant ERR-ALREADY-REFUNDED (err u139))
 (define-constant ERR-NO-REMAINING-BALANCE (err u140))
+(define-constant ERR-TOKEN-CONTRACT-NOT-CONFIGURED (err u141))
 
 (define-constant CONTRACT-OWNER tx-sender)
-(define-constant DEFAULT-SBTC-CONTRACT 'ST1F7QA2MDF17S807EPA36TSS8AMEFY4KA9TVGWXT.sbtc-token)
-(define-constant DEFAULT-USDCX-CONTRACT 'ST1PQHQKV0RJXZFY1DGX8MNSNYVE3VGZJSRTPGZGM.usdcx)
 
 (define-data-var project-counter uint u0)
 (define-data-var refund-admin principal CONTRACT-OWNER)
-(define-data-var sbtc-token-contract principal DEFAULT-SBTC-CONTRACT)
-(define-data-var usdcx-token-contract principal DEFAULT-USDCX-CONTRACT)
+(define-data-var sbtc-token-contract (optional principal) none)
+(define-data-var usdcx-token-contract (optional principal) none)
 
 (define-map projects uint
   {
@@ -93,15 +92,15 @@
 
 (define-private (get-allowed-token-contract (token-type uint))
   (if (is-eq token-type TOKEN-SBTC)
-    (some (var-get sbtc-token-contract))
+    (var-get sbtc-token-contract)
     (if (is-eq token-type TOKEN-USDCX)
-      (some (var-get usdcx-token-contract))
+      (var-get usdcx-token-contract)
       none)))
 
 (define-private (assert-token-contract (expected (optional principal)) (token <sip010-ft-trait>))
-  (match expected
-    contract-principal (ok (asserts! (is-eq (contract-of token) contract-principal) ERR-INVALID-TOKEN))
-    ERR-INVALID-TOKEN))
+  (let ((contract-principal (unwrap! expected ERR-TOKEN-CONTRACT-NOT-CONFIGURED)))
+    (asserts! (is-eq (contract-of token) contract-principal) ERR-INVALID-TOKEN)
+    (ok true)))
 
 (define-private (store-project-and-milestones
   (id uint)
@@ -113,15 +112,7 @@
   (m3 uint)
   (m4 uint))
   (let (
-      (m1-fee (calc-fee m1))
-      (m2-fee (calc-fee m2))
-      (m3-fee (calc-fee m3))
-      (m4-fee (calc-fee m4))
-      (m1-net (- m1 m1-fee))
-      (m2-net (- m2 m2-fee))
-      (m3-net (- m3 m3-fee))
-      (m4-net (- m4 m4-fee))
-      (total-net (+ m1-net (+ m2-net (+ m3-net m4-net))))
+      (total-amount (+ m1 (+ m2 (+ m3 m4))))
       (num-milestones (count-milestones m1 m2 m3 m4))
     )
     (map-set projects id {
@@ -129,23 +120,23 @@
       freelancer: freelancer,
       token-type: token-type,
       token-contract: token-contract,
-      total-amount: total-net,
+      total-amount: total-amount,
       total-released: u0,
       num-milestones: num-milestones,
       status: PROJECT-STATUS-ACTIVE,
       refund-status: REFUND-STATUS-NONE
     })
     (if (> m1 u0)
-      (map-set milestones {project-id: id, milestone-num: u1} {amount: m1-net, complete: false, released: false})
+      (map-set milestones {project-id: id, milestone-num: u1} {amount: m1, complete: false, released: false})
       true)
     (if (> m2 u0)
-      (map-set milestones {project-id: id, milestone-num: u2} {amount: m2-net, complete: false, released: false})
+      (map-set milestones {project-id: id, milestone-num: u2} {amount: m2, complete: false, released: false})
       true)
     (if (> m3 u0)
-      (map-set milestones {project-id: id, milestone-num: u3} {amount: m3-net, complete: false, released: false})
+      (map-set milestones {project-id: id, milestone-num: u3} {amount: m3, complete: false, released: false})
       true)
     (if (> m4 u0)
-      (map-set milestones {project-id: id, milestone-num: u4} {amount: m4-net, complete: false, released: false})
+      (map-set milestones {project-id: id, milestone-num: u4} {amount: m4, complete: false, released: false})
       true)
     true))
 
@@ -180,6 +171,24 @@
 (define-private (collect-ft-fee (amount uint) (token <sip010-ft-trait>))
   (if (> amount u0)
     (send-ft-from-escrow amount CONTRACT-OWNER token)
+    (ok true)))
+
+(define-private (release-stx-milestone-payout (amount uint) (freelancer principal))
+  (let (
+      (fee (calc-fee amount))
+      (net-amount (- amount fee))
+    )
+    (try! (collect-stx-fee fee))
+    (try! (send-stx-from-escrow net-amount freelancer))
+    (ok true)))
+
+(define-private (release-ft-milestone-payout (amount uint) (freelancer principal) (token <sip010-ft-trait>))
+  (let (
+      (fee (calc-fee amount))
+      (net-amount (- amount fee))
+    )
+    (try! (collect-ft-fee fee token))
+    (try! (send-ft-from-escrow net-amount freelancer token))
     (ok true)))
 
 (define-private (get-remaining-amount-internal (project-id uint))
@@ -344,8 +353,8 @@
     (try! (assert-contract-owner))
     (asserts! (or (is-eq token-type TOKEN-SBTC) (is-eq token-type TOKEN-USDCX)) ERR-INVALID-TOKEN)
     (if (is-eq token-type TOKEN-SBTC)
-      (var-set sbtc-token-contract token-contract)
-      (var-set usdcx-token-contract token-contract))
+      (var-set sbtc-token-contract (some token-contract))
+      (var-set usdcx-token-contract (some token-contract)))
     (ok token-contract)))
 
 (define-public (create-project-stx
@@ -357,13 +366,11 @@
   (let (
       (id (+ (var-get project-counter) u1))
       (total (+ m1 (+ m2 (+ m3 m4))))
-      (total-fee (+ (calc-fee m1) (+ (calc-fee m2) (+ (calc-fee m3) (calc-fee m4)))))
     )
     (asserts! (> total u0) ERR-INVALID-AMOUNT)
     (asserts! (not (is-eq contract-caller freelancer)) ERR-SAME-PARTY)
     (asserts! (is-valid-layout m1 m2 m3 m4) ERR-INVALID-MILESTONE-LAYOUT)
     (try! (deposit-stx-into-escrow total))
-    (try! (collect-stx-fee total-fee))
     (var-set project-counter id)
     (store-project-and-milestones id freelancer TOKEN-STX none m1 m2 m3 m4)
     (ok id)))
@@ -378,7 +385,6 @@
   (let (
       (id (+ (var-get project-counter) u1))
       (total (+ m1 (+ m2 (+ m3 m4))))
-      (total-fee (+ (calc-fee m1) (+ (calc-fee m2) (+ (calc-fee m3) (calc-fee m4)))))
       (expected-token-contract (get-allowed-token-contract TOKEN-SBTC))
       (token-contract (contract-of sbtc-token))
     )
@@ -387,7 +393,6 @@
     (asserts! (is-valid-layout m1 m2 m3 m4) ERR-INVALID-MILESTONE-LAYOUT)
     (try! (assert-token-contract expected-token-contract sbtc-token))
     (try! (deposit-ft-into-escrow total sbtc-token))
-    (try! (collect-ft-fee total-fee sbtc-token))
     (var-set project-counter id)
     (store-project-and-milestones id freelancer TOKEN-SBTC (some token-contract) m1 m2 m3 m4)
     (ok id)))
@@ -402,7 +407,6 @@
   (let (
       (id (+ (var-get project-counter) u1))
       (total (+ m1 (+ m2 (+ m3 m4))))
-      (total-fee (+ (calc-fee m1) (+ (calc-fee m2) (+ (calc-fee m3) (calc-fee m4)))))
       (expected-token-contract (get-allowed-token-contract TOKEN-USDCX))
       (token-contract (contract-of usdcx-token))
     )
@@ -411,7 +415,6 @@
     (asserts! (is-valid-layout m1 m2 m3 m4) ERR-INVALID-MILESTONE-LAYOUT)
     (try! (assert-token-contract expected-token-contract usdcx-token))
     (try! (deposit-ft-into-escrow total usdcx-token))
-    (try! (collect-ft-fee total-fee usdcx-token))
     (var-set project-counter id)
     (store-project-and-milestones id freelancer TOKEN-USDCX (some token-contract) m1 m2 m3 m4)
     (ok id)))
@@ -459,7 +462,7 @@
     (asserts! (is-eq contract-caller (get client project)) ERR-NOT-CLIENT)
     (asserts! (is-eq (get status project) PROJECT-STATUS-ACTIVE) ERR-INVALID-PROJECT-STATUS)
     (asserts! (is-eq (get refund-status project) REFUND-STATUS-REQUESTED) ERR-REFUND-NOT-REQUESTED)
-    (set-project-refund-status project-id project REFUND-STATUS-CANCELLED)
+    (set-project-refund-status project-id project REFUND-STATUS-NONE)
     (print {event: "refund-request-cancelled", project-id: project-id, client: contract-caller})
     (ok true)))
 
@@ -476,7 +479,7 @@
     (asserts! (> amount u0) ERR-INVALID-AMOUNT)
     (asserts! (get complete milestone) ERR-NOT-COMPLETE)
     (asserts! (not (get released milestone)) ERR-ALREADY-RELEASED)
-    (try! (send-stx-from-escrow amount (get freelancer project)))
+    (try! (release-stx-milestone-payout amount (get freelancer project)))
     (map-set milestones
       {project-id: project-id, milestone-num: milestone-num}
       {
@@ -501,7 +504,7 @@
     (asserts! (get complete milestone) ERR-NOT-COMPLETE)
     (asserts! (not (get released milestone)) ERR-ALREADY-RELEASED)
     (try! (assert-token-contract (get token-contract project) sbtc-token))
-    (try! (send-ft-from-escrow amount (get freelancer project) sbtc-token))
+    (try! (release-ft-milestone-payout amount (get freelancer project) sbtc-token))
     (map-set milestones
       {project-id: project-id, milestone-num: milestone-num}
       {
@@ -526,7 +529,7 @@
     (asserts! (get complete milestone) ERR-NOT-COMPLETE)
     (asserts! (not (get released milestone)) ERR-ALREADY-RELEASED)
     (try! (assert-token-contract (get token-contract project) usdcx-token))
-    (try! (send-ft-from-escrow amount (get freelancer project) usdcx-token))
+    (try! (release-ft-milestone-payout amount (get freelancer project) usdcx-token))
     (map-set milestones
       {project-id: project-id, milestone-num: milestone-num}
       {

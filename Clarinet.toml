@@ -21,11 +21,6 @@ cache_dir = "./.cache"
 passes = ["check_checker"]
 check_checker = { trusted_sender = false, trusted_caller = false, callee_filter = false }
 
-[contracts.escrow-multi-token-v11]
-path = "contracts/escrow-multi-token-v11.clar"
-clarity_version = 4
-epoch = "latest"
-
 [contracts.escrow-v2]
 path = "contracts/escrow-v2.clar"
 clarity_version = 4

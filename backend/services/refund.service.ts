@@ -90,11 +90,19 @@ async function getRefundHistory(projectId: number) {
 }
 
 async function computeRemainingAmount(project: Project) {
+  const totalAmount = [1, 2, 3, 4].reduce((sum, milestoneNum) => sum + getMilestoneAmount(project, milestoneNum), 0);
+  if (project.status === "refunded") {
+    return {
+      totalAmount,
+      releasedAmount: totalAmount,
+      remainingAmount: 0,
+    };
+  }
+
   const submissions = await getProjectSubmissions(project.id);
   const releasedAmount = submissions
     .filter((submission) => submission.status === "approved")
     .reduce((sum, submission) => sum + getMilestoneAmount(project, submission.milestoneNum), 0);
-  const totalAmount = [1, 2, 3, 4].reduce((sum, milestoneNum) => sum + getMilestoneAmount(project, milestoneNum), 0);
   const remainingAmount = Math.max(0, totalAmount - releasedAmount);
 
   return {
@@ -193,7 +201,7 @@ async function syncApprovedRefundRecord(project: Project, refundRecord: Refund) 
     status: "refunded",
     executedAt: new Date(),
     refundedAmount: formatAmount(remainingAmount),
-    remainingAmount: formatAmount(remainingAmount),
+    remainingAmount: "0",
   });
 
   await updateProjectRefunded(project.id);
@@ -339,7 +347,7 @@ export const refundService = {
       approvedAt: new Date(),
       executedAt: verification.status === "confirmed" ? new Date() : current.executedAt,
       refundedAmount: verification.status === "confirmed" ? formatAmount(remainingAmount) : current.refundedAmount,
-      remainingAmount: formatAmount(remainingAmount),
+      remainingAmount: verification.status === "confirmed" ? "0" : formatAmount(remainingAmount),
     });
 
     if (verification.status === "confirmed") {
@@ -395,7 +403,7 @@ export const refundService = {
       approvedAt: new Date(),
       executedAt: verification.status === "confirmed" ? new Date() : null,
       refundedAmount: verification.status === "confirmed" ? formatAmount(remainingAmount) : current?.refundedAmount || null,
-      remainingAmount: formatAmount(remainingAmount),
+      remainingAmount: verification.status === "confirmed" ? "0" : formatAmount(remainingAmount),
     };
 
     if (current && current.status !== "refunded") {

@@ -31,6 +31,25 @@ function normalizeAddress(address?: string | null) {
   return address?.trim().toUpperCase() || '';
 }
 
+function getConfiguredNetwork() {
+  return (process.env.VITE_STACKS_NETWORK || 'mainnet').trim().toLowerCase();
+}
+
+function assertConfiguredPrincipalMatchesNetwork(label: string, address: string) {
+  const normalized = normalizeAddress(address);
+  if (!normalized) {
+    throw new Error(`${label} must be configured`);
+  }
+
+  if (getConfiguredNetwork() === 'mainnet' && normalized.startsWith('ST')) {
+    throw new Error(`${label} is using a testnet address (${address}) while VITE_STACKS_NETWORK is mainnet`);
+  }
+
+  if (getConfiguredNetwork() !== 'mainnet' && (normalized.startsWith('SP') || normalized.startsWith('SM'))) {
+    throw new Error(`${label} is using a mainnet address (${address}) while VITE_STACKS_NETWORK is ${getConfiguredNetwork()}`);
+  }
+}
+
 function getExpectedFunctionName(tokenType: EscrowTokenType) {
   if (tokenType === 'sBTC') {
     return 'create-project-sbtc';
@@ -75,6 +94,8 @@ function getExpectedTokenContract(tokenType: Exclude<EscrowTokenType, 'STX'>) {
     throw new Error(`${tokenType} contract address and name must be configured for escrow transaction verification`);
   }
 
+  assertConfiguredPrincipalMatchesNetwork(`${tokenType} contract address`, address);
+
   return `${address}.${name}`.toUpperCase();
 }
 
@@ -86,6 +107,8 @@ function getExpectedContractId() {
     throw new Error('Escrow contract address and name must be configured before proposal acceptance can verify contract calls');
   }
 
+  assertConfiguredPrincipalMatchesNetwork('Escrow contract address', contractAddress);
+
   return `${contractAddress}.${contractName}`.toUpperCase();
 }
 
@@ -95,7 +118,7 @@ function getStacksApiBaseUrl() {
     return configured.replace(/\/$/, '');
   }
 
-  const network = (process.env.VITE_STACKS_NETWORK || 'testnet').toLowerCase();
+  const network = getConfiguredNetwork();
   return network === 'mainnet' ? 'https://api.hiro.so' : 'https://api.testnet.hiro.so';
 }
 
