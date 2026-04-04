@@ -25,302 +25,525 @@ The codebase and markdowns point to this as the intended product direction:
 - The top banner and surrounding product copy needed to be simplified around the escrow marketplace story.
 - Documentation is inconsistent with the actual code in several places.
 
+## Recently completed
+
+### P0 - Escrow, milestones, and refund workflow
+
+**Status:** Finished
+
+**Completion summary**
+
+- [x] Consolidated the marketplace around the canonical `escrow` contract.
+- [x] Finalized support for `STX`, `sBTC`, and `USDCx` with explicit token allowlist configuration.
+- [x] Removed unsafe default token principals and enforced explicit environment-based token configuration.
+- [x] Ensured the escrow contract holds the full gross project amount until milestone release.
+- [x] Moved fee collection to milestone release so refund math matches unreleased escrow balance.
+- [x] Implemented refund request, cancel, approval, and admin fallback refund flows.
+- [x] Added backend/frontend validation for network principals and escrow/refund transaction verification.
+- [x] Aligned mainnet configuration for token contracts and the deployed escrow flow.
+
+**Operational follow-up**
+
+- [ ] Keep `.env.example`, `README.md`, and deployment docs aligned with the deployed `escrow` contract name.
+- [ ] Re-run end-to-end smoke tests for STX, sBTC, USDCx, milestone release, mutual refund, and admin fallback refund after each related release.
+
 ## Priority backlog
 
-### P0 - Product alignment and cleanup
+### P0 - Product copy and launch messaging cleanup
 
- **AI Prompt**
- ```text
- Goal: Realign the STXWORX codebase around its actual intended product: a Stacks-based freelance marketplace with escrow, milestones, admin moderation, social identity, and reputation.
- 
- Vision: Remove dead-end or conflicting product directions so the platform has one coherent story, one canonical payment flow, and one consistent product surface. The result should feel intentional, production-minded, and easier to build on.
- 
- Instructions: Audit all product-facing code, docs, copy, and workflows related to banner messaging, launch messaging, and proposal acceptance. Remove or refactor anything that conflicts with the intended escrow marketplace direction. Keep the canonical user journey simple: users sign in with wallet, clients post projects, freelancers submit proposals, clients fund and activate escrow, milestones are completed and released, disputes are handled through admin tools.
- 
- Constraints: Completely abandon deprecated alternate payment flows. Do not preserve conflicting UX or documentation unless something must temporarily remain for migration safety. Prefer removing confusing code over keeping half-implemented abstractions.
- 
- Definition of done: The repo presents one escrow marketplace direction, the banner/copy reflects the real platform, and the proposal-to-escrow activation path is clearly the single source of truth.
- ```
-  
-  - [ ] Remove the network status banner from the navbar announcement bar.
-  - [ ] Remove legacy alternate-payment references from docs and planning files.
-  - [ ] Remove unused deprecated payment code paths from backend, client, and shared modules.
-  - [ ] Remove obsolete proposal acceptance progress tracking if it is no longer part of the intended flow.
-  - [ ] Reconfirm the single canonical proposal acceptance flow: client accepts proposal, escrow tx is verified, project becomes active.
-  - [ ] Update repo documentation so the product description matches the actual direction: escrow marketplace + admin/social/reputation.
-  - [ ] Remove outdated launch/beta copy and stale dates from the top announcement content.
-  
-  ### P0 - Requested features to add
+**Detailed AI Prompt**
 
- **AI Prompt**
- ```text
- Goal: Turn the current backlog into a focused feature roadmap by implementing the highest-value missing product capabilities that align with STXWORX's marketplace and trust vision.
- 
- Vision: STXWORX should feel like a credible on-chain work platform with strong trust, identity, referrals, and collaboration features. The product should make it easy for people to discover each other, verify credibility, invite new clients, and use AI responsibly as a support layer.
- 
- Instructions: Treat the items in this section as strategic feature pillars. Break each one into backend, frontend, schema, API, UX, and QA requirements. Prefer solutions that integrate cleanly into the existing wallet-authenticated marketplace rather than bolting on disconnected features.
- 
- Constraints: Do not reintroduce deprecated alternate payment flows or add features that dilute the marketplace focus. Keep the implementation grounded in the existing architecture: Express backend, Drizzle schema, React frontend, Stacks wallet auth, and admin moderation patterns.
- 
- Definition of done: Each requested feature has a clear implementation path, technical scope, and product rationale that fits the long-term STXWORX platform vision.
- ```
-  
-  - [ ] Add a proper friend request system.
-  - [ ] Add X and email connections.
-  - [ ] Add a referral link system where a member can invite clients to the platform and get a cut of their orders.
-  - [ ] Verify the AI integration.
-  - [ ] Finish and validate the NFTs feature set.
-  
-  ### P1 - Friend request system
+```text
+Task:
+- Remove product-facing copy that still feels like a beta experiment or points users toward outdated flows.
+- Keep the marketplace story centered on wallet auth, proposals, escrow funding, milestones, and trust.
 
- **AI Prompt**
- ```text
- Goal: Replace the current lightweight connections feature with a real friend request and relationship system that supports trust, messaging, and social graph growth.
- 
- Vision: Users should be able to discover other members, send requests, receive requests, accept or decline them, and clearly understand the state of every relationship. The system should feel deliberate, safe, and useful for collaboration on a professional marketplace.
- 
- Instructions: Design and implement a complete friend-request lifecycle across schema, API, services, notifications, and UI. Make relationship state explicit everywhere it appears. Ensure messaging rules, profile CTAs, and connection suggestions all rely on the same backend truth.
- 
- Constraints: Do not reuse unrelated notification types like proposal notifications for friend events. Avoid fake or local-only state. Support abuse prevention and future moderation.
- 
- Definition of done: Users can send, receive, accept, decline, cancel, and remove friend connections with consistent state across profile pages, notifications, messaging permissions, and backend data.
- ```
-  
-  - [ ] Replace the current lightweight connections flow with a real friend-request lifecycle.
-  - [ ] Add dedicated notification types for connection/friend requests instead of reusing proposal-related notifications.
-  - [ ] Add outgoing request state in the UI.
-  - [ ] Add incoming request state in the UI.
+Not the task:
+- Do not redesign the marketplace flow itself.
+- Do not add new product features while doing copy cleanup.
+
+Technical scope:
+- Audit navbar/banner copy, landing copy, dashboard copy, and launch-related markdown files.
+- Remove stale dates, outdated launch claims, and copy that conflicts with the escrow-first marketplace narrative.
+- Make sure the same positioning appears consistently across client UI and docs.
+
+Acceptance criteria:
+- The top-level product story is consistent everywhere a user first encounters the platform.
+- There are no obvious stale launch/beta messages left in core user-facing surfaces.
+
+Verification:
+- Review the navbar, landing surfaces, and top-level docs side by side after the cleanup.
+```
+
+- [ ] Remove the network status banner from the navbar announcement bar.
+- [ ] Remove outdated launch/beta copy and stale dates from the top announcement content.
+- [ ] Update repo documentation so the product description matches the actual direction: escrow marketplace + admin/social/reputation.
+
+### P0 - Remove deprecated payment directions
+
+**Detailed AI Prompt**
+
+```text
+Task:
+- Move token selection and realtime token value handling out of the job application flow and into the job posting flow.
+- Make the client's token choice authoritative so freelancers apply against the token and funding asset already chosen for the job.
+- Remove deprecated alternate payment concepts that conflict with the escrow marketplace.
+- Make escrow funding and on-chain verification the only supported payment direction.
+
+Not the task:
+- Do not introduce token swaps, custodial flows, or new payment abstractions.
+- Do not let freelancers override the payment token during proposal/application submission.
+- Do not preserve dead code just because it might be useful later.
+
+Technical scope:
+- Audit backend, client, shared modules, docs, and planning files for alternate-payment references and token-conversion-style UI.
+- Move the token selection/realtime token value logic to the job posting/create-project flow so the client selects the payment asset before proposals are submitted.
+- Update job creation, proposal submission, proposal review, and escrow activation data flow so the selected token originates from the job/project itself.
+- Restrict freelancer applications so they inherit the token selected by the client instead of choosing or converting tokens at application time.
+- Remove unused code paths, stale type branches, and docs that imply multiple competing payment models.
+- Keep the minimum migration-safe compatibility only if something is still actively referenced.
+
+Acceptance criteria:
+- Clients choose the token during job posting/project creation.
+- Freelancers can see the selected token when applying but cannot change it.
+- Escrow funding and downstream contract verification use the token selected on the job/project.
+- There is one canonical payment direction in code and docs.
+- Deprecated alternate-payment paths are removed or clearly archived.
+
+Verification:
+- Search the repo for old payment terminology and application-time token conversion references and confirm only intentional references remain.
+- Test job posting, proposal submission, proposal acceptance, and escrow funding to confirm the same client-selected token is used end to end.
+```
+
+- [ ] Move realtime token value selection/display from the job application flow to the job posting/project creation flow.
+- [ ] Make the client-selected token the authoritative payment token stored on the job/project.
+- [ ] Update freelancer application/proposal UX so the selected token is visible but not editable by the freelancer.
+- [ ] Ensure proposal review and escrow activation consume the token selected during job posting.
+- [ ] Remove legacy alternate-payment references from docs and planning files.
+- [ ] Remove unused deprecated payment code paths from backend, client, and shared modules.
+- [ ] Replace the legacy alternate-payment markdown with a neutral archival note or remove it.
+
+### P0 - Canonical proposal activation flow
+
+**Detailed AI Prompt**
+
+```text
+Task:
+- Make the proposal acceptance path explicit and singular: client accepts proposal, escrow transaction is verified, project becomes active.
+- Remove ambiguous progress states or legacy UI that suggests alternate activation routes.
+
+Not the task:
+- Do not redesign proposal UX beyond what is needed for correctness and clarity.
+- Do not add new status models unless required to simplify and align the current flow.
+
+Technical scope:
+- Audit proposal acceptance UI, backend verification flow, project activation state updates, and related docs.
+- Remove obsolete progress tracking if it no longer reflects the real activation model.
+- Update labels, helper text, and docs to point to the escrow verification path as the source of truth.
+
+Acceptance criteria:
+- Proposal acceptance has one authoritative activation path.
+- Project state changes and docs match the verified escrow flow.
+
+Verification:
+- Walk through a proposal acceptance scenario from client action to active project state and verify every surface matches the same sequence.
+```
+
+- [ ] Remove obsolete proposal acceptance progress tracking if it is no longer part of the intended flow.
+- [ ] Reconfirm the single canonical proposal acceptance flow: client accepts proposal, escrow tx is verified, project becomes active.
+
+### P0 - Roadmap decomposition for remaining features
+
+**Detailed AI Prompt**
+
+```text
+Task:
+- Turn the remaining backlog into execution-ready feature slices instead of broad umbrella asks.
+- Split work into backend, frontend, schema, API, admin, and QA milestones whenever a task is too large for one pass.
+
+Not the task:
+- Do not try to implement multiple major features in one prompt.
+- Do not mix planning work with unrelated production refactors.
+
+Technical scope:
+- Review each remaining feature area and identify dependencies, likely files, and rollout order.
+- Break epics into smaller prompts that can be completed and reviewed independently.
+- Keep each prompt grounded in the current Express + Drizzle + React + Stacks architecture.
+
+Acceptance criteria:
+- Large roadmap items are split into smaller, implementation-ready chunks.
+- Each chunk has a clear boundary and definition of done.
+
+Verification:
+- A future AI pass should be able to pick a single section below and execute it without needing to reinterpret the entire backlog.
+```
+
+- [ ] Break each remaining feature into backend, frontend, schema, API, and QA sub-tasks before implementation.
+- [ ] Define success criteria and dependencies for friend requests, identity connections, referrals, AI, NFTs, notifications, and docs.
+- [ ] Keep each future implementation prompt narrowly scoped to one feature slice.
+
+### P1 - Friend request system
+
+**Detailed AI Prompt**
+
+```text
+Task:
+- Replace the lightweight connections feature with a full friend-request lifecycle.
+- Make relationship state explicit across backend, notifications, messaging permissions, and profile CTAs.
+
+Not the task:
+- Do not fake request state in the client.
+- Do not reuse proposal notification types or unrelated tables for friend events.
+
+Technical scope:
+- Add or refactor schema for request state, acceptance state, cancellation, removal, and moderation-related restrictions.
+- Update routes/services/controllers and notification creation logic.
+- Render outgoing, incoming, accepted, blocked, and disconnected states from backend truth.
+
+Acceptance criteria:
+- Users can send, receive, accept, decline, cancel, remove, and restrict connections consistently.
+- Messaging permissions respect the accepted-connection state when `connections_only` is enabled.
+
+Verification:
+- Test request, duplicate request, accept, decline, cancel, remove, and block/restrict scenarios end to end.
+```
+
+- [ ] Replace the current lightweight connections flow with a real friend-request lifecycle.
+- [ ] Add dedicated notification types for connection/friend requests instead of reusing proposal-related notifications.
+- [ ] Add outgoing request state in the UI.
+- [ ] Add incoming request state in the UI.
 - [ ] Add cancel pending request support.
 - [ ] Add unfriend/remove connection support.
 - [ ] Add block or restrict-user support for abuse prevention.
 - [ ] Add mutual-friend or relevant suggestion logic if social growth is important.
 - [ ] Add clear CTAs on profile pages for request sent / accept / decline / connected.
-  - [ ] Gate messaging rules consistently against accepted connections when `connections_only` is selected.
-  - [ ] Add tests for request, accept, decline, cancel, remove, and duplicate request scenarios.
-  
-  ### P1 - X and email connections
+- [ ] Gate messaging rules consistently against accepted connections when `connections_only` is selected.
+- [ ] Add tests for request, accept, decline, cancel, remove, and duplicate request scenarios.
 
- **AI Prompt**
- ```text
- Goal: Implement real identity connection flows for X and email so STXWORX can move from placeholder settings to meaningful, verifiable trust signals.
- 
- Vision: Account connections should be real, persistent, and backed by the backend. Users should be able to connect X, verify email, and see clear status indicators that contribute to trust and credibility on the platform.
- 
- Instructions: Replace mock UI behavior with actual OAuth and email verification workflows. Persist all relevant identity fields in the database, expose them through the API, and render them from backend truth. Design the system so these connections can later power trust badges, verification state, and profile reputation.
- 
- Constraints: No fake connected states, no frontend-only toggles, and no verification status that is not backed by stored server data. Keep security in mind with rate limits, token expiry, and replay protection.
- 
- Definition of done: X and email connections are real product features with proper backend flows, storage, verification state, and UI representation.
- ```
-  
-  - [ ] Replace the mock X connect button in `SettingsPage` with a real OAuth flow.
-  - [ ] Implement backend X OAuth routes and callback handling.
-  - [ ] Persist X account identity and verification metadata in the database.
-  - [ ] Show connected X account state from backend truth instead of local UI toggles.
+### P1 - X and email connections
+
+**Detailed AI Prompt**
+
+```text
+Task:
+- Replace placeholder identity settings with real X OAuth and email verification flows.
+- Persist connection status and verification state in the backend and render only backend-confirmed truth.
+
+Not the task:
+- Do not keep local-only connected toggles.
+- Do not mark anything as verified unless the backend has actually completed the flow.
+
+Technical scope:
+- Add backend routes/callbacks for X OAuth, token handling, and disconnect flows.
+- Add email verification tokens, expiry, confirmation endpoints, and verified-email fields.
+- Update settings/profile APIs and UI state handling to consume persisted connection status.
+
+Acceptance criteria:
+- X and email connection states survive refreshes and are backed by stored server data.
+- Notification preferences and trust signals depend on verified identity state, not raw strings.
+
+Verification:
+- Test connect, reconnect, disconnect, expired token, invalid token, and verified-email scenarios.
+```
+
+- [ ] Replace the mock X connect button in `SettingsPage` with a real OAuth flow.
+- [ ] Implement backend X OAuth routes and callback handling.
+- [ ] Persist X account identity and verification metadata in the database.
+- [ ] Show connected X account state from backend truth instead of local UI toggles.
 - [ ] Decide whether X verification should influence profile trust, badges, or NFT verification.
 - [ ] Turn email binding into a real email verification flow.
 - [ ] Add email verification tokens / expiry / confirmation endpoint.
 - [ ] Add verified-email status in user settings/profile responses.
-  - [ ] Make notification email preferences depend on a verified email, not just a saved string.
-  - [ ] Add disconnect/reconnect flows for X and email.
-  - [ ] Add rate limits and replay protection for OAuth and email verification endpoints.
-  
-  ### P1 - Referral system
+- [ ] Make notification email preferences depend on a verified email, not just a saved string.
+- [ ] Add disconnect/reconnect flows for X and email.
+- [ ] Add rate limits and replay protection for OAuth and email verification endpoints.
 
- **AI Prompt**
- ```text
- Goal: Build a referral system that allows members to invite clients to STXWORX and earn a transparent, auditable share of platform activity generated through those referrals.
- 
- Vision: Referrals should feel like a serious platform growth feature, not a gimmick. Members should get a clear referral link, attribution should be trustworthy, payouts should be explainable, and admins should be able to audit everything.
- 
- Instructions: Design the business logic, schema, attribution lifecycle, payout rules, admin tooling, and user-facing UX for referrals. Decide exactly when a referral becomes locked, how commissions are calculated, and how abuse is prevented. Build it in a way that fits wallet-based onboarding and the existing project/order lifecycle.
- 
- Constraints: Prevent self-referrals, spam, and ambiguous attribution. Keep the economic model compatible with platform fees and marketplace integrity.
- 
- Definition of done: Members can generate and share referral links, referred clients can be attributed correctly, payouts can be tracked, and admins can review performance and abuse signals.
- ```
-  
-  - [ ] Design the referral model: who can refer, who can be referred, and when attribution is locked.
-  - [ ] Add schema for referral codes, referral ownership, referred users, and payout records.
-  - [ ] Decide whether referrals apply to clients only or to both clients and freelancers.
-  - [ ] Decide how order cuts are calculated: platform fee split, extra commission, or separate referral pool.
+### P1 - Referral system
+
+**Detailed AI Prompt**
+
+```text
+Task:
+- Build a referral system for inviting clients and tracking attributable platform activity.
+- Make attribution, payout math, and admin auditability explicit before implementation.
+
+Not the task:
+- Do not bolt on referral logic without a clear economic model.
+- Do not allow self-referrals, ambiguous attribution, or wallet farming loopholes.
+
+Technical scope:
+- Define schema for referral codes, ownership, attribution, commission records, and payout status.
+- Decide when attribution locks and how referral earnings relate to platform fees.
+- Add member-facing sharing UX and admin reporting for performance and abuse review.
+
+Acceptance criteria:
+- Referral ownership, attribution, and payouts are explainable and auditable.
+- The model fits the existing wallet onboarding and project/payment lifecycle.
+
+Verification:
+- Test referral creation, attribution, self-referral prevention, payout calculation, and admin review flows.
+```
+
+- [ ] Design the referral model: who can refer, who can be referred, and when attribution is locked.
+- [ ] Add schema for referral codes, referral ownership, referred users, and payout records.
+- [ ] Decide whether referrals apply to clients only or to both clients and freelancers.
+- [ ] Decide how order cuts are calculated: platform fee split, extra commission, or separate referral pool.
 - [ ] Add member-facing UI to generate/copy/share referral links.
 - [ ] Add referral attribution during sign-up / first wallet verification.
-  - [ ] Add admin reporting for referral performance and abuse monitoring.
-  - [ ] Add protections against self-referral and wallet farming.
-  - [ ] Add payout visibility for referrers.
-  - [ ] Add policy text for referral eligibility and payout timing.
-  
-  ### P1 - AI integration verification
+- [ ] Add admin reporting for referral performance and abuse monitoring.
+- [ ] Add protections against self-referral and wallet farming.
+- [ ] Add payout visibility for referrers.
+- [ ] Add policy text for referral eligibility and payout timing.
 
- **AI Prompt**
- ```text
- Goal: Verify that AI features in STXWORX are functional, safe, maintainable, and aligned with the platform's real product role.
- 
- Vision: AI should help users with support and proposal assistance without becoming a fragile or insecure dependency. The experience should feel polished, predictable, and intentionally scoped.
- 
- Instructions: Audit every Gemini-related integration in the frontend and any supporting infrastructure. Confirm which features actually work, which are duplicated, and which should be refactored. Decide whether AI calls should remain client-side or move server-side, and improve failure handling, key management, rate limiting, and UX copy accordingly.
- 
- Constraints: Do not leave exposed or poorly controlled AI flows in place if they compromise reliability or security. Avoid duplicated integrations and dead code.
- 
- Definition of done: AI features have a clear architecture, verified runtime behavior, safe key handling, sensible fallbacks, and product-consistent prompts.
- ```
-  
-  - [ ] Verify the support chat flow actually works end-to-end with current Gemini configuration.
-  - [ ] Verify the AI proposal generator works end-to-end with current Gemini configuration.
-  - [ ] Audit where `GoogleGenAI` is imported and used across the frontend.
-  - [ ] Remove duplicated or unused Gemini-related imports/components.
+### P1 - AI integration verification
+
+**Detailed AI Prompt**
+
+```text
+Task:
+- Audit and verify all Gemini-powered user-facing flows.
+- Decide whether AI calls should remain client-side or move server-side based on security and maintainability.
+
+Not the task:
+- Do not keep duplicated or unsafe AI flows just because they exist.
+- Do not ship exposed key usage without an explicit justification.
+
+Technical scope:
+- Trace every `GoogleGenAI` import and all Gemini-dependent UI paths.
+- Validate end-to-end runtime behavior for support chat and proposal assistance.
+- Add fallback behavior, abuse protection, and clearer error handling around AI failure modes.
+
+Acceptance criteria:
+- AI features that remain are functional, scoped, and operationally safe.
+- The repo has one intentional architecture for AI usage.
+
+Verification:
+- Test with valid key, missing key, rate-limited usage, guest state, and connected-wallet state.
+```
+
+- [ ] Verify the support chat flow actually works end-to-end with current Gemini configuration.
+- [ ] Verify the AI proposal generator works end-to-end with current Gemini configuration.
+- [ ] Audit where `GoogleGenAI` is imported and used across the frontend.
+- [ ] Remove duplicated or unused Gemini-related imports/components.
 - [ ] Decide whether Gemini calls should remain client-side or move server-side.
-  - [ ] If server-side is preferred, move API key usage off the client.
-  - [ ] Define fallback behavior when no API key is configured.
-  - [ ] Add usage limits / abuse protection for AI features.
-  - [ ] Add QA scenarios for wallet-connected users, guests, rate limits, and failure states.
-  - [ ] Validate prompt quality and tone against STXWORX product goals.
-  
-  ### P1 - NFTs and reputation
+- [ ] If server-side is preferred, move API key usage off the client.
+- [ ] Define fallback behavior when no API key is configured.
+- [ ] Add usage limits / abuse protection for AI features.
+- [ ] Add QA scenarios for wallet-connected users, guests, rate limits, and failure states.
+- [ ] Validate prompt quality and tone against STXWORX product goals.
 
- **AI Prompt**
- ```text
- Goal: Reconcile and complete the NFT and reputation layer so it becomes a coherent trust system rather than a partially wired set of contracts, tables, and UI assets.
- 
- Vision: STXWORX should use NFTs and soulbound-style badges to represent reputation, verification, or platform-earned status in a way that is clear to users, consistent in code, and connected to admin workflows.
- 
- Instructions: Identify the canonical NFT contracts, define the intended role of each NFT type, and align docs, backend flows, admin tools, and frontend displays around that model. Verify the full lifecycle from issuance decision to mint confirmation to profile rendering.
- 
- Constraints: Do not keep ambiguous contract roles or overlapping badge systems without explicit differentiation. Favor one clear mental model for users and admins.
- 
- Definition of done: The repo has a clearly defined NFT/reputation architecture, verified mint flows, aligned docs, and consistent UI display across profile, admin, and discovery surfaces.
- ```
-  
-  - [ ] Verify which NFT contracts are canonical: `rep-sft.clar`, `stxworx-badge.clar`, and `verify-soulbound.clar`.
-  - [ ] Reconcile markdown contract docs with the actual contracts present in `/contracts`.
-  - [ ] Confirm the intended distinction between reputation NFT, badge NFT, and verification soulbound NFT.
-  - [ ] Validate admin NFT issuance flow end-to-end.
+### P1 - NFTs and reputation
+
+**Detailed AI Prompt**
+
+```text
+Task:
+- Define one coherent NFT/reputation model and complete the missing lifecycle pieces.
+- Clarify what each contract represents and how admin issuance/verification should work.
+
+Not the task:
+- Do not keep overlapping badge systems without explicit differentiation.
+- Do not leave mint/verification flows half-off-chain and half-implicit.
+
+Technical scope:
+- Audit `rep-sft.clar`, `stxworx-badge.clar`, and `verify-soulbound.clar` plus all backend/admin/profile integrations.
+- Define canonical roles for reputation, badges, and verification NFTs.
+- Add mint confirmation, optional revocation/update flows, metadata validation, and consistent UI rendering.
+
+Acceptance criteria:
+- Contract roles are documented and reflected consistently in backend/admin/frontend behavior.
+- Users and admins can understand the issuance lifecycle end to end.
+
+Verification:
+- Test admin issue, on-chain mint confirmation, profile rendering, and any revocation/update behavior that remains supported.
+```
+
+- [ ] Verify which NFT contracts are canonical: `rep-sft.clar`, `stxworx-badge.clar`, and `verify-soulbound.clar`.
+- [ ] Reconcile markdown contract docs with the actual contracts present in `/contracts`.
+- [ ] Confirm the intended distinction between reputation NFT, badge NFT, and verification soulbound NFT.
+- [ ] Validate admin NFT issuance flow end-to-end.
 - [ ] Add real mint confirmation workflows tied to on-chain tx verification.
 - [ ] Add revocation/update flows if badges are supposed to be mutable by admin action.
-  - [ ] Decide whether user verification should mint an NFT automatically or remain an admin action.
-  - [ ] Surface NFT state consistently across profile, leaderboard, admin, and freelancer discovery pages.
-  - [ ] Add metadata integrity checks for NFT name, type, image, and description.
-  - [ ] Add tests for admin issue, confirm mint, and profile rendering.
-  
-  ### P1 - Core marketplace consistency
+- [ ] Decide whether user verification should mint an NFT automatically or remain an admin action.
+- [ ] Surface NFT state consistently across profile, leaderboard, admin, and freelancer discovery pages.
+- [ ] Add metadata integrity checks for NFT name, type, image, and description.
+- [ ] Add tests for admin issue, confirm mint, and profile rendering.
 
- **AI Prompt**
- ```text
- Goal: Align the marketplace implementation, schema, contracts, backend logic, and documentation so the core STXWORX work flow is internally consistent and trustworthy.
- 
- Vision: The heart of the product should be rock-solid: projects, proposals, escrow activation, milestone submission, release, disputes, and fees should all reflect the same business rules across contracts, backend, UI, and docs.
- 
- Instructions: Audit the end-to-end marketplace flow and identify mismatches between schema, API behavior, frontend assumptions, contract versions, and documentation. Clarify the intended support for assets like USDCx, confirm fee logic, and ensure dispute/admin behavior matches contract reality.
- 
- Constraints: Prioritize correctness over preserving outdated docs or legacy assumptions. If code and docs diverge, establish a single canonical model and update the rest to match it.
- 
- Definition of done: The core marketplace flow is documented accurately, implemented consistently, and validated across client, freelancer, and admin scenarios.
- ```
-  
-  - [ ] Reconcile the docs with the real schema around `proposedAmount` on proposals.
-  - [ ] Reconcile docs and code around contract versioning; docs mention older contract names while `/contracts` contains newer files.
-  - [ ] Reconfirm whether USDCx is truly supported in the intended product or only partially introduced.
-  - [ ] Audit the project activation path after escrow tx verification.
-- [ ] Audit milestone submission and release flow against contract assumptions.
-  - [ ] Audit dispute flow against admin resolution and reset flows.
-  - [ ] Verify the DAO/platform fee logic against contracts, backend config, and UI copy.
-  - [ ] Run an end-to-end QA pass across client, freelancer, and admin flows.
-  
-  ### P1 - Notifications and messaging
+### P1 - Marketplace consistency follow-through
 
- **AI Prompt**
- ```text
- Goal: Upgrade notifications and messaging into a coherent communication layer that reflects real marketplace and social events accurately.
- 
- Vision: Notifications should feel relevant, traceable, and actionable. Messaging should respect relationship settings and moderation needs. Together they should support trust, collaboration, and responsiveness across the platform.
- 
- Instructions: Review the current notification taxonomy, identify misused event types, and introduce dedicated types for connection, referral, verification, NFT, and other missing events. Improve message/notification state syncing, deep linking, and moderation readiness. Make sure communication features align with friend relationships and user messaging preferences.
- 
- Constraints: Do not overload unrelated event types. Avoid shallow UI-only fixes if the underlying backend event model is wrong.
- 
- Definition of done: Notifications are semantically correct, message permissions are consistent, unread counts stay in sync, and users can act on events through clear links and flows.
- ```
-  
-  - [ ] Expand notification taxonomy to include friend request, friend accepted, referral events, NFT issued, and verification events.
-  - [ ] Stop reusing unrelated notification types for social/connection events.
-  - [ ] Add deep links from notifications to the correct destination pages.
-  - [ ] Add better unread/read syncing for notifications and conversations.
-  - [ ] Decide whether connection acceptance should optionally create a conversation automatically.
-  - [ ] Add moderation/reporting hooks for direct messages.
-  
-  ### P2 - Social and profile layer
+**Detailed AI Prompt**
 
- **AI Prompt**
- ```text
- Goal: Decide the role of the social/profile layer in STXWORX and strengthen it so it supports marketplace trust and discovery rather than feeling disconnected.
- 
- Vision: Profiles should communicate credibility, completeness, and relevance. Social features should either meaningfully support marketplace engagement or be clearly scoped as a later differentiator.
- 
- Instructions: Evaluate whether posts and social activity are core launch features or secondary. Improve profile trust indicators, completion scoring, and discovery quality so users can quickly judge who is credible and relevant to work with.
- 
- Constraints: Keep this layer subordinate to the marketplace mission. Do not expand social features in ways that distract from professional identity, discovery, and trust.
- 
- Definition of done: The social/profile layer has a clear role in the product, better trust cues, stronger discovery signals, and a deliberate scope.
- ```
-  
-  - [ ] Review whether social posts are part of the core launch scope or a post-launch differentiator.
-  - [ ] Add profile trust indicators sourced from verified email/X/NFT state.
-  - [ ] Add stronger profile completion scoring.
-  - [ ] Add richer connection suggestions based on role, skills, or activity.
-  - [ ] Add better post moderation/reporting if social stays in scope.
-  
-  ### P2 - Settings and identity cleanup
+```text
+Task:
+- Clean up the remaining marketplace mismatches that still exist around docs, schema naming, disputes, and QA.
+- Treat the escrow/refund architecture as complete and focus only on the remaining consistency gaps.
 
- **AI Prompt**
- ```text
- Goal: Clean up the settings and identity model so users can clearly distinguish between saved data, connected accounts, and verified identity signals.
- 
- Vision: Settings should be truthful, understandable, and reliable. A user should always know whether an email is merely saved, whether X is actually connected, and whether something is verified, pending, or disconnected.
- 
- Instructions: Refactor settings UX and API contracts so identity-related states are modeled explicitly. Separate editable contact info from verified identity connections, normalize inputs, and make the frontend render only what the backend has actually confirmed.
- 
- Constraints: Avoid ambiguous labels and frontend-only assumptions. Do not collapse verification and simple data storage into the same state model.
- 
- Definition of done: The settings experience accurately represents identity status, uses normalized data, and is backed by clear server-side truth.
- ```
-  
-  - [ ] Separate "saved contact details" from "verified identity connections" in settings.
-  - [ ] Add explicit status labels for connected, verified, pending verification, and disconnected.
-  - [ ] Make settings UI reflect backend truth only.
-  - [ ] Add optimistic UI only where rollback is safe.
-  - [ ] Add validation and normalization for email, social handles, and URLs.
-  
-  ### P2 - Docs and developer experience
+Not the task:
+- Do not redesign the escrow contract or re-open already-finished refund architecture unless a new defect is discovered.
+- Do not introduce alternate payment paths.
 
- **AI Prompt**
- ```text
- Goal: Make the repository documentation and developer guidance accurately reflect the real STXWORX architecture, flows, dependencies, and product direction.
- 
- Vision: A new engineer or AI agent should be able to read the docs and immediately understand what the platform is, how it works, what is canonical, and what has been abandoned. The repo should feel coherent rather than historically layered.
- 
- Instructions: Review root docs, markdown planning files, route maps, dependency structure, and frontend/backend architecture notes. Remove stale alternate-payment directions, fix outdated contract/version references, and document the actual runtime and routing setup used today.
- 
- Constraints: Do not preserve confusing or obsolete documentation just because it exists. Prefer fewer, more accurate docs over many divergent ones.
- 
- Definition of done: The repo docs describe the real system, abandoned directions are archived or removed, and the developer experience is clearer for both humans and AI tools.
- ```
-  
-  - [ ] Rewrite `markdowns/README.md` and root `README.md` to match the current codebase.
-  - [ ] Replace the legacy alternate-payment markdown with a neutral archival note or remove it.
-  - [ ] Review all markdown files for stale contract names and outdated flow descriptions.
-  - [ ] Document the actual route map currently mounted in `backend/index.ts`.
-  - [ ] Document the actual frontend routing stack (`react-router-dom`) instead of older router assumptions.
-  - [ ] Consolidate duplicate or diverging dependency expectations between root `package.json` and `client/package.json`.
-  - [ ] Decide whether the repo should have one frontend package strategy or keep the current split deliberately.
+Technical scope:
+- Reconcile docs with the real proposal schema and the canonical deployed `escrow` contract.
+- Confirm the remaining dispute/admin flows match the deployed contract and backend expectations.
+- Run final end-to-end QA across client, freelancer, and admin scenarios.
+
+Acceptance criteria:
+- Docs, backend behavior, frontend assumptions, and deployed contract naming are aligned.
+- Remaining marketplace gaps are tracked separately from the already-finished escrow work.
+
+Verification:
+- Perform one documented QA pass covering proposal acceptance, activation, milestone release, dispute handling, and refund status visibility.
+```
+
+- [ ] Reconcile the docs with the real schema around `proposedAmount` on proposals.
+- [x] Finalize the canonical deployed escrow contract as `escrow`.
+- [ ] Update remaining docs and code references that still mention older escrow contract names.
+- [x] Confirm `USDCx` remains an intended supported asset alongside `STX` and `sBTC`.
+- [x] Audit the project activation path after escrow tx verification.
+- [x] Audit milestone submission and release flow against contract assumptions.
+- [ ] Audit dispute flow against admin resolution and reset flows.
+- [x] Verify the DAO/platform fee logic against contracts, backend config, and UI copy.
+- [ ] Run an end-to-end QA pass across client, freelancer, and admin flows.
+
+### P1 - Notifications and messaging
+
+**Detailed AI Prompt**
+
+```text
+Task:
+- Expand notifications and messaging into a semantically correct communication layer.
+- Align event types, deep links, unread state, and moderation hooks with marketplace and social events.
+
+Not the task:
+- Do not overload unrelated notification types.
+- Do not fix only UI symptoms if the backend event taxonomy is wrong.
+
+Technical scope:
+- Review existing notification enums/types, creation logic, unread counters, and messaging permission rules.
+- Add dedicated types for friend requests, referrals, NFT events, and verification state changes.
+- Improve deep linking, read/unread syncing, and moderation/reporting readiness.
+
+Acceptance criteria:
+- Notifications represent the correct event type and lead users to the right destination.
+- Messaging permissions remain consistent with connection/privacy settings.
+
+Verification:
+- Test event creation, unread count changes, navigation targets, and moderation/reporting hooks.
+```
+
+- [ ] Expand notification taxonomy to include friend request, friend accepted, referral events, NFT issued, and verification events.
+- [ ] Stop reusing unrelated notification types for social/connection events.
+- [ ] Add deep links from notifications to the correct destination pages.
+- [ ] Add better unread/read syncing for notifications and conversations.
+- [ ] Decide whether connection acceptance should optionally create a conversation automatically.
+- [ ] Add moderation/reporting hooks for direct messages.
+
+### P2 - Social and profile layer
+
+**Detailed AI Prompt**
+
+```text
+Task:
+- Decide the proper scope of the social/profile layer and strengthen the trust/discovery parts that help the marketplace.
+- Keep the profile experience focused on credibility, relevance, and professional discovery.
+
+Not the task:
+- Do not expand social features in ways that distract from the marketplace mission.
+- Do not treat posts as a core feature unless the audit clearly supports that decision.
+
+Technical scope:
+- Review profile completeness signals, discovery filters, trust indicators, and the role of social activity.
+- Add stronger trust cues from verified email, X, and NFT state once those systems are real.
+- Decide whether posts stay in launch scope or move to a later-stage roadmap.
+
+Acceptance criteria:
+- Profiles better communicate trust and relevance.
+- The social layer has a deliberate scope and does not overshadow the marketplace.
+
+Verification:
+- Review profile, discovery, and social surfaces together to confirm the trust/discovery story is coherent.
+```
+
+- [ ] Review whether social posts are part of the core launch scope or a post-launch differentiator.
+- [ ] Add profile trust indicators sourced from verified email/X/NFT state.
+- [ ] Add stronger profile completion scoring.
+- [ ] Add richer connection suggestions based on role, skills, or activity.
+- [ ] Add better post moderation/reporting if social stays in scope.
+
+### P2 - Settings and identity cleanup
+
+**Detailed AI Prompt**
+
+```text
+Task:
+- Clean up the settings and identity model so saved data, connected accounts, and verified identity are clearly separated.
+- Make the UI render state truthfully from the backend.
+
+Not the task:
+- Do not keep ambiguous labels like "connected" when the backend has not verified anything.
+- Do not rely on frontend-only toggles for identity status.
+
+Technical scope:
+- Refactor settings data contracts and UI sections around saved contact info versus verified/connected identity.
+- Add normalized validation for email, handles, and URLs.
+- Use optimistic UI only where rollback is trivial and safe.
+
+Acceptance criteria:
+- Users can distinguish saved info from verified identity at a glance.
+- Identity-related settings are backed by server truth and explicit status labels.
+
+Verification:
+- Test settings rendering with empty, pending, connected, verified, and disconnected states.
+```
+
+- [ ] Separate "saved contact details" from "verified identity connections" in settings.
+- [ ] Add explicit status labels for connected, verified, pending verification, and disconnected.
+- [ ] Make settings UI reflect backend truth only.
+- [ ] Add optimistic UI only where rollback is safe.
+- [ ] Add validation and normalization for email, social handles, and URLs.
+
+### P2 - Docs and developer experience
+
+**Detailed AI Prompt**
+
+```text
+Task:
+- Rewrite developer docs so they match the current STXWORX architecture, deployed contracts, runtime setup, and product direction.
+- Reduce the gap between what the repo says and what the code actually does.
+
+Not the task:
+- Do not preserve stale docs for historical reasons unless they are explicitly archived.
+- Do not describe deprecated router, contract, or payment assumptions as if they are current.
+
+Technical scope:
+- Audit root docs, markdown planning files, routing notes, dependency structure, and setup steps.
+- Update references to the canonical `escrow` contract, actual routes mounted in `backend/index.ts`, and the real frontend routing stack.
+- Clarify package structure and any intentional split between root and client dependencies.
+
+Acceptance criteria:
+- A new engineer or AI agent can read the docs and understand the current system without tripping over outdated assumptions.
+- Setup, architecture, and contract references are accurate.
+
+Verification:
+- Follow the docs from a clean read-through and verify they match the real file structure, package scripts, and deployed contract names.
+```
+
+- [ ] Rewrite `markdowns/README.md` and root `README.md` to match the current codebase.
+- [ ] Review all markdown files for stale contract names and outdated flow descriptions.
+- [ ] Document the actual route map currently mounted in `backend/index.ts`.
+- [ ] Document the actual frontend routing stack (`react-router-dom`) instead of older router assumptions.
+- [ ] Consolidate duplicate or diverging dependency expectations between root `package.json` and `client/package.json`.
+- [ ] Decide whether the repo should have one frontend package strategy or keep the current split deliberately.
 
 ## Suggested implementation order
 
-1. Remove deprecated alternate payment paths and outdated product copy.
-2. Remove the network banner.
-3. Verify AI integration and decide client-side vs server-side strategy.
-4. Build real X/email connection flows.
-5. Upgrade connections into a proper friend request system.
-6. Reconcile and validate NFT/reputation flows.
-7. Add the referral system.
-8. Clean and align docs after the product direction is locked.
+1. Clean up product copy and remove deprecated payment directions.
+2. Reconfirm the canonical proposal activation flow in UI, backend, and docs.
+3. Rewrite core docs so they match the deployed `escrow` contract and current architecture.
+4. Verify AI integration and decide client-side vs server-side strategy.
+5. Build real X/email connection flows.
+6. Upgrade connections into a proper friend request system.
+7. Expand notifications/messaging to support the new relationship and identity events.
+8. Reconcile and validate NFT/reputation flows.
+9. Add the referral system.
+10. Revisit the social/profile layer once trust signals and identity features are real.

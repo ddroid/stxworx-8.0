@@ -56,6 +56,17 @@ export const WalletContext = createContext<WalletContextType>({
     });
 export const useWallet = () => useContext(WalletContext);
 
+type SupportedCurrency = 'STX' | 'sBTC' | 'USDCx';
+
+const getCurrencyPrecision = (currency: SupportedCurrency) => (currency === 'sBTC' ? 8 : currency === 'USDCx' ? 3 : 2);
+
+const getCurrencyStep = (currency: SupportedCurrency) => (currency === 'sBTC' ? '0.00000001' : currency === 'USDCx' ? '0.001' : '0.01');
+
+const formatCurrencyInputValue = (amount: number, currency: SupportedCurrency) => amount
+  .toFixed(getCurrencyPrecision(currency))
+  .replace(/\.0+$/, '')
+  .replace(/(\.\d*?)0+$/, '$1');
+
 export interface StatProps {
     value: string;
     label: string;
@@ -110,7 +121,7 @@ export const GroupCard = ({ title, members, image, color }: GroupProps) => (
             referrerPolicy="no-referrer"
           />
           <div className="absolute inset-0 p-6 flex flex-col justify-end">
-            <h3 className="text-xl font-black text-white leading-tight mb-1">{title}</h3>
+            <h3 className="text-xl font-black mb-1">{title}</h3>
             <p className="text-xs font-bold text-white/80">{members} Members</p>
           </div>
         </div>
@@ -559,17 +570,20 @@ export const MessageModal = ({ isOpen, onClose, recipientAddress }: { isOpen: bo
         </AnimatePresence>
       );
     };
-export const PostJobModal = ({ isOpen, onClose, onCreated }: { isOpen: boolean, onClose: () => void, onCreated?: () => void }) => {
+  export const PostJobModal = ({ isOpen, onClose, onCreated }: { isOpen: boolean, onClose: () => void, onCreated?: () => void }) => {
       const [milestones, setMilestones] = useState(4);
       const [title, setTitle] = useState('');
       const [description, setDescription] = useState('');
       const [totalBudget, setTotalBudget] = useState('');
-      const [currency, setCurrency] = useState<'STX' | 'sBTC' | 'USDCx'>('STX');
+      const [currency, setCurrency] = useState<SupportedCurrency>('STX');
       const [categories, setCategories] = useState<ApiCategory[]>([]);
       const [selectedCategory, setSelectedCategory] = useState('');
       const [selectedSubcategory, setSelectedSubcategory] = useState('');
       const [milestoneTitles, setMilestoneTitles] = useState<string[]>(['', '', '', '']);
       const [isSubmitting, setIsSubmitting] = useState(false);
+      const [isConvertingBudget, setIsConvertingBudget] = useState(false);
+      const [pendingCurrency, setPendingCurrency] = useState<SupportedCurrency | null>(null);
+      const [usdValue, setUsdValue] = useState<number | null>(null);
 
       useEffect(() => {
         if (!isOpen) {
@@ -596,10 +610,70 @@ export const PostJobModal = ({ isOpen, onClose, onCreated }: { isOpen: boolean, 
         }
       }, [categories, selectedCategory, selectedSubcategory]);
 
+      useEffect(() => {
+        const numericBudget = Number(totalBudget);
+
+        if (!totalBudget.trim() || !Number.isFinite(numericBudget) || numericBudget < 0) {
+          setUsdValue(null);
+          return;
+        }
+
+        let cancelled = false;
+
+        const updateUsdValue = async () => {
+          try {
+            const value = await getUSDValue(numericBudget, currency);
+            if (!cancelled) {
+              setUsdValue(value);
+            }
+          } catch (error) {
+            console.error('Failed to get post job USD value:', error);
+            if (!cancelled) {
+              setUsdValue(null);
+            }
+          }
+        };
+
+        updateUsdValue();
+
+        return () => {
+          cancelled = true;
+        };
+      }, [totalBudget, currency]);
+
       if (!isOpen) return null;
 
-      const budgetPrecision = currency === 'sBTC' ? 8 : currency === 'USDCx' ? 3 : 2;
+      const budgetPrecision = getCurrencyPrecision(currency);
       const amountPerMilestone = totalBudget ? (Number(totalBudget) / milestones).toFixed(budgetPrecision) : '';
+
+      const handleCurrencyChange = async (nextCurrency: SupportedCurrency) => {
+        if (nextCurrency === currency || isConvertingBudget) {
+          return;
+        }
+
+        if (!totalBudget.trim()) {
+          setCurrency(nextCurrency);
+          return;
+        }
+
+        const numericBudget = Number(totalBudget);
+        if (!Number.isFinite(numericBudget) || numericBudget < 0) {
+          return;
+        }
+
+        setPendingCurrency(nextCurrency);
+        setIsConvertingBudget(true);
+        try {
+          const convertedBudget = await convertAmount(numericBudget, currency, nextCurrency);
+          setCurrency(nextCurrency);
+          setTotalBudget(formatCurrencyInputValue(convertedBudget, nextCurrency));
+        } catch (error) {
+          console.error('Failed to convert post job budget:', error);
+        } finally {
+          setIsConvertingBudget(false);
+          setPendingCurrency(null);
+        }
+      };
 
       const handlePostJob = async () => {
         if (!title.trim() || !description.trim() || !totalBudget || !selectedCategory || milestoneTitles.slice(0, milestones).some((entry) => !entry.trim())) {
@@ -720,27 +794,56 @@ export const PostJobModal = ({ isOpen, onClose, onCreated }: { isOpen: boolean, 
                   <div>
                     <label className="block text-xs font-bold uppercase tracking-widest text-muted mb-2">Total Budget & Currency</label>
                     <div className="flex flex-col md:flex-row gap-4">
-                      <input 
-                        type="number" 
-                        value={totalBudget}
-                        onChange={(e) => setTotalBudget(e.target.value)}
-                        step={currency === 'sBTC' ? '0.00000001' : currency === 'USDCx' ? '0.001' : '0.01'}
-                        className="flex-1 bg-ink/5 border border-border rounded-[15px] px-4 py-3 text-sm focus:ring-1 focus:ring-accent-orange outline-none"
-                        placeholder="e.g. 1000"
-                      />
+                      <div className="flex-1">
+                        <input 
+                          type="number" 
+                          value={totalBudget}
+                          onChange={(e) => {
+                            const value = e.target.value;
+                            
+                            // Prevent negative values
+                            if (value.startsWith('-')) return;
+                            
+                            // Check decimal precision based on currency
+                            const decimalIndex = value.indexOf('.');
+                            if (decimalIndex !== -1) {
+                              const decimalPlaces = value.length - decimalIndex - 1;
+                              const maxDecimalPlaces = getCurrencyPrecision(currency);
+                              
+                              // Prevent typing more decimals than allowed
+                              if (decimalPlaces > maxDecimalPlaces) return;
+                            }
+                            
+                            // Update amount if valid
+                            const numValue = Number(value);
+                            if (!isNaN(numValue) && numValue >= 0) {
+                              setTotalBudget(value);
+                            }
+                          }}
+                          className="w-full bg-ink/5 border border-border rounded-[15px] px-4 py-3 text-sm focus:ring-1 focus:ring-accent-orange outline-none"
+                          placeholder="e.g. 1000"
+                          step={getCurrencyStep(currency)}
+                        />
+                        {usdValue !== null && (
+                          <p className="mt-2 text-xs text-muted">
+                            ≈ ${usdValue.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} USD
+                          </p>
+                        )}
+                      </div>
                       <div className="flex gap-2 md:w-1/2">
                         {['STX', 'sBTC', 'USDCx'].map((c) => (
                           <button
                             key={c}
                             type="button"
-                            onClick={() => setCurrency(c as 'STX' | 'sBTC' | 'USDCx')}
+                            onClick={() => handleCurrencyChange(c as SupportedCurrency)}
+                            disabled={isConvertingBudget}
                             className={`flex-1 py-3 px-2 rounded-[15px] font-bold text-sm transition-all border ${
                               currency === c 
                                 ? 'bg-accent-orange text-white border-transparent' 
                                 : 'bg-ink/5 border-border text-muted hover:border-ink/30'
-                            }`}
+                            } ${isConvertingBudget ? 'opacity-60 cursor-not-allowed' : ''}`}
                           >
-                            {c}
+                            {isConvertingBudget && pendingCurrency === c ? <Loader2 size={14} className="animate-spin mx-auto" /> : c}
                           </button>
                         ))}
                       </div>
@@ -810,7 +913,7 @@ export const PostJobModal = ({ isOpen, onClose, onCreated }: { isOpen: boolean, 
 
                   <button 
                     onClick={handlePostJob}
-                    disabled={isSubmitting}
+                    disabled={isSubmitting || isConvertingBudget}
                     className="w-full btn-primary py-4 justify-center"
                   >
                     {isSubmitting ? 'Posting...' : 'Post Job'}
@@ -824,13 +927,12 @@ export const PostJobModal = ({ isOpen, onClose, onCreated }: { isOpen: boolean, 
     };
 export const JobApplyModal = ({ isOpen, onClose, job, onSubmitted }: { isOpen: boolean, onClose: () => void, job?: any, onSubmitted?: () => void | Promise<void> }) => {
       const [amount, setAmount] = useState(typeof job?.rawBudget === 'number' ? job.rawBudget : 1000);
-      const [currency, setCurrency] = useState(job?.currency || 'STX');
       const [milestones, setMilestones] = useState(2);
       const [useEscrow, setUseEscrow] = useState(true);
       const [coverLetter, setCoverLetter] = useState('');
       const [isSubmitting, setIsSubmitting] = useState(false);
-      const [isConverting, setIsConverting] = useState(false);
       const [usdValue, setUsdValue] = useState<number | null>(null);
+      const currency = (job?.currency || 'STX') as SupportedCurrency;
 
       useEffect(() => {
         if (isOpen) {
@@ -839,7 +941,6 @@ export const JobApplyModal = ({ isOpen, onClose, job, onSubmitted }: { isOpen: b
           // Set initial amount and currency from job if available
           if (job) {
             setAmount(typeof job.rawBudget === 'number' ? job.rawBudget : 1000);
-            setCurrency(job.currency || 'STX');
           }
         }
       }, [isOpen, job]);
@@ -870,12 +971,8 @@ export const JobApplyModal = ({ isOpen, onClose, job, onSubmitted }: { isOpen: b
 
         setIsSubmitting(true);
         try {
-          const targetCurrency = job?.currency || currency;
-          const normalizedAmount = targetCurrency !== currency
-            ? await convertAmount(amount, currency, targetCurrency)
-            : amount;
-          const proposedAmount = normalizedAmount
-            .toFixed(targetCurrency === 'sBTC' ? 8 : targetCurrency === 'USDCx' ? 3 : 6)
+          const proposedAmount = amount
+            .toFixed(getCurrencyPrecision(currency))
             .replace(/\.0+$/, '')
             .replace(/(\.\d*?)0+$/, '$1');
 
@@ -1000,7 +1097,6 @@ export const JobApplyModal = ({ isOpen, onClose, job, onSubmitted }: { isOpen: b
                   )}
 
                   {/* Amount & Currency */}
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     <div>
                       <label className="block text-sm font-bold mb-2">Total Project Amount</label>
                       <input 
@@ -1016,7 +1112,7 @@ export const JobApplyModal = ({ isOpen, onClose, job, onSubmitted }: { isOpen: b
                           const decimalIndex = value.indexOf('.');
                           if (decimalIndex !== -1) {
                             const decimalPlaces = value.length - decimalIndex - 1;
-                            const maxDecimalPlaces = currency === 'sBTC' ? 8 : currency === 'USDCx' ? 3 : 2;
+                            const maxDecimalPlaces = getCurrencyPrecision(currency);
                             
                             // Prevent typing more decimals than allowed
                             if (decimalPlaces > maxDecimalPlaces) return;
@@ -1030,50 +1126,9 @@ export const JobApplyModal = ({ isOpen, onClose, job, onSubmitted }: { isOpen: b
                         }}
                         className="w-full bg-transparent border border-border rounded-[15px] p-4 text-sm focus:border-accent-orange outline-none transition-colors"
                         min="0"
-                        step={currency === 'sBTC' ? '0.00000001' : currency === 'USDCx' ? '0.001' : '0.01'}
+                        step={getCurrencyStep(currency)}
                       />
                     </div>
-                    <div>
-                      <label className="block text-sm font-bold mb-2">Payment Currency</label>
-                      <div className="flex gap-2">
-                        {['STX', 'sBTC', 'USDCx'].map(curr => (
-                          <button 
-                            key={curr}
-                            onClick={async () => {
-                              // If clicking the same currency, do nothing
-                              if (curr === currency) return;
-                              
-                              setIsConverting(true);
-                              try {
-                                // Convert the amount to the new currency
-                                const convertedAmount = await convertAmount(amount, currency, curr);
-                                setAmount(convertedAmount);
-                                setCurrency(curr);
-                              } catch (error) {
-                                console.error('Currency conversion failed:', error);
-                                // Keep original amount if conversion fails
-                                setCurrency(curr);
-                              } finally {
-                                setIsConverting(false);
-                              }
-                            }}
-                            disabled={isConverting}
-                            className={`flex-1 py-4 rounded-[15px] border font-bold transition-all text-sm relative ${
-                              currency === curr 
-                                ? 'border-accent-cyan bg-accent-cyan/10 text-accent-cyan' 
-                                : 'border-border hover:border-ink/30'
-                            } ${isConverting ? 'opacity-50 cursor-not-allowed' : ''}`}
-                          >
-                            {isConverting && curr !== currency ? (
-                              <Loader2 size={14} className="animate-spin mx-auto" />
-                            ) : (
-                              curr
-                            )}
-                          </button>
-                        ))}
-                      </div>
-                    </div>
-                  </div>
 
                   {/* Fee Breakdown */}
                   <div className="bg-ink/5 rounded-[15px] p-4 space-y-2">
@@ -1081,7 +1136,7 @@ export const JobApplyModal = ({ isOpen, onClose, job, onSubmitted }: { isOpen: b
                       <span className="text-muted">Total Amount</span>
                       <div className="text-right">
                         <span className="font-bold">
-                          {currency === 'sBTC' ? amount.toFixed(8) : currency === 'USDCx' ? amount.toFixed(3) : amount.toFixed(2)} {currency}
+                          {amount.toFixed(getCurrencyPrecision(currency))} {currency}
                         </span>
                         {usdValue !== null && (
                           <div className="text-xs text-muted">
