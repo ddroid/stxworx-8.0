@@ -69,8 +69,7 @@ import {
   ZoomOut
 } from 'lucide-react';
 
-import { GoogleGenAI } from '@google/genai';
-
+import { generateAiText } from './lib/api';
 import { createContext, useContext } from 'react';
 import * as Shared from "./shared";
 import { WalletProvider } from "./components/wallet/WalletProvider";
@@ -148,25 +147,17 @@ const LiveChat = () => {
     setIsLoading(true);
 
     try {
-      const apiKey = import.meta.env.VITE_GEMINI_API_KEY || process.env.GEMINI_API_KEY;
-      if (!apiKey) {
-        setChat(prev => [...prev, { type: 'bot', text: 'AI assistant is not configured yet. Please set VITE_GEMINI_API_KEY.' }]);
-        return;
-      }
-
-      const ai = new GoogleGenAI({ apiKey });
-      const response = await ai.models.generateContent({
-        model: 'gemini-3-flash-preview',
-        contents: userMessage,
-        config: {
-          systemInstruction: "You are a helpful customer support agent for STXWORX, a creative platform for designers, freelancers, and architects. Keep your answers concise and friendly.",
-        }
+      const response = await generateAiText({
+        prompt: userMessage,
+        systemInstruction: "You are a helpful customer support agent for STXWORX, a creative platform for designers, freelancers, and architects. Keep your answers concise and friendly.",
+        temperature: 0.2,
       });
       
       setChat(prev => [...prev, { type: 'bot', text: response.text || "Sorry, I couldn't process that request." }]);
-    } catch (error) {
+    } catch (error: any) {
       console.error("Chat error:", error);
-      setChat(prev => [...prev, { type: 'bot', text: "Sorry, I'm having trouble connecting right now. Please try again later." }]);
+      const errorMessage = error?.message || "Sorry, I'm having trouble connecting right now. Please try again later.";
+      setChat(prev => [...prev, { type: 'bot', text: errorMessage }]);
     } finally {
       setIsLoading(false);
     }

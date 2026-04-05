@@ -1,7 +1,6 @@
-
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import { Bot, CheckCircle2, FileText, Sparkles } from 'lucide-react';
-import { GoogleGenAI } from '@google/genai';
+import { generateAiText } from '../../lib/api';
 
 export const AIProposalGenerator = () => {
   const [role, setRole] = useState<'client' | 'freelancer'>('freelancer');
@@ -21,13 +20,6 @@ export const AIProposalGenerator = () => {
     setError('');
     
     try {
-      const apiKey = import.meta.env.VITE_GEMINI_API_KEY || process.env.GEMINI_API_KEY;
-      if (!apiKey) {
-        throw new Error('Gemini API Key is missing. Please set VITE_GEMINI_API_KEY or GEMINI_API_KEY in your environment.');
-      }
-      
-      const ai = new GoogleGenAI({ apiKey });
-      
       let systemInstruction = '';
       if (role === 'freelancer') {
         systemInstruction = 'You are an expert freelance proposal writer. Write a compelling, professional proposal to win a job based on the provided details.';
@@ -41,13 +33,10 @@ export const AIProposalGenerator = () => {
         systemInstruction += ' Keep the tone professional, structured, and concise.';
       }
 
-      const response = await ai.models.generateContent({
-        model: 'gemini-3-flash-preview',
-        contents: prompt,
-        config: {
-          systemInstruction,
-          temperature: humanize ? 0.7 : 0.3,
-        }
+      const response = await generateAiText({
+        prompt,
+        systemInstruction,
+        temperature: humanize ? 0.7 : 0.3,
       });
       
       setGeneratedText(response.text || 'No content generated.');

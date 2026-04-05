@@ -16,6 +16,13 @@ type RequestOptions = RequestInit & {
   searchParams?: Record<string, string | number | undefined | null>;
 };
 
+export interface GenerateAiTextInput {
+  prompt: string;
+  systemInstruction?: string;
+  temperature?: number;
+  model?: string;
+}
+
 export interface WalletVerificationInput {
   stxAddress: string;
   publicKey: string;
@@ -1292,6 +1299,13 @@ export async function resolveAdminDispute(disputeId: number, input: AdminDispute
 export async function resetAdminDispute(disputeId: number, input: AdminDisputeResolutionInput) {
   return apiRequest<ApiDispute>(`/admin/disputes/${disputeId}/reset`, {
     method: 'PATCH',
+    body: JSON.stringify(input),
+  });
+}
+
+export async function generateAiText(input: GenerateAiTextInput) {
+  return apiRequest<{ model: string; text: string }>('/ai/generate', {
+    method: 'POST',
     body: JSON.stringify(input),
   });
 }

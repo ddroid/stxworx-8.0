@@ -701,7 +701,7 @@ export const HomePage = () => {
                 </div>
                 <div className="flex-1 min-w-0">
                   <p className="text-white text-sm md:text-base font-bold leading-tight drop-shadow-sm">
-                    Special thanks to Deorganized Media for supporting this initiative—they will receive a 1% royalty.
+                    A Special thanks to Deorganized Media for supporting this initiative, they will receive a 1% royalty.
                   </p>
                 </div>
               </div>
