@@ -360,6 +360,32 @@ export const HomePage = () => {
                 </div>
               </div>
             </motion.div>
+        {/* Friends Section */}
+        <section className="mb-4">
+          <div className="flex items-center justify-between mb-8">
+            <h2 className="text-2xl font-black">Our Friends</h2>
+          </div>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            {/* Circle USDC */}
+            <div className="card p-6 flex items-center gap-6 hover:border-accent-blue transition-all">
+              <div className="w-16 h-16 rounded-full bg-[#2775CA] flex items-center justify-center shrink-0">
+                <span className="text-white text-2xl font-black">$</span>
+              </div>
+              <div className="flex-1 min-w-0">
+                <h3 className="text-lg font-black mb-1">Circle USDC</h3>
+                <p className="text-sm text-muted">Digital dollar stablecoin powering global payments</p>
+              </div>
+              <a 
+                href="https://www.circle.com/en/usdc" 
+                target="_blank" 
+                rel="noreferrer"
+                className="text-accent-blue text-sm font-bold flex items-center gap-2 hover:underline"
+              >
+                Learn more <ArrowRight size={16} />
+              </a>
+            </div>
+          </div>
+        </section>  
           </div>
 
           <div className="lg:col-span-4 space-y-6">
@@ -375,8 +401,9 @@ export const HomePage = () => {
           </div>
         </section>
 
+
         {/* Top Featured Jobs */}
-        <section className="mb-20">
+        <section className="mb-12">
           <div className="flex items-center justify-between mb-8">
             <h2 className="text-2xl font-black">Top Featured Jobs</h2>
             <button onClick={() => navigate('/jobs')} className="text-accent-orange text-sm font-bold flex items-center gap-2">
