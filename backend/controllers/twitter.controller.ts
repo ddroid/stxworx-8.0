@@ -26,8 +26,10 @@ export const twitterController = {
       }
     );
 
-    // Store verifier + state in short-lived cookie
-    res.cookie("_tw_oauth", JSON.stringify({ codeVerifier, state }), {
+    // Store verifier + state + userId in short-lived cookie
+    // UserId is included so we can identify the user on callback even if session cookie isn't available
+    const userId = req.user?.id;
+    res.cookie("_tw_oauth", JSON.stringify({ codeVerifier, state, userId }), {
       httpOnly: true,
       secure: process.env.NODE_ENV === "production",
       maxAge: 10 * 60 * 1000, // 10 minutes
@@ -48,7 +50,7 @@ export const twitterController = {
       return res.redirect("/settings?twitter=error&msg=missing_params");
     }
 
-    let parsed: { codeVerifier: string; state: string };
+    let parsed: { codeVerifier: string; state: string; userId?: number };
     try {
       parsed = JSON.parse(stored);
     } catch {
@@ -72,10 +74,12 @@ export const twitterController = {
       });
 
       const isVerified = twitterUser.data.verified ?? false;
-      const twitterId = twitterUser.data.id;
       const twitterUsername = twitterUser.data.username;
 
-      if (!req.user) {
+      // Get userId from session cookie OR from the OAuth state cookie
+      const userId = req.user?.id || parsed.userId;
+
+      if (!userId) {
         return res.redirect("/settings?twitter=error&msg=not_logged_in");
       }
 
@@ -88,7 +92,7 @@ export const twitterController = {
           twitterVerified: isVerified,
           updatedAt: new Date(),
         })
-        .where(eq(userSettings.userId, req.user.id));
+        .where(eq(userSettings.userId, userId));
 
       return res.redirect(
         `/settings?twitter=connected&verified=${isVerified}`
