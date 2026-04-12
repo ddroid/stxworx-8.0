@@ -6,6 +6,8 @@ import {
   requestEmailVerification,
   resendEmailVerification,
   removeEmail,
+  initiateTwitterAuth,
+  disconnectTwitter,
   type ApiSettings,
 } from '../lib/api';
 
@@ -28,6 +30,8 @@ export const SettingsPage = () => {
   const [emailVerificationSentAt, setEmailVerificationSentAt] = useState<string | null>(null);
   const [twitterHandle, setTwitterHandle] = useState('');
   const [isTwitterConnected, setIsTwitterConnected] = useState(false);
+  const [twitterVerified, setTwitterVerified] = useState(false);
+  const [twitterLoading, setTwitterLoading] = useState(false);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [activeSection, setActiveSection] = useState<SettingsSection>('general');
@@ -37,6 +41,10 @@ export const SettingsPage = () => {
   const [isVerifying, setIsVerifying] = useState(false);
   const [emailError, setEmailError] = useState<string | null>(null);
   const [emailSuccess, setEmailSuccess] = useState<string | null>(null);
+
+  // Twitter connection messages
+  const [twitterError, setTwitterError] = useState<string | null>(null);
+  const [twitterSuccess, setTwitterSuccess] = useState<string | null>(null);
 
   useEffect(() => {
     const loadSettings = async () => {
@@ -53,6 +61,7 @@ export const SettingsPage = () => {
         setEmailVerificationSentAt(settings.emailVerificationSentAt || null);
         setTwitterHandle(settings.twitterHandle || '');
         setIsTwitterConnected(settings.isTwitterConnected);
+        setTwitterVerified(settings.twitterVerified);
       } catch (error) {
         console.error('Failed to load settings:', error);
       } finally {
@@ -74,17 +83,73 @@ export const SettingsPage = () => {
     }
   }, [emailError, emailSuccess]);
 
+  // Handle OAuth callback params on mount
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    const twitterStatus = params.get('twitter');
+    const verified = params.get('verified');
+
+    if (twitterStatus === 'connected') {
+      setTwitterSuccess(verified === 'true' 
+        ? 'Twitter connected successfully! Your account is verified.' 
+        : 'Twitter connected successfully!');
+      // Clear URL params
+      window.history.replaceState({}, '', window.location.pathname);
+      // Reload settings to get updated state
+      getSettings().then(settings => {
+        setTwitterHandle(settings.twitterHandle || '');
+        setIsTwitterConnected(settings.isTwitterConnected);
+        setTwitterVerified(settings.twitterVerified);
+      });
+    } else if (twitterStatus === 'error') {
+      const msg = params.get('msg');
+      setTwitterError(
+        msg === 'not_configured' ? 'Twitter OAuth is not configured on the server.' :
+        msg === 'oauth_failed' ? 'Failed to connect Twitter. Please try again.' :
+        msg === 'state_mismatch' ? 'Security check failed. Please try again.' :
+        'Failed to connect Twitter.'
+      );
+      window.history.replaceState({}, '', window.location.pathname);
+    }
+  }, []);
+
+  // Clear Twitter messages after 5 seconds
+  useEffect(() => {
+    if (twitterError || twitterSuccess) {
+      const timer = setTimeout(() => {
+        setTwitterError(null);
+        setTwitterSuccess(null);
+      }, 5000);
+      return () => clearTimeout(timer);
+    }
+  }, [twitterError, twitterSuccess]);
+
   const handleTwitterConnect = () => {
     if (!isTwitterConnected) {
-      setIsTwitterConnected(true);
-      if (!twitterHandle) {
-        setTwitterHandle('@stxworx');
-      }
+      // Initiate real OAuth flow
+      initiateTwitterAuth();
       return;
     }
 
-    setIsTwitterConnected(false);
-    setTwitterHandle('');
+    // Disconnect is handled separately
+  };
+
+  const handleTwitterDisconnect = async () => {
+    setTwitterLoading(true);
+    setTwitterError(null);
+    setTwitterSuccess(null);
+
+    try {
+      await disconnectTwitter();
+      setIsTwitterConnected(false);
+      setTwitterHandle('');
+      setTwitterVerified(false);
+      setTwitterSuccess('Twitter account disconnected');
+    } catch (error: any) {
+      setTwitterError(error.message || 'Failed to disconnect Twitter');
+    } finally {
+      setTwitterLoading(false);
+    }
   };
 
   const handleRequestVerification = async () => {
@@ -366,27 +431,90 @@ export const SettingsPage = () => {
               </h2>
               
               <div className="space-y-4">
+                {/* Twitter Error/Success Messages */}
+                {twitterError && (
+                  <div className="p-3 bg-red-50 border border-red-200 rounded-[10px] text-sm text-red-600">
+                    {twitterError}
+                  </div>
+                )}
+                {twitterSuccess && (
+                  <div className="p-3 bg-green-50 border border-green-200 rounded-[10px] text-sm text-green-600">
+                    {twitterSuccess}
+                  </div>
+                )}
+
                 <div className="flex items-center justify-between p-4 border border-border rounded-[15px] bg-bg">
                   <div className="flex items-center gap-4">
                     <div className="w-10 h-10 bg-[#1DA1F2]/10 text-[#1DA1F2] rounded-full flex items-center justify-center">
                       <Twitter size={20} />
                     </div>
                     <div>
-                      <p className="font-bold">X / Twitter</p>
-                      <p className="text-xs text-muted">{isTwitterConnected ? twitterHandle : 'Not connected'}</p>
+                      <div className="flex items-center gap-2">
+                        <p className="font-bold">X / Twitter</p>
+                        {isTwitterConnected && twitterVerified && (
+                          <span className="flex items-center gap-1 text-xs text-green-600 font-bold bg-green-50 px-2 py-0.5 rounded-full">
+                            <CheckCircle size={12} />
+                            Verified
+                          </span>
+                        )}
+                      </div>
+                      <p className="text-xs text-muted">
+                        {isTwitterConnected 
+                          ? `@${twitterHandle}` 
+                          : 'Link your account for reputation and NFT eligibility'}
+                      </p>
                     </div>
                   </div>
-                  <button 
-                    onClick={handleTwitterConnect}
-                    className={`px-4 py-2 rounded-[15px] text-xs font-bold transition-colors ${
-                      isTwitterConnected 
-                        ? 'bg-ink/5 text-ink hover:bg-red-500/10 hover:text-red-500' 
-                        : 'bg-[#1DA1F2] text-white hover:bg-[#1a8cd8]'
-                    }`}
-                  >
-                    {isTwitterConnected ? 'Disconnect' : 'Connect'}
-                  </button>
+                  {isTwitterConnected ? (
+                    <button 
+                      onClick={handleTwitterDisconnect}
+                      disabled={twitterLoading}
+                      className="px-4 py-2 rounded-[15px] text-xs font-bold transition-colors bg-ink/5 text-ink hover:bg-red-500/10 hover:text-red-500 disabled:opacity-50"
+                    >
+                      {twitterLoading ? 'Disconnecting...' : 'Disconnect'}
+                    </button>
+                  ) : (
+                    <button 
+                      onClick={handleTwitterConnect}
+                      className="px-4 py-2 rounded-[15px] text-xs font-bold transition-colors bg-[#1DA1F2] text-white hover:bg-[#1a8cd8]"
+                    >
+                      Connect
+                    </button>
+                  )}
                 </div>
+
+                {/* Verified Badge Info */}
+                {isTwitterConnected && twitterVerified && (
+                  <div className="p-4 bg-green-50 border border-green-200 rounded-[15px]">
+                    <div className="flex items-center gap-2 text-green-700 font-bold text-sm mb-1">
+                      <CheckCircle size={16} />
+                      Twitter Verified Account
+                    </div>
+                    <p className="text-xs text-green-600">
+                      Your account has a blue checkmark. You are eligible for verified NFT minting.
+                    </p>
+                  </div>
+                )}
+
+                {isTwitterConnected && !twitterVerified && (
+                  <div className="p-4 bg-amber-50 border border-amber-200 rounded-[15px]">
+                    <div className="flex items-center gap-2 text-amber-700 font-bold text-sm mb-1">
+                      <Clock size={16} />
+                      Not Verified
+                    </div>
+                    <p className="text-xs text-amber-600">
+                      Your Twitter account does not have a blue checkmark. 
+                      <a 
+                        href="https://twitter.com/i/premium_sign_up" 
+                        target="_blank" 
+                        rel="noopener noreferrer"
+                        className="underline hover:text-amber-800 ml-1"
+                      >
+                        Upgrade to Premium
+                      </a> to get verified status.
+                    </p>
+                  </div>
+                )}
               </div>
             </section>
 
@@ -509,8 +637,11 @@ export const SettingsPage = () => {
                     setEmailVerificationSentAt(settings.emailVerificationSentAt || null);
                     setTwitterHandle(settings.twitterHandle || '');
                     setIsTwitterConnected(settings.isTwitterConnected);
+                    setTwitterVerified(settings.twitterVerified);
                     setEmailError(null);
                     setEmailSuccess(null);
+                    setTwitterError(null);
+                    setTwitterSuccess(null);
                   } catch (error) {
                     console.error('Failed to reload settings:', error);
                   } finally {

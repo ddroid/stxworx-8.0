@@ -9,6 +9,7 @@ const updateSettingsSchema = z.object({
   profileVisibility: z.enum(["public", "private"]).optional(),
   twitterHandle: z.string().max(100).optional(),
   isTwitterConnected: z.boolean().optional(),
+  twitterVerified: z.boolean().optional(),
   // Note: email is no longer directly updatable - use email verification flow
 });
 

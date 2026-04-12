@@ -27,6 +27,8 @@ import { nftRoutes } from "./routes/nft.routes";
 import { refundRoutes } from "./routes/refund.routes";
 import { referralRoutes } from "./routes/referral.routes";
 import contactRoutes from "./routes/contact.routes";
+import { twitterRoutes } from "./routes/twitter.routes";
+import { verifiedTwitterUsersRoutes } from "./routes/verified-twitter-users.routes";
 
 const app = express();
 
@@ -116,6 +118,8 @@ app.use("/api/nfts", nftRoutes);
 app.use("/api/refunds", refundRoutes);
 app.use("/api/referrals", referralRoutes);
 app.use("/api/contact", contactRoutes);
+app.use("/api/auth/twitter", twitterRoutes);
+app.use("/api/twitter-verified", verifiedTwitterUsersRoutes);
 
 // Error handler
 app.use((err: any, _req: Request, res: Response, _next: NextFunction) => {

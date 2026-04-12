@@ -27,6 +27,7 @@ export const settingsService = {
     email?: string | null;
     twitterHandle?: string | null;
     isTwitterConnected?: boolean;
+    twitterVerified?: boolean;
   }) {
     await this.getByUser(userId);
 

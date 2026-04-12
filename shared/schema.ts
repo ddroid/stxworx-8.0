@@ -336,6 +336,7 @@ export const userSettings = mysqlTable("user_settings", {
   emailVerifiedAt: timestamp("email_verified_at"),
   twitterHandle: varchar("twitter_handle", { length: 100 }),
   isTwitterConnected: boolean("is_twitter_connected").default(false).notNull(),
+  twitterVerified: boolean("twitter_verified").default(false).notNull(),
   createdAt: timestamp("created_at").defaultNow().notNull(),
   updatedAt: timestamp("updated_at").defaultNow().notNull(),
 });

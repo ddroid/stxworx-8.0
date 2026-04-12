@@ -320,6 +320,7 @@ export interface ApiSettings {
   emailVerifiedAt?: string | null;
   twitterHandle?: string | null;
   isTwitterConnected: boolean;
+  twitterVerified: boolean;
   createdAt?: string;
   updatedAt?: string;
 }
@@ -1063,6 +1064,18 @@ export async function confirmEmailVerification(token: string) {
 
 export async function removeEmail() {
   return apiRequest<{ message: string }>('/settings/email', {
+    method: 'DELETE',
+  });
+}
+
+// Twitter OAuth functions
+export function initiateTwitterAuth() {
+  // Redirect to backend OAuth endpoint
+  window.location.href = `${API_BASE_URL}/auth/twitter`;
+}
+
+export async function disconnectTwitter() {
+  return apiRequest<{ message: string }>('/auth/twitter/disconnect', {
     method: 'DELETE',
   });
 }
