@@ -1,5 +1,5 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
-import { LogOut, ShieldCheck, Users, Wallet } from 'lucide-react';
+import { LogOut, ShieldCheck, Users, Wallet, Gift } from 'lucide-react';
 import * as Shared from '../shared';
 import {
   adminLogin,
@@ -27,6 +27,7 @@ import {
 } from '../lib/api';
 import { adminEscrowRefund } from '../lib/escrow';
 import type { ApiUserProfile } from '../types/user';
+import { ReferralViewer } from './admin';
 
 type ResolutionDraft = {
   favorFreelancer: boolean;
@@ -589,6 +590,13 @@ export const AdminDashboard = () => {
             })}
             {disputes.length === 0 && <p className="text-sm text-muted">No disputes found.</p>}
           </div>
+        </div>
+
+        <div className="card">
+          <div className="flex items-center justify-between mb-8">
+            <h3 className="font-bold flex items-center gap-2"><Gift size={18} /> Referral Management</h3>
+          </div>
+          <ReferralViewer />
         </div>
       </div>
     </div>

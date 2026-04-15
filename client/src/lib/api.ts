@@ -1382,3 +1382,76 @@ export async function submitContactForm(input: ContactFormInput) {
     body: JSON.stringify(input),
   });
 }
+
+// Admin Referral Lookup
+export interface AdminReferralLookupResponse {
+  referrer: {
+    id: number;
+    stxAddress: string;
+    name: string | null;
+    username: string | null;
+    role: string;
+    isActive: boolean;
+  };
+  code: {
+    id: number;
+    code: string;
+    isActive: boolean;
+    lastSharedAt: string | null;
+    createdAt: string;
+  } | null;
+  referrals: Array<{
+    id: number;
+    status: 'pending' | 'qualified' | 'blocked';
+    referredUser: {
+      id: number;
+      stxAddress: string;
+      name: string | null;
+      username: string | null;
+      role: string;
+    } | null;
+    firstProjectId: number | null;
+    firstEscrowProjectId: number | null;
+    firstCompletedProjectId: number | null;
+    qualifiedProjectId: number | null;
+    totalCompletedJobs: number;
+    cumulativeCompletedSpendUsd: string;
+    firstCompletedSpendUsd: string | null;
+    qualificationRule: string | null;
+    blockedReason: string | null;
+    firstSeenAt: string;
+    attributedAt: string;
+    becameClientAt: string | null;
+    qualifiedAt: string | null;
+    createdAt: string;
+    updatedAt: string;
+    firstSeenIp: string | null;
+    attributionIp: string | null;
+    userAgent: string | null;
+    payouts: Array<{
+      id: number;
+      status: string;
+      amountUsd: string;
+      eligibleSpendUsd: string;
+      payoutRate: string;
+      projectId: number | null;
+      createdAt: string;
+      paidAt: string | null;
+    }>;
+  }>;
+  summary: {
+    totalReferrals: number;
+    qualifiedReferrals: number;
+    pendingReferrals: number;
+    blockedReferrals: number;
+    totalPayoutUsd: string;
+    pendingPayoutUsd: string;
+    paidPayoutUsd: string;
+  };
+}
+
+export async function getAdminReferralsByUsername(username: string) {
+  return apiRequest<AdminReferralLookupResponse>(`/admin/referrals?username=${encodeURIComponent(username)}`, {
+    method: 'GET',
+  });
+}

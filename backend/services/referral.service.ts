@@ -453,4 +453,137 @@ export const referralService = {
 
     return result?.total || 0;
   },
+
+  async getReferralsByUsername(username: string) {
+    // First find the user by username (case-insensitive)
+    const [referrer] = await db
+      .select({
+        id: users.id,
+        stxAddress: users.stxAddress,
+        name: users.name,
+        username: users.username,
+        role: users.role,
+        isActive: users.isActive,
+      })
+      .from(users)
+      .where(sql`lower(${users.username}) = lower(${username})`)
+      .limit(1);
+
+    if (!referrer) {
+      return null;
+    }
+
+    // Get their referral code
+    const code = await getPrimaryReferralCodeByOwner(referrer.id);
+
+    // Get all attributions for this referrer
+    const attributions = await db
+      .select()
+      .from(referralAttributions)
+      .where(eq(referralAttributions.referrerId, referrer.id))
+      .orderBy(desc(referralAttributions.createdAt));
+
+    // Get all payouts for this referrer
+    const payouts = await db
+      .select()
+      .from(referralPayouts)
+      .where(eq(referralPayouts.referrerId, referrer.id))
+      .orderBy(desc(referralPayouts.createdAt));
+
+    // Get referred user details
+    const referredUserIds = Array.from(new Set(attributions.map((a) => a.referredUserId)));
+    const referredUsers = referredUserIds.length
+      ? await db
+          .select({
+            id: users.id,
+            stxAddress: users.stxAddress,
+            name: users.name,
+            username: users.username,
+            role: users.role,
+          })
+          .from(users)
+          .where(inArray(users.id, referredUserIds))
+      : [];
+
+    const referredUsersById = new Map(referredUsers.map((u) => [u.id, u]));
+
+    // Build complete referral records
+    const referrals = attributions.map((attr) => {
+      const referredUser = referredUsersById.get(attr.referredUserId);
+      const relatedPayouts = payouts.filter((p) => p.attributionId === attr.id);
+
+      return {
+        id: attr.id,
+        status: attr.status,
+        referredUser: referredUser || null,
+        firstProjectId: attr.firstProjectId || null,
+        firstEscrowProjectId: attr.firstEscrowProjectId || null,
+        firstCompletedProjectId: attr.firstCompletedProjectId || null,
+        qualifiedProjectId: attr.qualifiedProjectId || null,
+        totalCompletedJobs: attr.totalCompletedJobs,
+        cumulativeCompletedSpendUsd: String(attr.cumulativeCompletedSpendUsd || "0.00"),
+        firstCompletedSpendUsd: attr.firstCompletedSpendUsd ? String(attr.firstCompletedSpendUsd) : null,
+        qualificationRule: attr.qualificationRule || null,
+        blockedReason: attr.blockedReason || null,
+        firstSeenAt: attr.firstSeenAt,
+        attributedAt: attr.attributedAt,
+        becameClientAt: attr.becameClientAt,
+        qualifiedAt: attr.qualifiedAt || null,
+        createdAt: attr.createdAt,
+        updatedAt: attr.updatedAt,
+        firstSeenIp: attr.firstSeenIp || null,
+        attributionIp: attr.attributionIp || null,
+        userAgent: attr.userAgent || null,
+        payouts: relatedPayouts.map((p) => ({
+          id: p.id,
+          status: p.status,
+          amountUsd: String(p.amountUsd),
+          eligibleSpendUsd: String(p.eligibleSpendUsd),
+          payoutRate: String(p.payoutRate),
+          projectId: p.projectId,
+          createdAt: p.createdAt,
+          paidAt: p.paidAt,
+        })),
+      };
+    });
+
+    // Calculate summary stats
+    const summary = {
+      totalReferrals: referrals.length,
+      qualifiedReferrals: referrals.filter((r) => r.status === "qualified").length,
+      pendingReferrals: referrals.filter((r) => r.status === "pending").length,
+      blockedReferrals: referrals.filter((r) => r.status === "blocked").length,
+      totalPayoutUsd: toUsdString(
+        payouts.reduce((sum, p) => sum + Number(p.amountUsd || 0), 0)
+      ),
+      pendingPayoutUsd: toUsdString(
+        payouts.filter((p) => p.status === "pending").reduce((sum, p) => sum + Number(p.amountUsd || 0), 0)
+      ),
+      paidPayoutUsd: toUsdString(
+        payouts.filter((p) => p.status === "paid").reduce((sum, p) => sum + Number(p.amountUsd || 0), 0)
+      ),
+    };
+
+    return {
+      referrer: {
+        id: referrer.id,
+        stxAddress: referrer.stxAddress,
+        name: referrer.name,
+        username: referrer.username,
+        role: referrer.role,
+        isActive: referrer.isActive,
+      },
+      code: code
+        ? {
+            id: code.id,
+            code: code.code,
+            isActive: code.isActive,
+            lastSharedAt: code.lastSharedAt,
+            createdAt: code.createdAt,
+          }
+        : null,
+      referrals,
+      summary,
+    };
+  },
 };

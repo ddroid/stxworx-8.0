@@ -4,6 +4,7 @@ import { adminAuthService } from "../services/admin-auth.service";
 import { adminService } from "../services/admin.service";
 import { getAdminCookieName } from "../middleware/admin-auth";
 import { platformSettingsService } from "../services/platform-settings.service";
+import { referralService } from "../services/referral.service";
 
 const loginSchema = z.object({
   username: z.string().min(1),
@@ -361,6 +362,26 @@ export const adminController = {
       return res.status(200).json(nfts);
     } catch (error) {
       console.error("Get user NFTs error:", error);
+      return res.status(500).json({ message: "Internal server error" });
+    }
+  },
+
+  // GET /api/admin/referrals?username=:username
+  async getReferralsByUsername(req: Request, res: Response) {
+    try {
+      const { username } = req.query;
+      if (!username || typeof username !== "string") {
+        return res.status(400).json({ message: "Username query parameter is required" });
+      }
+
+      const result = await referralService.getReferralsByUsername(username.trim());
+      if (!result) {
+        return res.status(404).json({ message: "User not found" });
+      }
+
+      return res.status(200).json(result);
+    } catch (error) {
+      console.error("Get referrals by username error:", error);
       return res.status(500).json({ message: "Internal server error" });
     }
   },

@@ -48,3 +48,6 @@ adminRoutes.post("/nfts", requireAdmin, adminController.createNft);
 adminRoutes.get("/nfts", requireAdmin, adminController.getAllNfts);
 adminRoutes.patch("/nfts/:id/confirm-mint", requireAdmin, adminController.confirmMint);
 adminRoutes.get("/nfts/user/:userId", requireAdmin, adminController.getNftsByUser);
+
+// Referrals
+adminRoutes.get("/referrals", requireAdmin, adminController.getReferralsByUsername);
