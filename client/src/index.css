@@ -76,6 +76,15 @@
     overflow-x: hidden;
   }
 
+  html {
+    scrollbar-width: none;
+    -ms-overflow-style: none;
+  }
+  
+  html::-webkit-scrollbar {
+    display: none;
+  }
+
   body {
     @apply bg-bg text-ink font-sans antialiased selection:bg-accent-orange selection:text-bg;
   }
@@ -178,6 +187,14 @@
   display: none;
 }
 .no-scrollbar {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
+
+.scrollbar-hide::-webkit-scrollbar {
+  display: none;
+}
+.scrollbar-hide {
   -ms-overflow-style: none;
   scrollbar-width: none;
 }

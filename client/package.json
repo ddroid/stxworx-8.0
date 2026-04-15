@@ -12,10 +12,10 @@
   },
   "dependencies": {
     "@google/genai": "^1.44.0",
-    "@tailwindcss/vite": "^4.1.14",
-    "@vitejs/plugin-react": "^5.0.4",
     "@stacks/connect": "^8.2.0",
     "@stacks/network": "^7.2.0",
+    "@tailwindcss/vite": "^4.1.14",
+    "@vitejs/plugin-react": "^5.0.4",
     "better-sqlite3": "^12.4.1",
     "clsx": "^2.1.1",
     "dotenv": "^17.2.3",
@@ -24,7 +24,9 @@
     "motion": "^12.23.24",
     "react": "^19.0.0",
     "react-dom": "^19.0.0",
+    "react-markdown": "^10.1.0",
     "react-router-dom": "^7.13.1",
+    "remark-gfm": "^4.0.1",
     "tailwind-merge": "^3.5.0",
     "ts-morph": "^27.0.2",
     "vite": "^6.2.0"

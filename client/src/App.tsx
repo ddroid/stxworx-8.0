@@ -96,6 +96,7 @@ import { ReviewWorkPage } from "./pages/ReviewWorkPage";
 import { MessagesPage } from "./pages/MessagesPage";
 import { NotificationsPage } from "./pages/NotificationsPage";
 import { AIProposalGenerator } from "./components/proposals/AIProposalGenerator";
+import { WhitepaperPage } from "./pages/WhitepaperPage";
 
 const getInitialTheme = (): 'dark' | 'light' => {
   if (typeof window === 'undefined') {
@@ -583,6 +584,16 @@ export default function App() {
                       <AIProposalGenerator />
                     </motion.div>
                   } />
+                  <Route path="/whitepaper" element={
+                    <motion.div
+                      initial={{ opacity: 0, x: 20 }}
+                      animate={{ opacity: 1, x: 0 }}
+                      exit={{ opacity: 0, x: -20 }}
+                      transition={{ duration: 0.4 }}
+                    >
+                      <WhitepaperPage />
+                    </motion.div>
+                  } />
                   <Route path="/settings" element={
                     <motion.div
                       initial={{ opacity: 0, x: 20 }}
@@ -713,6 +724,7 @@ export default function App() {
                 </div>
                 <div className="flex flex-col items-center md:items-end gap-4">
                   <div className="flex flex-wrap justify-center md:justify-end gap-4 sm:gap-6 md:gap-8">
+                    <Link to="/whitepaper" className="hover:text-ink transition-colors">Whitepaper</Link>
                     <Link to="/privacy" className="hover:text-ink transition-colors">Privacy Policy</Link>
                     <Link to="/terms" className="hover:text-ink transition-colors">Terms of Service</Link>
                     <Link to="/contact" className="hover:text-ink transition-colors">Contact</Link>
